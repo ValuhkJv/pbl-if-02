@@ -11,8 +11,8 @@ import {
   InputLabel,
   FormControl,
 } from "@mui/material";
-import polibatam from "../polibatam.png";
-import backgroundImage from "../tekno.png";
+import polibatam from "../assets/polibatam.png";
+import backgroundImage from "../assets/tekno.png";
 
 function Login() {
   return (
