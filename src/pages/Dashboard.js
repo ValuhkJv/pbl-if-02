@@ -30,8 +30,7 @@ import {
   ExpandMore,
 } from "@mui/icons-material";
 import { Link, Route, Routes } from "react-router-dom";
-import polibatam from '../assets/logoPolibatam.png';
-
+import polibatam from "../assets/logoPolibatam.png";
 
 const drawerWidth = 240;
 
@@ -74,7 +73,11 @@ export default function Dashboard() {
   // Define the sidebar items for each role
   const menuItemsByRole = {
     staf: [
-      { text: "Manajemen Barang", icon: <FeaturedPlayListIcon />, link: "/inventory" },
+      {
+        text: "Manajemen Barang",
+        icon: <FeaturedPlayListIcon />,
+        link: "/inventory",
+      },
       { text: "Laporan", icon: <ReportIcon />, link: "/report" },
     ],
     kepalaUnit: [
@@ -107,7 +110,6 @@ export default function Dashboard() {
         icon: <EventAvailableIcon />,
         link: "/loan/approval",
       },
-      
     ],
   };
 
@@ -158,12 +160,12 @@ export default function Dashboard() {
           },
         }}
       >
-        <Box sx={{ overflow: "auto", height: "100%" }}>
+        <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1}}>
           <Box
             sx={{
-              display: "flex",   // menyusun elemen dalam satu baris
-              alignItems: "center",   // menyelaraskan logo dan teks secara vertikal
-              textAlign: "left",   // menjaga teks rata kiri
+              display: "flex", // menyusun elemen dalam satu baris
+              alignItems: "center", // menyelaraskan logo dan teks secara vertikal
+              textAlign: "left", // menjaga teks rata kiri
               height: "80px",
               padding: "20px 0",
             }}
@@ -173,11 +175,17 @@ export default function Dashboard() {
               alt="logo polibatam"
               style={{ height: "70px" }}
             />
-            <Typography variant="body1" sx={{ color: "white" }}>
+            <Typography variant="body2" sx={{ color: "white"}}>
               SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
-          <Divider sx={{ backgroundColor: "white", margin: "3px 0" }} />
+          <Divider
+            sx={{
+              backgroundColor: "rgba(255, 255, 255, 0.3)", // warna putih dengan opacity 50%
+              height: "1px",
+              margin: "8px 0",
+            }}
+          />
 
           <List>
             {/* dashboard */}
@@ -190,8 +198,8 @@ export default function Dashboard() {
               </ListItemButton>
             </ListItem>
 
-              {/* Dropdown Peminjaman hanya muncul jika role adalah 'Staf' */}
-              {role === "staf" && (
+            {/* Dropdown Peminjaman hanya muncul jika role adalah 'Staf' */}
+            {role === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
                   <ListItemButton onClick={handleClickPeminjaman}>
@@ -205,10 +213,18 @@ export default function Dashboard() {
 
                 <Collapse in={openPeminjaman} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/approval">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/loan/approval"
+                    >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/transaction/history">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/loan/transaction/history"
+                    >
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
@@ -231,10 +247,18 @@ export default function Dashboard() {
 
                 <Collapse in={openPermintaan} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/approval">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/approval"
+                    >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/transaction/history">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/transaction/history"
+                    >
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
