@@ -141,11 +141,11 @@ export default function Dashboard(props) {
             </ListItem>
             <Collapse in={openPeminjaman} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/borrowing/form">
-                  <ListItemText primary="Form Peminjaman" />
+                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/loan/approval">
+                  <ListItemText primary="Persetujuan" />
                 </ListItemButton>
-                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/borrowing/history">
-                  <ListItemText primary="Riwayat Peminjaman" />
+                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/loan/transaction/history">
+                  <ListItemText primary="Riwayat Transaksi" />
                 </ListItemButton>
               </List>
             </Collapse>
@@ -162,11 +162,11 @@ export default function Dashboard(props) {
             </ListItem>
             <Collapse in={openPermintaan} timeout="auto" unmountOnExit>
               <List component="div" disablePadding>
-                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/request/form">
-                  <ListItemText primary="Form Permintaan" />
+                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/request/approval">
+                  <ListItemText primary="Persetujuan" />
                 </ListItemButton>
-                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/request/history">
-                  <ListItemText primary="Riwayat Permintaan" />
+                <ListItemButton sx={{ pl: 4, color: "white" }} component={Link} to="/request/transaction/history">
+                  <ListItemText primary="Riwayat Transaksi" />
                 </ListItemButton>
               </List>
             </Collapse>
@@ -186,7 +186,12 @@ export default function Dashboard(props) {
 
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-            {/* konten */}
+        {/* konten */}
+        <div>
+          <Typography>
+            Hello
+          </Typography>
+        </div>
       </Box>
     </Box>
   );
