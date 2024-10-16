@@ -12,7 +12,7 @@ import {
 import { NightShelter } from '@mui/icons-material';
 
 export default function LoanApproval () {
-    const loanReaquest = [
+    const loanRequests = [
         {
             id: 1,
             name: "lala",
@@ -36,7 +36,7 @@ export default function LoanApproval () {
                         <TableRow>
                             <TableCell>No</TableCell>
                             <TableCell>Nama</TableCell>
-                            <TableCell>NIK/NIM</TableCell>
+                            <TableCell>NIK</TableCell>
                             <TableCell>Nama Barang</TableCell>
                             <TableCell>No Inventaris</TableCell>
                             <TableCell>Jumlah</TableCell>
@@ -48,14 +48,28 @@ export default function LoanApproval () {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {loanReaquest.map((request, index) => (
+                        {loanRequests.map((request, index) => (
                             <TableRow key={request.id}>
-                                
+                                <TableCell>{index + 1}</TableCell>
+                                <TableCell>{request.name}</TableCell>
+                                <TableCell>{request.nik}</TableCell>
+                                <TableCell>{request.itemName}</TableCell>
+                                <TableCell>{request.inventoryNo}</TableCell>
+                                <TableCell>{request.quantity}</TableCell>
+                                <TableCell>{request.purpose}</TableCell>
+                                <TableCell>{request.borrowDate}</TableCell>
+                                <TableCell>{request.returnDate}</TableCell>
+                                <TableCell>{request.status}</TableCell>
+                                <TableCell>
+                                    <Button variant="contained" color="primary">
+                                        Approve
+                                    </Button>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
             </TableContainer>
         </div>
-    )
+    );
 }

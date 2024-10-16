@@ -26,8 +26,9 @@ import {
   ExpandLess, 
   ExpandMore,
 } from "@mui/icons-material";
-import { Link } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import polibatam from '../assets/logoPolibatam.png';
+import LoanApproval from "./LoanApproval";
 
 const drawerWidth = 240;
 
@@ -184,14 +185,12 @@ export default function Dashboard(props) {
         </Box>
       </Drawer>
 
+      {/* konten */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-        {/* konten */}
-        <div>
-          <Typography>
-            Hello
-          </Typography>
-        </div>
+        <Routes>
+          <Route path="/loan/approval" element={<LoanApproval />} />
+        </Routes>
       </Box>
     </Box>
   );
