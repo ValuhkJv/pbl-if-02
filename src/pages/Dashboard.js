@@ -22,7 +22,7 @@ import {
   Home as HomeIcon,
   Approval as ApprovalIcon,
   FeaturedPlayList as FeaturedPlayListIcon,
-  Report as ReportIcon,
+  Summarize as SummarizeIcon,
   Handshake as HandhakeIcon,
   RequestQuote as RequestQuoteIcon,
   EventAvailable as EventAvailableIcon,
@@ -32,7 +32,7 @@ import {
 import { Link, Route, Routes } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
 
-const drawerWidth = 240;
+const drawerWidth = 280;
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -78,7 +78,7 @@ export default function Dashboard() {
         icon: <FeaturedPlayListIcon />,
         link: "/inventory",
       },
-      { text: "Laporan", icon: <ReportIcon />, link: "/report" },
+      { text: "Laporan", icon: <SummarizeIcon />, link: "/report" },
     ],
     kepalaUnit: [
       {
@@ -160,7 +160,7 @@ export default function Dashboard() {
           },
         }}
       >
-        <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1}}>
+        <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1 }}>
           <Box
             sx={{
               display: "flex", // menyusun elemen dalam satu baris
@@ -175,8 +175,8 @@ export default function Dashboard() {
               alt="logo polibatam"
               style={{ height: "70px" }}
             />
-            <Typography variant="body2" sx={{ color: "white"}}>
-              SUB-BAGIAN UMUM POLIBATAM
+            <Typography variant="body1" sx={{ color: "white" }}>
+              <strong>SBUM</strong> <br/>SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
           <Divider
@@ -191,10 +191,10 @@ export default function Dashboard() {
             {/* dashboard */}
             <ListItem disablePadding sx={{ color: "white" }}>
               <ListItemButton component={Link} to="/dashboard">
-                <ListItemIcon sx={{ color: "white" }}>
+                <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                   <HomeIcon />
                 </ListItemIcon>
-                <ListItemText primary="Dashboard" />
+                <ListItemText primary="Dashboard" sx={{ margin: 0 }} />
               </ListItemButton>
             </ListItem>
 
@@ -202,11 +202,23 @@ export default function Dashboard() {
             {role === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPeminjaman}>
-                    <ListItemIcon sx={{ color: "white" }}>
-                      <ApprovalIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Persetujuan Peminjaman" />
+                  <ListItemButton
+                    onClick={handleClickPeminjaman}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%", // pastikan lebar 100% agar konten tidak terpotong
+                      whiteSpace: "nowrap", // cegah teks terputus ke baris baru
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px"}}>
+                        <ApprovalIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Persetujuan Peminjaman" />
+                    </Box>
+                    {/* Ikon dropdown di samping */}
                     {openPeminjaman ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
                 </ListItem>
@@ -236,11 +248,29 @@ export default function Dashboard() {
             {(role === "kepalaUnit" || role === "staf") && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
-                    <ListItemIcon sx={{ color: "white" }}>
-                      <HandhakeIcon />
-                    </ListItemIcon>
-                    <ListItemText primary="Persetujuan Permintaan" />
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%", // pastikan lebar 100% agar konten tidak terpotong
+                      whiteSpace: "nowrap", // cegah teks terputus ke baris baru
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        flexGrow: 0,
+                      }}
+                    >
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px"}}>
+                        <HandhakeIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Persetujuan Permintaan" />
+                    </Box>
+                    {/* Ikon dropdown di samping */}
                     {openPermintaan ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
                 </ListItem>
@@ -270,10 +300,13 @@ export default function Dashboard() {
             {menuItems.map((item, index) => (
               <ListItem key={index} disablePadding sx={{ color: "white" }}>
                 <ListItemButton component={Link} to={item.link}>
-                  <ListItemIcon sx={{ color: "white" }}>
+                  <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText primary={item.text} />
+                  <ListItemText
+                    primary={item.text}
+                    sx={{ whiteSpace: "nowrap" }}
+                  />
                 </ListItemButton>
               </ListItem>
             ))}
