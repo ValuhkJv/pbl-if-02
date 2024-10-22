@@ -32,6 +32,8 @@ import {
 import { Link, Route, Routes } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
 import LoanApproval from "./LoanApproval";
+import Manage from "./Manage";
+import Laporan from "./Laporan";
 
 const drawerWidth = 280;
 
@@ -320,6 +322,8 @@ export default function Dashboard() {
         <Toolbar />
         <Routes>
           <Route path="/loan/approval" element={<LoanApproval />} />
+          <Route path="/inventory" element={<Manage />} />
+          <Route path="/report" element={<Laporan />} />
         </Routes>
       </Box>
     </Box>
