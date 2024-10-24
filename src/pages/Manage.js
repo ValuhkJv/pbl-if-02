@@ -77,7 +77,7 @@ function createData(no, kode, nama, stock, satuan, kategori, opsi) {
 const initialRows = [
   createData(
     1,
-    "001",
+    "003",
     "Desk Set Joyko",
     100,
     "Set",
@@ -132,13 +132,13 @@ export default function StickyHeadTable() {
             startIcon={<AddCircleIcon />}
             sx={{
               padding: "8px",
-              color: "#0C628B", 
-              borderColor: "#0C628B", 
-              backgroundColor: "#fff", 
+              color: "#0C628B",
+              borderColor: "#0C628B",
+              backgroundColor: "#fff",
               "&:hover": {
-                backgroundColor: "#242D34", 
-                borderColor: "#fff", 
-                color: "#fff", 
+                backgroundColor: "#242D34",
+                borderColor: "#fff",
+                color: "#fff",
               },
             }}
             onClick={handleTambahBarang}

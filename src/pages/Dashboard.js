@@ -179,7 +179,8 @@ export default function Dashboard() {
               style={{ height: "70px" }}
             />
             <Typography variant="body1" sx={{ color: "white" }}>
-              <strong>SBUM</strong> <br/>SUB-BAGIAN UMUM POLIBATAM
+              <strong>SBUM</strong> <br />
+              SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
           <Divider
@@ -216,7 +217,7 @@ export default function Dashboard() {
                     }}
                   >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <ListItemIcon sx={{ color: "white", minWidth: "36px"}}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
                       </ListItemIcon>
                       <ListItemText primary="Persetujuan Peminjaman" />
@@ -268,7 +269,7 @@ export default function Dashboard() {
                         flexGrow: 0,
                       }}
                     >
-                      <ListItemIcon sx={{ color: "white", minWidth: "36px"}}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandhakeIcon />
                       </ListItemIcon>
                       <ListItemText primary="Persetujuan Permintaan" />
