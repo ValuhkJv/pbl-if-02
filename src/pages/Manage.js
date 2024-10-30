@@ -11,6 +11,7 @@ import {
   TableRow,
   IconButton,
   Tooltip,
+  Grid,
 } from "@mui/material";
 
 import {
@@ -106,7 +107,7 @@ export default function StickyHeadTable() {
   };
 
   return (
-    <div>
+    <Grid>
       <h2>Barang</h2>
 
       <Paper
@@ -118,7 +119,7 @@ export default function StickyHeadTable() {
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
-        <div
+        <Grid
           style={{
             display: "flex",
             justifyContent: "flex-end",
@@ -135,6 +136,7 @@ export default function StickyHeadTable() {
               color: "#0C628B",
               borderColor: "#0C628B",
               backgroundColor: "#fff",
+              borderRadius: "8px",
               "&:hover": {
                 backgroundColor: "#242D34",
                 borderColor: "#fff",
@@ -145,7 +147,7 @@ export default function StickyHeadTable() {
           >
             Tambah Barang
           </Button>
-        </div>
+        </Grid>
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
@@ -203,7 +205,7 @@ export default function StickyHeadTable() {
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[5, 10, 20]}
-          component="div"
+          component="Grid"
           count={rows.length}
           rowsPerPage={rowsPerPage}
           page={page}
@@ -221,6 +223,6 @@ export default function StickyHeadTable() {
           }}
         />
       </Paper>
-    </div>
+    </Grid>
   );
 }

@@ -57,7 +57,7 @@ const AppBar = styled(MuiAppBar, {
 
 export default function Dashboard() {
   // Hardcode role untuk pengujian
-  const role = "staf"; // Bisa diganti dengan 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
+  const role = "kepalaUnit"; // Bisa diganti dengan 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
 

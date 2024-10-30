@@ -377,11 +377,13 @@ export default function StickyHeadTable() {
               color: "#0C628B",
               boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
               backgroundColor: "#fff",
+              borderRadius: "8px",
               "&:hover": {
                 backgroundColor: "#242D34",
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
                 color: "#fff",
               },
+              textTransform: "none",
             }}
           >
             Export to PDF
@@ -395,11 +397,13 @@ export default function StickyHeadTable() {
               backgroundColor: "#242D34",
               borderColor: "#fff",
               color: "#fff",
+              borderRadius: "8px",
               "&:hover": {
                 color: "#0C628B",
                 borderColor: "#0C628B",
                 backgroundColor: "#fff",
               },
+              textTransform: "none",
             }}
           >
             Export to Excel
