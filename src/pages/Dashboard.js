@@ -339,15 +339,15 @@ export default function Dashboard() {
       {/* konten */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
-          <Routes>
-            <Route path="/dashboard/staf" element={<DashboardStaf />} />
-            <Route path="/dashboard/unit" element={<DashboardUnit />} />
-            <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
-            <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
-            <Route path="/loan/approval" element={<LoanApproval />} />
-            <Route path="/inventory" element={<Manage />} />
-            <Route path="/report" element={<Laporan />} />
-          </Routes>
+        <Routes>
+          <Route path="/dashboard/staf" element={<DashboardStaf />} />
+          <Route path="/dashboard/unit" element={<DashboardUnit />} />
+          <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
+          <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
+          <Route path="/loan/approval" element={<LoanApproval />} />
+          <Route path="/inventory" element={<Manage />} />
+          <Route path="/report" element={<Laporan />} />
+        </Routes>
       </Box>
     </Box>
   );
