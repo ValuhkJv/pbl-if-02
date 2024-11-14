@@ -31,6 +31,10 @@ import {
 } from "@mui/icons-material";
 import { Link, Route, Routes } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
+import DashboardStaf from "./DashboardStaf";
+import DashboardUnit from "./DashboardUnit";
+import DashboardUnitHead from "./DashboardUnitHead";
+import DashboardMahasiswa from "./DashboardMahasiswa";
 import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
 import Laporan from "./Laporan";
@@ -120,6 +124,20 @@ export default function Dashboard() {
   // Get the menu items for the current role
   const menuItems = menuItemsByRole[role] || [];
 
+  // Fungsi untuk memilih dashboard berdasarkan role
+  const getDashboardComponent = () => {
+    switch (role) {
+      case "staf":
+        return <DashboardStaf />;
+      case "unit":
+        return <DashboardUnit />;
+      case "kepalaUnit":
+        return <DashboardUnitHead />;
+      case "mahasiswa":
+        return <DashboardMahasiswa />;
+    }
+  };
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
@@ -195,7 +213,7 @@ export default function Dashboard() {
           <List>
             {/* dashboard */}
             <ListItem disablePadding sx={{ color: "white" }}>
-              <ListItemButton component={Link} to="/dashboard">
+              <ListItemButton component={Link} to={`/dashboard/${role}`}>
                 <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                   <HomeIcon />
                 </ListItemIcon>
@@ -323,6 +341,10 @@ export default function Dashboard() {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <Routes>
+          <Route path="/dashboard/staf" element={<DashboardStaf />} />
+          <Route path="/dashboard/unit" element={<DashboardUnit />} />
+          <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
+          <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
           <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
