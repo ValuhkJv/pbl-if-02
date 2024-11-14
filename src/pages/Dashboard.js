@@ -34,6 +34,7 @@ import polibatam from "../assets/logoPolibatam.png";
 import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
 import Laporan from "./Laporan";
+import Request from "./Request";
 
 const drawerWidth = 280;
 
@@ -57,7 +58,7 @@ const AppBar = styled(MuiAppBar, {
 
 export default function Dashboard() {
   // Hardcode role untuk pengujian
-  const role = "kepalaUnit"; // Bisa diganti dengan 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
+  const role = "unit"; // Bisa diganti dengan 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
 
@@ -92,19 +93,19 @@ export default function Dashboard() {
       {
         text: "Peminjaman",
         icon: <EventAvailableIcon />,
-        link: "/request/transaction/history",
+        link: "/loan",
       },
     ],
     unit: [
       {
         text: "Permintaan",
         icon: <RequestQuoteIcon />,
-        link: "/loan/approval",
+        link: "/request",
       },
       {
         text: "Peminjaman",
         icon: <EventAvailableIcon />,
-        link: "/request/",
+        link: "/loan",
       },
     ],
     mahasiswa: [
@@ -325,6 +326,8 @@ export default function Dashboard() {
           <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
+          <Route path="/request" element={<Request />} />
+
         </Routes>
       </Box>
     </Box>
