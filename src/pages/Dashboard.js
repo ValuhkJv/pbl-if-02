@@ -31,10 +31,10 @@ import {
 } from "@mui/icons-material";
 import { Link, Route, Routes } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
-import DashboardStaf from "./DashboardStaf";
-import DashboardUnit from "./DashboardUnit";
-import DashboardUnitHead from "./DashboardUnitHead";
-import DashboardMahasiswa from "./DashboardMahasiswa";
+import DashboardStaf from "../component/DashboardStaf";
+import DashboardUnit from "../component/DashboardUnit";
+import DashboardUnitHead from "../component/DashboardUnitHead";
+import DashboardMahasiswa from "../component/DashboardMahasiswa";
 import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
 import Laporan from "./Laporan";
@@ -349,7 +349,6 @@ export default function Dashboard() {
           <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
           <Route path="/request" element={<Request />} />
-
         </Routes>
       </Box>
     </Box>
