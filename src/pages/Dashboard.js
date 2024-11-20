@@ -39,6 +39,7 @@ import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
 import Laporan from "./Laporan";
 import Request from "./Request";
+import Loan from "./Loan";
 
 const drawerWidth = 280;
 
@@ -62,7 +63,7 @@ const AppBar = styled(MuiAppBar, {
 
 export default function Dashboard() {
   // Hardcode role untuk pengujian
-  const role = "unit"; // Bisa diganti dengan 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
+  const role = "staf"; // Bisa diganti dengan 'staf', 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
 
@@ -139,7 +140,7 @@ export default function Dashboard() {
   };
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: "flex", bgcolor: "#EEEEEE"}}>
       <CssBaseline />
       <AppBar position="fixed" open={true} sx={{ bgcolor: "#3691BE" }}>
         <Toolbar
@@ -349,6 +350,7 @@ export default function Dashboard() {
           <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
           <Route path="/request" element={<Request />} />
+          <Route path="/loan" element={<Loan />} />
         </Routes>
       </Box>
     </Box>
