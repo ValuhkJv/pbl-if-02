@@ -136,7 +136,7 @@ export default function StickyHeadTable() {
       <Container maxWidth="sm" style={{ marginTop: 40 }}>
         <Box display="flex" alignItems="center" justifyContent="center" marginBottom={3}>
           <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
-          <Typography variant="h4" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita" }}>
+          <Typography variant="h6" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita", fontSize: "34px" }}>
             Permintaan Barang
           </Typography>
           <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
@@ -158,10 +158,10 @@ export default function StickyHeadTable() {
           backgroundColor: "#fff",
           borderRadius: "8px",
           "&:hover": {
-          backgroundColor: "#242D34",
-          borderColor: "#fff",
-          color: "#fff",
-            },
+            backgroundColor: "#242D34",
+            borderColor: "#fff",
+            color: "#fff",
+              },
           }}
         onClick={handleTambahBarang}
         >

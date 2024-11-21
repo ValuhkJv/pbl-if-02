@@ -29,35 +29,35 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-export default function LoanApproval() {
+export default function RequestHistory() {
   // state untuk menyimpan status filter
   const [filterStatus, setFilterStatus] = useState("Semua");
 
   // data dummy
-  const LoanApproval = [
+  const RequestHistory = [
     {
       id: 1,
       name: "lala",
-      nik: "2343546",
-      itemName: "infocus",
-      inventoryNo: "234567",
+      unit: "PAM",
+      jenisbarang: "Kertas A4",
       quantity: 2,
       purpose: "untuk kegiatan kuliah",
-      borrowDate: "10/09/2024",
-      returnDate: "10/15/2024",
-      status: "Menunggu persetujuan",
+      date: "10/09/2024",
+      statusPengaju: "Submited",
+      statusKepalaUnit: "Disetujui",
+      statusStafSBUM: "Menunggu Persetujuan",
     },
     {
       id: 2,
       name: "budi",
-      nik: "12345678",
-      itemName: "laptop",
-      inventoryNo: "09876",
+      unit: "12345678",
+      jenisbarang: "laptop",
       quantity: 1,
       purpose: "untuk kegiatan kuliah",
-      borrowDate: "10/10/2024",
-      returnDate: "10/18/2024",
-      status: "Disetujui",
+      date: "10/10/2024",
+      statusPengaju: "Submited",
+      statusKepalaUnit: "Disetujui",
+      statusStafSBUM: "Menunggu Persetujuan",
     },
   ];
 
@@ -76,20 +76,7 @@ export default function LoanApproval() {
         padding: "20px",
       }}
     >
-      <h2>Persetujuan Peminjaman</h2>
-      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2}}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={handleFilterChange}
-          label="Status"
-        >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Disetujui">Disetujui</MenuItem>
-          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
-          <MenuItem value="Ditolak">Ditolak</MenuItem>
-        </Select>
-      </FormControl>
+      <h2>Riwayat Transaksi Permintaan</h2>
       <div
         style={{
           display: "flex",
@@ -109,24 +96,24 @@ export default function LoanApproval() {
           overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
         }}
       >
-        <Table aria-label="loan approval table">
+        <Table aria-label="request history table">
           <TableHead>
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
               <StyledTableCell>Nama</StyledTableCell>
-              <StyledTableCell>NIK</StyledTableCell>
-              <StyledTableCell>Nama Barang</StyledTableCell>
-              <StyledTableCell>No Inventaris</StyledTableCell>
+              <StyledTableCell>Unit</StyledTableCell>
+              <StyledTableCell>Jenis Barang</StyledTableCell>
               <StyledTableCell>Jumlah</StyledTableCell>
-              <StyledTableCell>Keperluan</StyledTableCell>
-              <StyledTableCell>Tanggal Pinjam</StyledTableCell>
-              <StyledTableCell>Tanggal Kembali</StyledTableCell>
-              <StyledTableCell>Status</StyledTableCell>
+              <StyledTableCell>Uraian</StyledTableCell>
+              <StyledTableCell>Tanggal</StyledTableCell>
+              <StyledTableCell>Status Pengaju</StyledTableCell>
+              <StyledTableCell>Status Kepala Unit</StyledTableCell>
+              <StyledTableCell>Status Staf SBUM</StyledTableCell>
               <StyledTableCell>Aksi</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {LoanApproval
+            {RequestHistory
               .filter(
                 (request) =>
                   filterStatus === "Semua" || request.status === filterStatus
@@ -135,19 +122,15 @@ export default function LoanApproval() {
                 <StyledTableRow key={request.id}>
                   <StyledTableCell>{index + 1}</StyledTableCell>
                   <StyledTableCell>{request.name}</StyledTableCell>
-                  <StyledTableCell>{request.nik}</StyledTableCell>
-                  <StyledTableCell>{request.itemName}</StyledTableCell>
-                  <StyledTableCell>{request.inventoryNo}</StyledTableCell>
+                  <StyledTableCell>{request.unit}</StyledTableCell>
+                  <StyledTableCell>{request.jenisbarang}</StyledTableCell>
                   <StyledTableCell>{request.quantity}</StyledTableCell>
                   <StyledTableCell>{request.purpose}</StyledTableCell>
-                  <StyledTableCell>{request.borrowDate}</StyledTableCell>
-                  <StyledTableCell>{request.returnDate}</StyledTableCell>
-                  <StyledTableCell>{request.status}</StyledTableCell>
-                  <StyledTableCell>
-                    <Button variant="contained" color="primary">
-                      Approve
-                    </Button>
-                  </StyledTableCell>
+                  <StyledTableCell>{request.date}</StyledTableCell>
+                  <StyledTableCell>{request.statusPengaju}</StyledTableCell>
+                  <StyledTableCell>{request.statusKepalaUnit}</StyledTableCell>
+                  <StyledTableCell>{request.statusStafSBUM}</StyledTableCell>
+                  <StyledTableCell></StyledTableCell>
                 </StyledTableRow>
               ))}
           </TableBody>

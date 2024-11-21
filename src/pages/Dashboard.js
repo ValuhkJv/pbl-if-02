@@ -35,10 +35,16 @@ import DashboardStaf from "../component/DashboardStaf";
 import DashboardUnit from "../component/DashboardUnit";
 import DashboardUnitHead from "../component/DashboardUnitHead";
 import DashboardMahasiswa from "../component/DashboardMahasiswa";
-import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
+import Loan from "./Loan";
+import LoanApproval from "./LoanApproval";
+import LoanHistory from "./LoanHistory";
+import Request from "./Request";
+import RequestApproval from "./RequestApproval";
+import RequestHistory from "./RequestHistory";
 import Laporan from "./Laporan";
 import Request from "./Request";
+import Loan from "./Loan";
 
 const drawerWidth = 280;
 
@@ -131,7 +137,7 @@ export default function Dashboard() {
       {
         text: "Peminjaman",
         icon: <EventAvailableIcon />,
-        link: "/loan/approval",
+        link: "/loan",
       },
     ],
   };
@@ -370,12 +376,12 @@ export default function Dashboard() {
           <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
-          <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/inventory" element={<Manage />} />
-          <Route path="/report" element={<Laporan />} />
+          <Route path="/loan" element={<Loan />} />
+          <Route path="/loan/approval" element={<LoanApproval />} />
+          <Route path="/loan/transaction/history" element={<LoanHistory />} />
           <Route path="/request" element={<Request />} />
-          {/* Jika role tidak sesuai, arahkan kembali ke login */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="/loan" element={<Loan />} />
         </Routes>
       </Box>
     </Box>
