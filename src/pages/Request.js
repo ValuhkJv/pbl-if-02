@@ -186,7 +186,7 @@ export default function Request() {
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          style={{ marginBottom: "20px" }}
+          style={{ marginBottom: "20px"}}
           onClick={handleTambahData}
         >
           Tambah Request

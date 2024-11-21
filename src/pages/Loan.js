@@ -22,70 +22,84 @@ import {
 
 const columns = [
   { id: "no", label: "No", minWidth: 80 },
+  { id: "nama", label: "Nama", minWidth: 100, align: "center" },
+  { id: "nik", label: "NIK/NIM", minWidth: 170, align: "center" },
+  { id: "namaBarang", label: "Nama Barang", minWidth: 100, align: "center" },
   {
-    id: "kode",
-    label: (
-      <>
-        Kode/No. <br />
-        Inventaris Barang
-      </>
-    ),
+    id: "noInventaris",
+    label: "No Inventaris",
     minWidth: 100,
     align: "center",
-    wrap: true,
   },
+  { id: "jumlah", label: "Jumlah", minWidth: 100, align: "center" },
+  { id: "keperluan", label: "Keperluan", minWidth: 100, align: "center" },
   {
-    id: "nama",
-    label: "Nama Barang",
-    minWidth: 170,
-    align: "center",
-    format: (value) => value.toLocaleString("en-US"),
-  },
-  {
-    id: "stock",
-    label: "Stock",
+    id: "tanggalPinjam",
+    label: "Tanggal Pinjam",
     minWidth: 100,
     align: "center",
-    format: (value) => value.toLocaleString("en-US"),
   },
   {
-    id: "satuan",
-    label: "Satuan",
+    id: "tanggalKembali",
+    label: "Tanggal Kembali",
     minWidth: 100,
     align: "center",
-    format: (value) => value.toFixed(2),
   },
-  {
-    id: "kategori",
-    label: "Kategori",
-    minWidth: 100,
-    align: "center",
-    format: (value) => value.toFixed(2),
-  },
-  {
-    id: "opsi",
-    label: "Opsi",
-    minWidth: 100,
-    align: "center",
-    format: (value) => value.toFixed(2),
-  },
+  { id: "status", label: "Status", minWidth: 100, align: "center" },
+  { id: "aksi", label: "Aksi", minWidth: 100, align: "center" },
 ];
 
-function createData(no, kode, nama, stock, satuan, kategori, opsi) {
-  return { no, kode, nama, stock, satuan, kategori, opsi };
+function createData(
+  no,
+  nama,
+  nik,
+  namaBarang,
+  noInventaris,
+  jumlah,
+  keperluan,
+  tanggalPinjam,
+  tanggalKembali,
+  status
+) {
+  return {
+    no,
+    nama,
+    nik,
+    namaBarang,
+    noInventaris,
+    jumlah,
+    keperluan,
+    tanggalPinjam,
+    tanggalKembali,
+    status,
+  };
 }
 
 const initialRows = [
   createData(
     1,
-    "003",
-    "Desk Set Joyko",
-    100,
-    "Set",
-    "Persediaan Barang Konsumsi"
+    "Salma",
+    "1001",
+    "Laptop",
+    "INV-001",
+    1,
+    "Tugas Akhir",
+    "2024-11-20",
+    "2024-11-22",
+    "Dipinjam"
   ),
-  createData(2, "002", "Kotak Tisu", 200, "Pcs", "Barang Rumah Tangga"),
-  createData(3, "003", "Bendera", 4, "Pcs", "Peminjaman"),
+  createData(
+    2,
+    "Andi",
+    "1002",
+    "Proyektor",
+    "INV-002",
+    2,
+    "Presentasi",
+    "2024-11-19",
+    "2024-11-21",
+    "Dikembalikan"
+  ),
 ];
 
 export default function StickyHeadTable() {
@@ -108,8 +122,7 @@ export default function StickyHeadTable() {
 
   return (
     <Grid>
-      <h2>Barang</h2>
-
+      <h2>Peminjaman Barang</h2>
       <Paper
         sx={{
           width: "100%",
@@ -145,7 +158,7 @@ export default function StickyHeadTable() {
             }}
             onClick={handleTambahBarang}
           >
-            Tambah Barang
+            Ajukan Peminjaman
           </Button>
         </Grid>
         <TableContainer sx={{ maxHeight: 440 }}>
@@ -172,10 +185,9 @@ export default function StickyHeadTable() {
                     <TableRow hover role="checkbox" tabIndex={-1} key={row.no}>
                       {columns.map((column) => {
                         const value = row[column.id];
-                        if (column.id === "opsi") {
+                        if (column.id === "aksi") {
                           return (
                             <TableCell key={column.id} align="center">
-                              {/* Adjusted alignment of icons */}
                               <Tooltip title="Edit">
                                 <IconButton style={{ color: "#0C628B" }}>
                                   <BorderColorOutlinedIcon />
@@ -191,9 +203,7 @@ export default function StickyHeadTable() {
                         }
                         return (
                           <TableCell key={column.id} align={column.align}>
-                            {column.format && typeof value === "number"
-                              ? column.format(value)
-                              : value}
+                            {value}
                           </TableCell>
                         );
                       })}
@@ -205,7 +215,7 @@ export default function StickyHeadTable() {
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[5, 10, 20]}
-          component="Grid"
+          component="div"
           count={rows.length}
           rowsPerPage={rowsPerPage}
           page={page}
@@ -216,10 +226,6 @@ export default function StickyHeadTable() {
             "& .MuiTablePagination-toolbar": {
               padding: "16px",
             },
-            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
-              {
-                margin: 0,
-              },
           }}
         />
       </Paper>
