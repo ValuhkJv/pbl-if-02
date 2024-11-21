@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link, Route, Routes, Navigate } from "react-router-dom";
+import { useNavigate, Link, Route, Routes } from "react-router-dom";
 import {
   Box,
   AppBar as MuiAppBar,
@@ -43,8 +43,6 @@ import Request from "./Request";
 import RequestApproval from "./RequestApproval";
 import RequestHistory from "./RequestHistory";
 import Laporan from "./Laporan";
-import Request from "./Request";
-import Loan from "./Loan";
 
 const drawerWidth = 280;
 
@@ -377,11 +375,13 @@ export default function Dashboard() {
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
           <Route path="/inventory" element={<Manage />} />
+          <Route path="/report" element={<Laporan />} />
           <Route path="/loan" element={<Loan />} />
           <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/loan/transaction/history" element={<LoanHistory />} />
           <Route path="/request" element={<Request />} />
-          <Route path="/loan" element={<Loan />} />
+          <Route path="/request/approval" element={<RequestApproval />} />
+          <Route path="/request/history" element={<RequestHistory />} />
         </Routes>
       </Box>
     </Box>
