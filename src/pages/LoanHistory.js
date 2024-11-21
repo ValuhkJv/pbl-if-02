@@ -29,12 +29,12 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-export default function LoanApproval() {
+export default function LoanHistory() {
   // state untuk menyimpan status filter
   const [filterStatus, setFilterStatus] = useState("Semua");
 
   // data dummy
-  const LoanApproval = [
+  const loanHistory = [
     {
       id: 1,
       name: "lala",
@@ -76,20 +76,7 @@ export default function LoanApproval() {
         padding: "20px",
       }}
     >
-      <h2>Persetujuan Peminjaman</h2>
-      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2}}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={handleFilterChange}
-          label="Status"
-        >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Disetujui">Disetujui</MenuItem>
-          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
-          <MenuItem value="Ditolak">Ditolak</MenuItem>
-        </Select>
-      </FormControl>
+      <h2>Riwayat Transaksi Peminjaman</h2>
       <div
         style={{
           display: "flex",
@@ -109,7 +96,7 @@ export default function LoanApproval() {
           overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
         }}
       >
-        <Table aria-label="loan approval table">
+        <Table aria-label="loan history table">
           <TableHead>
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
@@ -126,28 +113,24 @@ export default function LoanApproval() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {LoanApproval
+            {loanHistory
               .filter(
-                (request) =>
-                  filterStatus === "Semua" || request.status === filterStatus
+                (history) =>
+                  filterStatus === "Semua" || history.status === filterStatus
               )
-              .map((request, index) => (
-                <StyledTableRow key={request.id}>
+              .map((history, index) => (
+                <StyledTableRow key={history.id}>
                   <StyledTableCell>{index + 1}</StyledTableCell>
-                  <StyledTableCell>{request.name}</StyledTableCell>
-                  <StyledTableCell>{request.nik}</StyledTableCell>
-                  <StyledTableCell>{request.itemName}</StyledTableCell>
-                  <StyledTableCell>{request.inventoryNo}</StyledTableCell>
-                  <StyledTableCell>{request.quantity}</StyledTableCell>
-                  <StyledTableCell>{request.purpose}</StyledTableCell>
-                  <StyledTableCell>{request.borrowDate}</StyledTableCell>
-                  <StyledTableCell>{request.returnDate}</StyledTableCell>
-                  <StyledTableCell>{request.status}</StyledTableCell>
-                  <StyledTableCell>
-                    <Button variant="contained" color="primary">
-                      Approve
-                    </Button>
-                  </StyledTableCell>
+                  <StyledTableCell>{history.name}</StyledTableCell>
+                  <StyledTableCell>{history.nik}</StyledTableCell>
+                  <StyledTableCell>{history.itemName}</StyledTableCell>
+                  <StyledTableCell>{history.inventoryNo}</StyledTableCell>
+                  <StyledTableCell>{history.quantity}</StyledTableCell>
+                  <StyledTableCell>{history.purpose}</StyledTableCell>
+                  <StyledTableCell>{history.borrowDate}</StyledTableCell>
+                  <StyledTableCell>{history.returnDate}</StyledTableCell>
+                  <StyledTableCell>{history.status}</StyledTableCell>
+                  <StyledTableCell></StyledTableCell>
                 </StyledTableRow>
               ))}
           </TableBody>
