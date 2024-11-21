@@ -1,316 +1,270 @@
-import React, { useState, useEffect } from "react";
+import * as React from "react";
 import {
+  Button,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
-  Paper,
-  Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  CircularProgress,
-  Typography,
-  Modal,
-  Box,
-  TextField,
   IconButton,
+  Tooltip,
+  Grid,
+  Box,
+  Divider,
+  Typography,
+  Container
 } from "@mui/material";
+
 import {
-  Add as AddIcon,
-  Close as CloseIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
+  BorderColorOutlined as BorderColorOutlinedIcon,
+  DeleteOutlined as DeleteOutlinedIcon,
+  AddCircle as AddCircleIcon,
 } from "@mui/icons-material";
-import { styled } from "@mui/system";
-import RequestItems from "./RequestItems"; // Import RequestItems di sini
 
-const StyledTableCell = styled(TableCell)({
-  border: "1px solid #ddd",
-  padding: "8px",
-});
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
+const columns = [
+  { id: "no", label: "No", minWidth: 80 },
+  {
+    id: "nama",
+    label: "Nama",
+    minWidth: 100,
+    align: "center",
   },
-  "&:hover": {
-    backgroundColor: theme.palette.action.selected,
+  {
+    id: "nik",
+    label: "NIK/NIM",
+    minWidth: 100,
+    align: "center",
   },
-}));
+  {
+    id: "nama_barang",
+    label: "Nama Barang",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "no_inventaris",
+    label: "No Inventaris",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "jumlah",
+    label: "Jumlah",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "keperluan",
+    label: "Keperluan",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "tanggal_pinjam",
+    label: "Tanggal Pinjam",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "tanggal_kembali",
+    label: "Tanggal Kembali",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "status",
+    label: "Status",
+    minWidth: 100,
+    align: "center",
+  },
+  {
+    id: "aksi",
+    label: "Aksi",
+    minWidth: 120,
+    align: "center",
+  },
+];
 
-export default function Request() {
-  const [filterStatus, setFilterStatus] = useState("Semua");
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openModal, setOpenModal] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState(null); // Menyimpan request yang dipilih
-  const [formData, setFormData] = useState({
-    user_id: "",
-    request_date: "",
-    purpose: "",
-    requester_status: "Submitted",
-    head_unit_status: "Pending",
-    sbum_staff_status: "Pending",
-  });
+function createData(no,  nama, nik, nama_barang, no_inventaris, jumlah, keperluan, tanggal_pinjam, tanggal_kembali, status, aksi) {
+  return { no, nama, nik, nama_barang, no_inventaris, jumlah, keperluan, tanggal_pinjam, tanggal_kembali, status, aksi };
+}
 
-  // Handle perubahan dropdown
-  const handleFilterChange = (event) => {
-    setFilterStatus(event.target.value);
+const initialRows = [
+  createData(
+    1,
+    "lala melala",
+    "123456",
+    "Desk Set Joyko",
+    "g12",
+    2,
+    "Kegiatan kuliah",
+    "10/09/2024",
+    "17/09/2024",
+    "Menunggu Persetujuan",
+    null
+  ),
+  createData(2, "lili", "123457", "Kotak Tisu", "g13", 9, "Pelengkap", "10/09/2024", "16/09/2024", "Menunggu Persetujuan", null),
+  createData(3, "lulu", "123458", "Bendera", "g14", 4, "Pelengkap", "10/09/2024", "15/09/2024", "Menunggu Persetujuan", null),
+  createData(4, "lele", "123459", "HVS", "g15", 12, "Pelengkap", "11/10/2024", "20/10/2024", "Menunggu Persetujuan", null),
+
+];
+
+export default function StickyHeadTable() {
+  const [page, setPage] = React.useState(0);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+  const [rows, setRows] = React.useState(initialRows);
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  const fetchRequests = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/requests");
-      const data = await response.json();
-      console.log(data);
-      if (Array.isArray(data) && data.length > 0) {
-        setRequests(data);
-      } else {
-        console.log("No requests found or data is empty");
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching requests:", error);
-      setLoading(false);
-    }
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
   };
 
-  const handleTambahData = () => {
-    setIsEditing(false);
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-    setFormData({
-      user_id: "",
-      request_date: "",
-      purpose: "",
-      requester_status: "Submitted",
-      head_unit_status: "Pending",
-      sbum_staff_status: "Pending",
-    });
-  };
-
-  const handleEdit = (request) => {
-    setIsEditing(true);
-    setFormData(request);
-    setOpenModal(true);
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await fetch(`http://localhost:5000/requests/${id}`, { method: "DELETE" });
-      setRequests(requests.filter((req) => req.request_id !== id));
-    } catch (error) {
-      console.error("Error deleting request:", error);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const method = isEditing ? "PUT" : "POST";
-    const url = isEditing
-      ? `http://localhost:5000/requests/${formData.request_id}`
-      : "http://localhost:5000/requests";
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const result = await response.json();
-      if (isEditing) {
-        setRequests(
-          requests.map((req) =>
-            req.request_id === formData.request_id ? formData : req
-          )
-        );
-      } else {
-        setRequests([...requests, result]);
-      }
-      // Setelah menyimpan request, tampilkan RequestItems dengan request_id yang baru
-      setSelectedRequest(result); // Set request yang baru ditambahkan atau diedit
-      handleCloseModal();
-    } catch (error) {
-      console.error("Error saving request:", error);
-    }
-  };
-
-  if (loading) {
-    return <CircularProgress />;
-  }
-
-  const formatTanggal = (dateString) => {
-    const tanggal = new Date(dateString);
-    return tanggal.toLocaleDateString("id-ID"); // Atau gunakan "en-GB" untuk format dd/mm/yyyy
+  const handleTambahBarang = () => {
+    alert("Tambah Barang clicked");
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        marginTop: "15px",
-        borderRadius: "12px",
-        padding: "20px",
-      }}
-    >
-      <h2>Permintaan Barang</h2>
-      {/* Filter status */}
-      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2 }}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={handleFilterChange}
-          label="Status"
-        >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Disetujui">Disetujui</MenuItem>
-          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
-          <MenuItem value="Ditolak">Ditolak</MenuItem>
-        </Select>
-      </FormControl>
+    <Grid>
+      
+      <Container maxWidth="sm" style={{ marginTop: 40 }}>
+        <Box display="flex" alignItems="center" justifyContent="center" marginBottom={3}>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+          <Typography variant="h4" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita" }}>
+            Permintaan Barang
+          </Typography>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+        </Box>
+      </Container>
 
-      {/* Table of requests */}
-      <TableContainer component={Paper}>
+      <Box 
+        display="flex"
+        alignItems="center"
+        justifyContent="flex-end"
+        marginBottom={2}
+      >
         <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          style={{ marginBottom: "20px"}}
-          onClick={handleTambahData}
+          startIcon={<AddCircleIcon />}
+          sx={{
+          padding: "8px",
+          color: "#0C628B",
+          borderColor: "#0C628B",
+          backgroundColor: "#fff",
+          borderRadius: "8px",
+          "&:hover": {
+          backgroundColor: "#242D34",
+          borderColor: "#fff",
+          color: "#fff",
+            },
+          }}
+        onClick={handleTambahBarang}
         >
-          Tambah Request
+          Tambah Barang
         </Button>
-        <Table>
-          <TableHead>
-            <StyledTableRow>
-              <StyledTableCell>No</StyledTableCell>
-              <StyledTableCell>User ID</StyledTableCell>
-              <StyledTableCell>Date</StyledTableCell>
-              <StyledTableCell>Purpose</StyledTableCell>
-              <StyledTableCell>Status Pengaju</StyledTableCell>
-              <StyledTableCell>Status Kepala Unit</StyledTableCell>
-              <StyledTableCell>Status Staff</StyledTableCell>
-              <StyledTableCell>Actions</StyledTableCell>
-            </StyledTableRow>
-          </TableHead>
-          <TableBody>
-            {requests.map((request, index) => (
-              <StyledTableRow key={request.request_id}>
-                <StyledTableCell>{index + 1}</StyledTableCell>
-                <StyledTableCell>{request.user_id}</StyledTableCell>
-                <StyledTableCell>
-                  {formatTanggal(request.request_date)}
-                </StyledTableCell>
-                <StyledTableCell>{request.purpose}</StyledTableCell>
-                <StyledTableCell>{request.requester_status}</StyledTableCell>
-                <StyledTableCell>{request.head_unit_status}</StyledTableCell>
-                <StyledTableCell>{request.sbum_staff_status}</StyledTableCell>
-                <TableCell>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleEdit(request)}
-                    sx={{ mr: 1 }}
+      </Box>
+          
+      <Paper
+        sx={{
+          width: "100%",
+          overflow: "hidden",
+          mt: "10px",
+          borderRadius: "5px",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        }}
+      >
+        <Grid
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            backgroundColor: "#0C628B",
+            padding: "10px",
+            borderBottom: "1px solid #e0e0e0",
+          }}
+        >
+          
+        </Grid>
+        <TableContainer sx={{ maxHeight: 440 }}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    align={column.align}
+                    style={{ minWidth: column.minWidth }}
+                    sx={{ color: "#333", fontWeight: "bold" }}
                   >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    color="secondary"
-                    onClick={() => handleDelete(request.request_id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </StyledTableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        {/* Modal for adding/editing request */}
-        <Modal open={openModal} onClose={handleCloseModal}>
-          <Box
-            sx={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: 400,
-              bgcolor: "background.paper",
-              boxShadow: 24,
-              p: 4,
-            }}
-          >
-            <Typography variant="h6" gutterBottom>
-              {isEditing ? "Edit Request" : "Tambah Request"}
-              <IconButton
-                aria-label="close"
-                onClick={handleCloseModal}
-                sx={{ position: "absolute", right: 8, top: 8 }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </Typography>
-            <form onSubmit={handleSubmit}>
-              {/* Form fields for request */}
-              <TextField
-                fullWidth
-                margin="normal"
-                id="user_id"
-                label="User ID"
-                value={formData.user_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, user_id: e.target.value })
-                }
-              />
-              <TextField
-                fullWidth
-                margin="normal"
-                type="date"
-                id="request_date"
-                name="request_date"
-                value={formData.request_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, request_date: e.target.value })
-                }
-              />
-              <TextField
-                fullWidth
-                margin="normal"
-                id="purpose"
-                name="purpose"
-                label="Purpose"
-                value={formData.purpose}
-                onChange={(e) =>
-                  setFormData({ ...formData, purpose: e.target.value })
-                }
-              />
-              <Button
-                type="submit"
-                variant="contained"
-                color="primary"
-                style={{ marginTop: "10px" }}
-              >
-                {isEditing ? "Update" : "Simpan"}
-              </Button>
-            </form>
-          </Box>
-        </Modal>
-      </TableContainer>
-
-      {/* Jika ada request yang dipilih, tampilkan RequestItems */}
-      {selectedRequest && (
-        <RequestItems requestId={selectedRequest.request_id} />
-      )}
-    </div>
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row) => {
+                  return (
+                    <TableRow hover role="checkbox" tabIndex={-1} key={row.no}>
+                      {columns.map((column) => {
+                        const value = row[column.id];
+                        if (column.id === "aksi") {
+                          return (
+                            <TableCell key={column.id} align="center">
+                              {/* Adjusted alignment of icons */}
+                              <Tooltip title="Edit">
+                                <IconButton style={{ color: "#0C628B" }}>
+                                  <BorderColorOutlinedIcon />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton style={{ color: "#0C628B" }}>
+                                  <DeleteOutlinedIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          );
+                        }
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            {column.format && typeof value === "number"
+                              ? column.format(value)
+                              : value}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 20]}
+          component="Grid"
+          count={rows.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{
+            borderTop: "1px solid #e0e0e0",
+            "& .MuiTablePagination-toolbar": {
+              padding: "16px",
+            },
+            "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+              {
+                margin: 0,
+              },
+          }}
+        />
+      </Paper>
+    </Grid>
   );
 }
