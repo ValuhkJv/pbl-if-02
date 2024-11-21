@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link, Route, Routes } from "react-router-dom";
+import React, { useState } from "react";
 import {
   Box,
   AppBar as MuiAppBar,
@@ -24,12 +23,13 @@ import {
   Approval as ApprovalIcon,
   FeaturedPlayList as FeaturedPlayListIcon,
   Summarize as SummarizeIcon,
-  Handshake as HandhakeIcon,
+  Handshake as HandshakeIcon,
   RequestQuote as RequestQuoteIcon,
   EventAvailable as EventAvailableIcon,
   ExpandLess,
   ExpandMore,
 } from "@mui/icons-material";
+import { Link, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
 import DashboardStaf from "../component/DashboardStaf";
 import DashboardUnit from "../component/DashboardUnit";
@@ -65,28 +65,23 @@ const AppBar = styled(MuiAppBar, {
 }));
 
 export default function Dashboard() {
-  // Hardcode role untuk pengujian
+  const user = JSON.parse(localStorage.getItem('user'));
+  const role = user ? user.role : null;  
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
-  const user = JSON.parse(localStorage.getItem("user"));
-  const role = user?.role || "mahasiswa"; // Default ke "guest" jika role tidak ada
-  const navigate = useNavigate(); // Mendapatkan useNavigate
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Cek apakah pengguna ada dan apakah role-nya sesuai
-    if (!user) {
-      navigate("/"); // Arahkan ke halaman login jika tidak ada pengguna
-    } else {
-      const allowedRoles = ["staf", "kepalaUnit", "unit", "mahasiswa"];
-      if (!allowedRoles.includes(user.role)) {
-        navigate("/"); // Arahkan ke halaman login jika role tidak diizinkan
-      }
-    }
-  }, [user, navigate]);
+  // Jika tidak ada user, redirect ke halaman login
+  if (!role) {
+    return <Navigate to="/" />;
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem("user"); // Hapus user saat logout
-    window.location.href = "/"; // Redirect ke halaman login
+    // Hapus data user dari localStorage
+    localStorage.removeItem('user');
+    
+    // Redirect ke halaman login
+    navigate('/');
   };
 
   const handleClickPeminjaman = () => {
@@ -97,7 +92,6 @@ export default function Dashboard() {
     setOpenPermintaan(!openPermintaan);
   };
 
-  // Define the sidebar items for each role
   const menuItemsByRole = {
     staf: [
       {
@@ -140,31 +134,7 @@ export default function Dashboard() {
     ],
   };
 
-  useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (user) {
-      switch (user.role) {
-        case "staf":
-          navigate("/dashboard/staf");
-          break;
-        case "kepalaUnit":
-          navigate("/dashboard/kepalaUnit");
-          break;
-        case "unit":
-          navigate("/dashboard/unit");
-          break;
-        case "mahasiswa":
-          navigate("/dashboard/mahasiswa");
-          break;
-        default:
-          navigate("/");
-      }
-    } else {
-      navigate("/");
-    }
-  }, [navigate]);
 
-  // Get the menu items for the current role
   const menuItems = menuItemsByRole[role] || [];
 
   return (
@@ -179,26 +149,15 @@ export default function Dashboard() {
             minHeight: "80px !important",
           }}
         >
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-          >
+          <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
             <MenuIcon sx={{ fontSize: 30 }} />
           </IconButton>
-          <IconButton
-            size="large"
-            color="inherit"
-            aria-label="logout"
-            onClick={handleLogout}
-          >
+          <IconButton size="large" color="inherit" aria-label="logout" onClick={handleLogout}>
             <AccountCircleIcon sx={{ fontSize: 30 }} />
           </IconButton>
         </Toolbar>
       </AppBar>
 
-      {/* sidebar */}
       <Drawer
         variant="permanent"
         sx={{
@@ -212,83 +171,44 @@ export default function Dashboard() {
         }}
       >
         <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1 }}>
-          <Box
-            sx={{
-              display: "flex", // menyusun elemen dalam satu baris
-              alignItems: "center", // menyelaraskan logo dan teks secara vertikal
-              textAlign: "left", // menjaga teks rata kiri
-              height: "80px",
-              padding: "20px 0",
-            }}
-          >
-            <img
-              src={polibatam}
-              alt="logo polibatam"
-              style={{ height: "70px" }}
-            />
+          <Box sx={{ display: "flex", alignItems: "center", height: "80px", padding: "20px 0" }}>
+            <img src={polibatam} alt="logo polibatam" style={{ height: "70px" }} />
             <Typography variant="body1" sx={{ color: "white" }}>
-              <strong>SBUM</strong> <br />
-              SUB-BAGIAN UMUM POLIBATAM
+              <strong>SBUM</strong> <br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
-          <Divider
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.3)", // warna putih dengan opacity 50%
-              height: "1px",
-              margin: "8px 0",
-            }}
-          />
+          <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.3)", height: "1px", margin: "8px 0" }} />
 
           <List>
-            {/* dashboard */}
             <ListItem disablePadding sx={{ color: "white" }}>
               <ListItemButton component={Link} to={`/dashboard/${role}`}>
                 <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                   <HomeIcon />
                 </ListItemIcon>
-                <ListItemText primary="Dashboard" sx={{ margin: 0 }} />
+                <ListItemText primary="Dashboard" />
               </ListItemButton>
             </ListItem>
 
-            {/* Dropdown Peminjaman hanya muncul jika role adalah 'Staf' */}
             {role === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton
-                    onClick={handleClickPeminjaman}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%", // pastikan lebar 100% agar konten tidak terpotong
-                      whiteSpace: "nowrap", // cegah teks terputus ke baris baru
-                    }}
-                  >
+                  <ListItemButton onClick={handleClickPeminjaman}>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
                       </ListItemIcon>
                       <ListItemText primary="Persetujuan Peminjaman" />
                     </Box>
-                    {/* Ikon dropdown di samping */}
                     {openPeminjaman ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
                 </ListItem>
 
                 <Collapse in={openPeminjaman} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/loan/approval"
-                    >
+                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/approval">
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/loan/transaction/history"
-                    >
+                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/transaction/history">
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
@@ -296,51 +216,26 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Dropdown Permintaan hanya muncul jika role adalah 'Kepala Unit' atau 'Staf' */}
             {(role === "kepalaUnit" || role === "staf") && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton
-                    onClick={handleClickPermintaan}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%", // pastikan lebar 100% agar konten tidak terpotong
-                      whiteSpace: "nowrap", // cegah teks terputus ke baris baru
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        flexGrow: 0,
-                      }}
-                    >
+                  <ListItemButton onClick={handleClickPermintaan}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
-                        <HandhakeIcon />
+                        <HandshakeIcon />
                       </ListItemIcon>
                       <ListItemText primary="Persetujuan Permintaan" />
                     </Box>
-                    {/* Ikon dropdown di samping */}
                     {openPermintaan ? <ExpandLess /> : <ExpandMore />}
                   </ListItemButton>
                 </ListItem>
 
                 <Collapse in={openPermintaan} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/request/approval"
-                    >
+                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/approval">
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/request/transaction/history"
-                    >
+                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/transaction/history">
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
@@ -348,17 +243,11 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* Render menu items based on the role */}
             {menuItems.map((item, index) => (
               <ListItem key={index} disablePadding sx={{ color: "white" }}>
                 <ListItemButton component={Link} to={item.link}>
-                  <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{ whiteSpace: "nowrap" }}
-                  />
+                  <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.text} />
                 </ListItemButton>
               </ListItem>
             ))}
@@ -366,11 +255,10 @@ export default function Dashboard() {
         </Box>
       </Drawer>
 
-      {/* konten */}
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <Routes>
-          <Route path="/dashboard/staf" element={<DashboardStaf />} />
+        <Route path="/dashboard/staf" element={<DashboardStaf />} />
           <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
@@ -382,6 +270,31 @@ export default function Dashboard() {
           <Route path="/request" element={<Request />} />
           <Route path="/request/approval" element={<RequestApproval />} />
           <Route path="/request/history" element={<RequestHistory />} />
+          {/* Route spesifik untuk setiap role */}
+        {role === 'staf' && (
+          <Route 
+            path="/dashboard/staf" 
+            element={<DashboardStaf />} 
+          />
+        )}
+        {role === 'unit' && (
+          <Route 
+            path="/dashboard/unit" 
+            element={<DashboardUnit />} 
+          />
+        )}
+        {role === 'kepalaUnit' && (
+          <Route 
+            path="/dashboard/kepalaUnit" 
+            element={<DashboardUnitHead />} 
+          />
+        )}
+        {role === 'mahasiswa' && (
+          <Route 
+            path="/dashboard/mahasiswa" 
+            element={<DashboardMahasiswa />} 
+          />
+        )}
         </Routes>
       </Box>
     </Box>
