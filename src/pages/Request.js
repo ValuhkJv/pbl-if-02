@@ -12,6 +12,10 @@ import {
   IconButton,
   Tooltip,
   Grid,
+  Box,
+  Divider,
+  Typography,
+  Container
 } from "@mui/material";
 
 import {
@@ -128,14 +132,49 @@ export default function StickyHeadTable() {
 
   return (
     <Grid>
-      <h2>Permintaan Barang</h2>
+      
+      <Container maxWidth="sm" style={{ marginTop: 40 }}>
+        <Box display="flex" alignItems="center" justifyContent="center" marginBottom={3}>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+          <Typography variant="h4" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita" }}>
+            Permintaan Barang
+          </Typography>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+        </Box>
+      </Container>
 
+      <Box 
+        display="flex"
+        alignItems="center"
+        justifyContent="flex-end"
+        marginBottom={2}
+      >
+        <Button
+          startIcon={<AddCircleIcon />}
+          sx={{
+          padding: "8px",
+          color: "#0C628B",
+          borderColor: "#0C628B",
+          backgroundColor: "#fff",
+          borderRadius: "8px",
+          "&:hover": {
+          backgroundColor: "#242D34",
+          borderColor: "#fff",
+          color: "#fff",
+            },
+          }}
+        onClick={handleTambahBarang}
+        >
+          Tambah Barang
+        </Button>
+      </Box>
+          
       <Paper
         sx={{
           width: "100%",
           overflow: "hidden",
           mt: "10px",
-          borderRadius: "12px",
+          borderRadius: "5px",
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         }}
       >
@@ -145,28 +184,11 @@ export default function StickyHeadTable() {
             justifyContent: "flex-end",
             alignItems: "center",
             backgroundColor: "#0C628B",
-            padding: "24px",
+            padding: "10px",
             borderBottom: "1px solid #e0e0e0",
           }}
         >
-          <Button
-            startIcon={<AddCircleIcon />}
-            sx={{
-              padding: "8px",
-              color: "#0C628B",
-              borderColor: "#0C628B",
-              backgroundColor: "#fff",
-              borderRadius: "8px",
-              "&:hover": {
-                backgroundColor: "#242D34",
-                borderColor: "#fff",
-                color: "#fff",
-              },
-            }}
-            onClick={handleTambahBarang}
-          >
-            Tambah Barang
-          </Button>
+          
         </Grid>
         <TableContainer sx={{ maxHeight: 440 }}>
           <Table stickyHeader aria-label="sticky table">
