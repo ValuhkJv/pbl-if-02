@@ -1,4 +1,5 @@
-import { useState } from "react";
+import React, { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -18,7 +19,53 @@ import backgroundImage from "../assets/tekno.png";
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState("");
+
+  const handleRoleChange = (e) => {
+    setUserRole(e.target.value);
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post("http://localhost:5000/login", {
+        username,
+        password,
+        role: userRole,
+      });
+
+      console.log("Response from server:", response.data); // Debugging
+      const { user } = response.data;
+      
+
+      // Simpan data pengguna (opsional, misalnya di localStorage)
+      localStorage.setItem("user", JSON.stringify(user));
+
+      // Arahkan ke dashboard sesuai role
+      switch (user.role) {
+        case "staf":
+          navigate("/dashboard/staf");
+          break;
+        case "kepalaUnit":
+          navigate("/dashboard/kepalaUnit");
+          break;
+        case "unit":
+          navigate("/dashboard/unit");
+          break;
+        case "mahasiswa":
+          navigate("/dashboard/mahasiswa");
+          break;
+        default:
+          setError("Role tidak dikenali");
+      }
+    } catch (err) {
+      console.error('Login error:', err); // Debugging
+      setError("Invalid username or password");
+    }
+  };
 
   return (
     <Container
@@ -68,14 +115,20 @@ const Login = () => {
         >
           Sub Bagian Umum Polibatam
         </Typography>
-        <Box component="form" sx={{ mt: 1 }}>
+        <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
           {/*dropdown jenis user */}
           <Box display="flex" justifyContent="center">
-            <FormControl fullWidth margin="normal" required>
+            <FormControl
+              fullWidth
+              margin="normal"
+              required
+            >
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
                 labelId="jenis-user-label"
                 id="jenis-user"
+                value={userRole}
+                onChange={handleRoleChange}
                 label="Jenis User"
                 fullWidth
                 sx={{
@@ -106,6 +159,8 @@ const Login = () => {
             name="username"
             autoComplete="username"
             autoFocus
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             InputProps={{
               sx: {
                 borderRadius: "10px", // menambahka1n border raadius
@@ -123,13 +178,15 @@ const Login = () => {
             type="password"
             id="password"
             autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             InputProps={{
               sx: {
                 borderRadius: "10px", // menambahkan border raadius
               },
             }}
           />
-
+          {error && <p style={{ color: "red" }}>{error}</p>}
           <Button
             type="submit"
             fullWidth

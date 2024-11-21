@@ -1,18 +1,25 @@
+require('dotenv').config(); // Load environment variables from .env file
 const express = require("express");
 const { Pool } = require("pg");
+const bodyParser = require('body-parser');
 const cors = require("cors");
 const app = express();
 const PORT = 5000;
+
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
+// Database connection
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "ciaL3perum",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
+
 db.connect((err) => {
   if (err) {
     console.error("Error connection to database :", err);
@@ -22,6 +29,43 @@ db.connect((err) => {
 });
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+      // Cek apakah username ada di database
+      const query = 'SELECT * FROM users WHERE username = $1';
+      const result = await db.query(query, [username]);
+
+      console.log(result.rows); // Debugging query result
+
+      if (result.rows.length === 0) {
+          return res.status(401).json({ message: 'Invalid username or password' });
+      }
+
+      const user = result.rows[0];
+
+      // Cocokkan password plaintext
+      if (password !== user.password) {
+          return res.status(401).json({ message: 'Invalid username or password' });
+      }
+
+      // Jika berhasil login
+      res.status(200).json({
+          message: 'Login successful',
+          user: {
+              id: user.id,
+              username: user.username,
+              role: user.role,
+              nama: user.nama,
+          },
+      });
+  } catch (error) {
+      console.error('Error during login:', error);
+      res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.get("/requests", async (req, res) => {
@@ -113,3 +157,4 @@ app.delete("/requests/:id", async (req, res) => {
     res.status(500).send("Error deleting request");
   }
 });
+

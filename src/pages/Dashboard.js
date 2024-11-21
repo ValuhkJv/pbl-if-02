@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link, Route, Routes, Navigate } from "react-router-dom";
 import {
   Box,
   AppBar as MuiAppBar,
@@ -29,7 +30,6 @@ import {
   ExpandLess,
   ExpandMore,
 } from "@mui/icons-material";
-import { Link, Route, Routes } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
 import DashboardStaf from "../component/DashboardStaf";
 import DashboardUnit from "../component/DashboardUnit";
@@ -39,7 +39,6 @@ import LoanApproval from "./LoanApproval";
 import Manage from "./Manage";
 import Laporan from "./Laporan";
 import Request from "./Request";
-import Loan from "./Loan";
 
 const drawerWidth = 280;
 
@@ -63,12 +62,27 @@ const AppBar = styled(MuiAppBar, {
 
 export default function Dashboard() {
   // Hardcode role untuk pengujian
-  const role = "unit"; // Bisa diganti dengan 'staf', 'kepalaUnit', 'unit', 'mahasiswa'/ receive role as prop
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user?.role || "mahasiswa"; // Default ke "guest" jika role tidak ada
+  const navigate = useNavigate(); // Mendapatkan useNavigate
+
+  useEffect(() => {
+    // Cek apakah pengguna ada dan apakah role-nya sesuai
+    if (!user) {
+      navigate("/"); // Arahkan ke halaman login jika tidak ada pengguna
+    } else {
+      const allowedRoles = ["staf", "kepalaUnit", "unit", "mahasiswa"];
+      if (!allowedRoles.includes(user.role)) {
+        navigate("/"); // Arahkan ke halaman login jika role tidak diizinkan
+      }
+    }
+  }, [user, navigate]);
 
   const handleLogout = () => {
-    console.log("Logout diklik");
+    localStorage.removeItem("user"); // Hapus user saat logout
+    window.location.href = "/"; // Redirect ke halaman login
   };
 
   const handleClickPeminjaman = () => {
@@ -122,25 +136,35 @@ export default function Dashboard() {
     ],
   };
 
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      switch (user.role) {
+        case "staf":
+          navigate("/dashboard/staf");
+          break;
+        case "kepalaUnit":
+          navigate("/dashboard/kepalaUnit");
+          break;
+        case "unit":
+          navigate("/dashboard/unit");
+          break;
+        case "mahasiswa":
+          navigate("/dashboard/mahasiswa");
+          break;
+        default:
+          navigate("/");
+      }
+    } else {
+      navigate("/");
+    }
+  }, [navigate]);
+
   // Get the menu items for the current role
   const menuItems = menuItemsByRole[role] || [];
 
-  // Fungsi untuk memilih dashboard berdasarkan role
-  const getDashboardComponent = () => {
-    switch (role) {
-      case "staf":
-        return <DashboardStaf />;
-      case "unit":
-        return <DashboardUnit />;
-      case "kepalaUnit":
-        return <DashboardUnitHead />;
-      case "mahasiswa":
-        return <DashboardMahasiswa />;
-    }
-  };
-
   return (
-    <Box sx={{ display: "flex", bgcolor: "#EEEEEE"}}>
+    <Box sx={{ display: "flex" }}>
       <CssBaseline />
       <AppBar position="fixed" open={true} sx={{ bgcolor: "#3691BE" }}>
         <Toolbar
@@ -350,7 +374,8 @@ export default function Dashboard() {
           <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
           <Route path="/request" element={<Request />} />
-          <Route path="/loan" element={<Loan />} />
+          {/* Jika role tidak sesuai, arahkan kembali ke login */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Box>
     </Box>
