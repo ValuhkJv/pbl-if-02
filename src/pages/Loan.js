@@ -147,14 +147,14 @@ export default function StickyHeadTable() {
           startIcon={<AddCircleIcon />}
           sx={{
           padding: "8px",
-          color: "#0C628B",
-          borderColor: "#0C628B",
-          backgroundColor: "#fff",
+          color: "#fff",
+          backgroundColor: "#0C628B",
+          borderColor: "#fff",
           borderRadius: "8px",
           "&:hover": {
-            backgroundColor: "#242D34",
-            borderColor: "#fff",
-            color: "#fff",
+            borderColor: "#0C628B",
+            backgroundColor: "#3691BE ",
+            color: "#0C628B",
               },
           }}
           onClick={handleTambahBarang}
