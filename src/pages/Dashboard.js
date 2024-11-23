@@ -65,10 +65,11 @@ const AppBar = styled(MuiAppBar, {
 }));
 
 export default function Dashboard() {
-  const user = JSON.parse(localStorage.getItem('user'));
-  const role = user ? user.role : null;  
+  const user = JSON.parse(localStorage.getItem("user"));
+  const role = user ? user.role : null;
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
+  const [openManajemenBarang, setOpenManajemenBarang] = useState(false);
   const navigate = useNavigate();
 
   // Jika tidak ada user, redirect ke halaman login
@@ -78,10 +79,10 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     // Hapus data user dari localStorage
-    localStorage.removeItem('user');
-    
+    localStorage.removeItem("user");
+
     // Redirect ke halaman login
-    navigate('/');
+    navigate("/");
   };
 
   const handleClickPeminjaman = () => {
@@ -92,15 +93,12 @@ export default function Dashboard() {
     setOpenPermintaan(!openPermintaan);
   };
 
+  const handleClickManajemenBarang = () => {
+    setOpenManajemenBarang(!openManajemenBarang);
+  };
+
   const menuItemsByRole = {
-    staf: [
-      {
-        text: "Manajemen Barang",
-        icon: <FeaturedPlayListIcon />,
-        link: "/inventory",
-      },
-      { text: "Laporan", icon: <SummarizeIcon />, link: "/report" },
-    ],
+    staf: [{ text: "Laporan", icon: <SummarizeIcon />, link: "/report" }],
     kepalaUnit: [
       {
         text: "Permintaan",
@@ -134,7 +132,6 @@ export default function Dashboard() {
     ],
   };
 
-
   const menuItems = menuItemsByRole[role] || [];
 
   return (
@@ -149,10 +146,20 @@ export default function Dashboard() {
             minHeight: "80px !important",
           }}
         >
-          <IconButton edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            sx={{ mr: 2 }}
+          >
             <MenuIcon sx={{ fontSize: 30 }} />
           </IconButton>
-          <IconButton size="large" color="inherit" aria-label="logout" onClick={handleLogout}>
+          <IconButton
+            size="large"
+            color="inherit"
+            aria-label="logout"
+            onClick={handleLogout}
+          >
             <AccountCircleIcon sx={{ fontSize: 30 }} />
           </IconButton>
         </Toolbar>
@@ -171,13 +178,30 @@ export default function Dashboard() {
         }}
       >
         <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1 }}>
-          <Box sx={{ display: "flex", alignItems: "center", height: "80px", padding: "20px 0" }}>
-            <img src={polibatam} alt="logo polibatam" style={{ height: "70px" }} />
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              height: "80px",
+              padding: "20px 0",
+            }}
+          >
+            <img
+              src={polibatam}
+              alt="logo polibatam"
+              style={{ height: "70px" }}
+            />
             <Typography variant="body1" sx={{ color: "white" }}>
               <strong>SBUM</strong> <br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
-          <Divider sx={{ backgroundColor: "rgba(255, 255, 255, 0.3)", height: "1px", margin: "8px 0" }} />
+          <Divider
+            sx={{
+              backgroundColor: "rgba(255, 255, 255, 0.3)",
+              height: "1px",
+              margin: "8px 0",
+            }}
+          />
 
           <List>
             <ListItem disablePadding sx={{ color: "white" }}>
@@ -192,7 +216,16 @@ export default function Dashboard() {
             {role === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPeminjaman}>
+                  <ListItemButton
+                    onClick={handleClickPeminjaman}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
@@ -205,21 +238,34 @@ export default function Dashboard() {
 
                 <Collapse in={openPeminjaman} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/approval">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/loan/approval"
+                    >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/loan/transaction/history">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/loan/transaction/history"
+                    >
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
                 </Collapse>
-              </>
-            )}
 
-            {(role === "kepalaUnit" || role === "staf") && (
-              <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />
@@ -232,10 +278,100 @@ export default function Dashboard() {
 
                 <Collapse in={openPermintaan} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/approval">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/approval"
+                    >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton sx={{ pl: 8, color: "white" }} component={Link} to="/request/transaction/history">
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/history"
+                    >
+                      <ListItemText primary="Riwayat Transaksi" />
+                    </ListItemButton>
+                  </List>
+                </Collapse>
+
+                <ListItem disablePadding sx={{ color: "white" }}>
+                  <ListItemButton onClick={handleClickManajemenBarang}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
+                        <FeaturedPlayListIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Manajemen Barang" />
+                    </Box>
+                    {openManajemenBarang ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+
+                <Collapse in={openManajemenBarang} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/manage/barangkonsumsi"
+                    >
+                      <ListItemText primary="Persediaan Barang Konsumsi" />
+                    </ListItemButton>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/manage/barangrt"
+                    >
+                      <ListItemText primary="Barang Rumah Tangga" />
+                    </ListItemButton>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/manage/barangpeminjaman"
+                    >
+                      <ListItemText primary="Peminjaman" />
+                    </ListItemButton>
+                  </List>
+                </Collapse>
+              </>
+            )}
+
+            {role === "kepalaUnit" && (
+              <>
+                <ListItem disablePadding sx={{ color: "white" }}>
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
+                        <HandshakeIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Persetujuan Permintaan" />
+                    </Box>
+                    {openPermintaan ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+
+                <Collapse in={openPermintaan} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/approval"
+                    >
+                      <ListItemText primary="Persetujuan" />
+                    </ListItemButton>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/request/history"
+                    >
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
                   </List>
@@ -246,7 +382,9 @@ export default function Dashboard() {
             {menuItems.map((item, index) => (
               <ListItem key={index} disablePadding sx={{ color: "white" }}>
                 <ListItemButton component={Link} to={item.link}>
-                  <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>{item.icon}</ListItemIcon>
+                  <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
+                    {item.icon}
+                  </ListItemIcon>
                   <ListItemText primary={item.text} />
                 </ListItemButton>
               </ListItem>
@@ -258,7 +396,7 @@ export default function Dashboard() {
       <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
         <Toolbar />
         <Routes>
-        <Route path="/dashboard/staf" element={<DashboardStaf />} />
+          <Route path="/dashboard/staf" element={<DashboardStaf />} />
           <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
@@ -271,30 +409,24 @@ export default function Dashboard() {
           <Route path="/request/approval" element={<RequestApproval />} />
           <Route path="/request/history" element={<RequestHistory />} />
           {/* Route spesifik untuk setiap role */}
-        {role === 'staf' && (
-          <Route 
-            path="/dashboard/staf" 
-            element={<DashboardStaf />} 
-          />
-        )}
-        {role === 'unit' && (
-          <Route 
-            path="/dashboard/unit" 
-            element={<DashboardUnit />} 
-          />
-        )}
-        {role === 'kepalaUnit' && (
-          <Route 
-            path="/dashboard/kepalaUnit" 
-            element={<DashboardUnitHead />} 
-          />
-        )}
-        {role === 'mahasiswa' && (
-          <Route 
-            path="/dashboard/mahasiswa" 
-            element={<DashboardMahasiswa />} 
-          />
-        )}
+          {role === "staf" && (
+            <Route path="/dashboard/staf" element={<DashboardStaf />} />
+          )}
+          {role === "unit" && (
+            <Route path="/dashboard/unit" element={<DashboardUnit />} />
+          )}
+          {role === "kepalaUnit" && (
+            <Route
+              path="/dashboard/kepalaUnit"
+              element={<DashboardUnitHead />}
+            />
+          )}
+          {role === "mahasiswa" && (
+            <Route
+              path="/dashboard/mahasiswa"
+              element={<DashboardMahasiswa />}
+            />
+          )}
         </Routes>
       </Box>
     </Box>
