@@ -38,9 +38,10 @@ const Login = () => {
       });
 
       console.log("Response from server:", response.data); // Debugging
-      const { user } = response.data;
-      
+      const { token, user } = response.data;
 
+      // Simpan token ke localStorage
+      localStorage.setItem("token", token);
       // Simpan data pengguna (opsional, misalnya di localStorage)
       localStorage.setItem("user", JSON.stringify(user));
 
@@ -62,7 +63,7 @@ const Login = () => {
           setError("Role tidak dikenali");
       }
     } catch (err) {
-      console.error('Login error:', err); // Debugging
+      console.error("Login error:", err); // Debugging
       setError("Invalid username or password");
     }
   };
@@ -118,11 +119,7 @@ const Login = () => {
         <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
           {/*dropdown jenis user */}
           <Box display="flex" justifyContent="center">
-            <FormControl
-              fullWidth
-              margin="normal"
-              required
-            >
+            <FormControl fullWidth margin="normal" required>
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
                 labelId="jenis-user-label"

@@ -319,7 +319,7 @@ export default function Dashboard() {
                     <ListItemButton
                       sx={{ pl: 8, color: "white" }}
                       component={Link}
-                      to="/manage/barangrt"
+                      to="/manage/barang"
                     >
                       <ListItemText primary="Barang Rumah Tangga" />
                     </ListItemButton>
