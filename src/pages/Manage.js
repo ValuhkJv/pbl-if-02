@@ -56,13 +56,6 @@ const columns = [
     format: (value) => value.toFixed(2),
   },
   {
-    id: "kategori",
-    label: "Kategori",
-    minWidth: 100,
-    align: "center",
-    format: (value) => value.toFixed(2),
-  },
-  {
     id: "opsi",
     label: "Opsi",
     minWidth: 100,
@@ -71,8 +64,8 @@ const columns = [
   },
 ];
 
-function createData(no, kode, nama, stock, satuan, kategori, opsi) {
-  return { no, kode, nama, stock, satuan, kategori, opsi };
+function createData(no, kode, nama, stock, satuan,  opsi) {
+  return { no, kode, nama, stock, satuan,  opsi };
 }
 
 const initialRows = [
@@ -82,10 +75,10 @@ const initialRows = [
     "Desk Set Joyko",
     100,
     "Set",
-    "Persediaan Barang Konsumsi"
+    
   ),
-  createData(2, "002", "Kotak Tisu", 200, "Pcs", "Barang Rumah Tangga"),
-  createData(3, "003", "Bendera", 4, "Pcs", "Peminjaman"),
+  createData(2, "002", "Kotak Tisu", 200, "Pcs"),
+  createData(3, "003", "Bendera", 4, "Pcs"),
 ];
 
 export default function StickyHeadTable() {
@@ -137,6 +130,7 @@ export default function StickyHeadTable() {
               borderColor: "#0C628B",
               backgroundColor: "#fff",
               borderRadius: "8px",
+              boxShadow: "-moz-initial",
               "&:hover": {
                 backgroundColor: "#242D34",
                 borderColor: "#fff",
