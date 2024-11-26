@@ -12,6 +12,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Container,
+  Box,
+  Divider,
+  Typography
 } from "@mui/material";
 import { styled } from "@mui/system";
 
@@ -67,16 +71,18 @@ export default function RequestApproval() {
   };
 
   return (
-    <div
-      style={{
-        width: "100%",
-        marginTop: "15px",
-        borderRadius: "12px",
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        padding: "20px",
-      }}
-    >
-      <h2>Persetujuan Permintaan</h2>
+    <div>
+
+      <Container maxWidth="sm" style={{ marginTop: 40 }}>
+        <Box display="flex" alignItems="center" justifyContent="center" marginBottom={3}>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+          <Typography variant="h6" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita", fontSize: "27px" }}>
+            Persetujuan Permintaan
+          </Typography>
+          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
+        </Box>
+      </Container>
+
       <FormControl variant="outlined" sx={{ minWidth: 200, my: 2}}>
         <InputLabel>Status</InputLabel>
         <Select
@@ -96,16 +102,16 @@ export default function RequestApproval() {
           justifyContent: "flex-start",
           alignItems: "center",
           backgroundColor: "#0C628B",
-          padding: "25px",
-          borderTopLeftRadius: "12px",
-          borderTopRightRadius: "12px",
+          padding: "10px",
+          borderTopLeftRadius: "5px",
+          borderTopRightRadius: "5px",
           borderBottom: "1px solid #e0e0e0",
         }}
       ></div>
       <TableContainer
         component={Paper}
         sx={{
-          borderRadius: "12px", // Border-radius untuk tabel
+          borderRadius: "5px", // Border-radius untuk tabel
           overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
         }}
       >
