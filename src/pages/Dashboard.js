@@ -138,7 +138,7 @@ export default function Dashboard() {
   const menuItems = menuItemsByRole[role] || [];
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: "flex", bgcolor: "#e0e0e0"}}>
       <CssBaseline />
       <AppBar position="fixed" open={true} sx={{ bgcolor: "#3691BE" }}>
         <Toolbar

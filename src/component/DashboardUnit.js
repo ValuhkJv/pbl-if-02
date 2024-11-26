@@ -18,7 +18,7 @@ function Dashboard() {
         <Typography variant="subtitle1" gutterBottom style={{ fontWeight: "bold" }}>
           Panduan 1
         </Typography>
-        <Paper style={{ height: 150, backgroundColor: "#e0e0e0" }} elevation={0} />
+        <Paper style={{ height: 150, backgroundColor: "#9e9e9e" }} elevation={0} />
       </Box>
 
       {/* Panduan 2 */}
@@ -26,7 +26,7 @@ function Dashboard() {
         <Typography variant="subtitle1" gutterBottom style={{ fontWeight: "bold" }}>
           Panduan 2
         </Typography>
-        <Paper style={{ height: 150, backgroundColor: "#e0e0e0" }} elevation={0} />
+        <Paper style={{ height: 150, backgroundColor: "#9e9e9e" }} elevation={0} />
       </Box>
     </Container>
   );

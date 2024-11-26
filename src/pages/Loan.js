@@ -1,257 +1,215 @@
-import * as React from "react";
+import React, { useState } from "react";
 import {
+  Box,
+  TextField,
   Button,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
+  Paper,
+  Typography,
   IconButton,
-  Tooltip,
   Grid,
-  Container,
-  Box,
   Divider,
-  Typography
 } from "@mui/material";
+import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
 
-import {
-  BorderColorOutlined as BorderColorOutlinedIcon,
-  DeleteOutlined as DeleteOutlinedIcon,
-  AddCircle as AddCircleIcon,
-} from "@mui/icons-material";
+const PeminjamanBarang = () => {
+  const [kodeBarang, setKodeBarang] = useState("");
+  const [namaBarang, setNamaBarang] = useState("");
+  const [kategori, setKategori] = useState("");
+  const [satuan, setSatuan] = useState("");
+  const [jumlah, setJumlah] = useState(1);
+  const [peminjam, setPeminjam] = useState("Toni");
+  const [items, setItems] = useState([]);
 
-const columns = [
-  { id: "no", label: "No", minWidth: 80 },
-  { id: "nama", label: "Nama", minWidth: 100, align: "center" },
-  { id: "nik", label: "NIK/NIM", minWidth: 170, align: "center" },
-  { id: "namaBarang", label: "Nama Barang", minWidth: 100, align: "center" },
-  {
-    id: "noInventaris",
-    label: "No Inventaris",
-    minWidth: 100,
-    align: "center",
-  },
-  { id: "jumlah", label: "Jumlah", minWidth: 100, align: "center" },
-  { id: "keperluan", label: "Keperluan", minWidth: 100, align: "center" },
-  {
-    id: "tanggalPinjam",
-    label: "Tanggal Pinjam",
-    minWidth: 100,
-    align: "center",
-  },
-  {
-    id: "tanggalKembali",
-    label: "Tanggal Kembali",
-    minWidth: 100,
-    align: "center",
-  },
-  { id: "status", label: "Status", minWidth: 100, align: "center" },
-  { id: "aksi", label: "Aksi", minWidth: 100, align: "center" },
-];
-
-function createData(
-  no,
-  nama,
-  nik,
-  namaBarang,
-  noInventaris,
-  jumlah,
-  keperluan,
-  tanggalPinjam,
-  tanggalKembali,
-  status
-) {
-  return {
-    no,
-    nama,
-    nik,
-    namaBarang,
-    noInventaris,
-    jumlah,
-    keperluan,
-    tanggalPinjam,
-    tanggalKembali,
-    status,
-  };
-}
-
-const initialRows = [
-  createData(
-    1,
-    "Salma",
-    "1001",
-    "Laptop",
-    "INV-001",
-    1,
-    "Tugas Akhir",
-    "2024-11-20",
-    "2024-11-22",
-    "Dipinjam"
-  ),
-  createData(
-    2,
-    "Andi",
-    "1002",
-    "Proyektor",
-    "INV-002",
-    2,
-    "Presentasi",
-    "2024-11-19",
-    "2024-11-21",
-    "Dikembalikan"
-  ),
-];
-
-export default function StickyHeadTable() {
-  const [page, setPage] = React.useState(0);
-  const [rowsPerPage, setRowsPerPage] = React.useState(10);
-  const [rows, setRows] = React.useState(initialRows);
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
+  const handleAddItem = () => {
+    if (kodeBarang && namaBarang && kategori && satuan && jumlah > 0) {
+      setItems([
+        ...items,
+        { kodeBarang, namaBarang, kategori, satuan, jumlah },
+      ]);
+      setKodeBarang("");
+      setNamaBarang("");
+      setKategori("");
+      setSatuan("");
+      setJumlah(1);
+    }
   };
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
+  const handleReset = () => {
+    setKodeBarang("");
+    setNamaBarang("");
+    setKategori("");
+    setSatuan("");
+    setJumlah(1);
   };
 
-  const handleTambahBarang = () => {
-    alert("Tambah Barang clicked");
+  const handleDeleteItem = (index) => {
+    if (index >= 0 && index < items.length) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
+  const handlePinjam = () => {
+    alert("Barang berhasil dipinjam!");
+    setItems([]);
   };
 
   return (
     <Grid>
-
-      <Container maxWidth="sm" style={{ marginTop: 40 }}>
-        <Box display="flex" alignItems="center" justifyContent="center" marginBottom={3}>
-          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
-          <Typography variant="h6" style={{ margin: "0 10px", color: "#000000", fontWeight: "bold", fontFamily: "Sansita", fontSize: "34px" }}>
-            Peminjaman Barang
-          </Typography>
-          <Divider style={{ width: "20%", backgroundColor: "#0C628B" }} />
-        </Box>
-      </Container>
-
-      <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="flex-end"
-        marginBottom={2}
-      >
-        <Button
-          startIcon={<AddCircleIcon />}
-          sx={{
-          padding: "8px",
-          color: "#fff",
-          backgroundColor: "#0C628B",
-          borderColor: "#fff",
-          borderRadius: "8px",
-          "&:hover": {
-            borderColor: "#0C628B",
-            backgroundColor: "#3691BE ",
-            color: "#0C628B",
-              },
-          }}
-          onClick={handleTambahBarang}
-          >
-            Ajukan Peminjaman
-          </Button>
-      </Box>
-
+      <Typography variant="h4" gutterBottom mb={5} mt={5}>
+        Peminjaman Barang
+      </Typography>
       <Paper
         sx={{
           width: "100%",
-          overflow: "hidden",
-          mt: "10px",
-          borderRadius: "5px",
+          marginTop: "15px",
+          borderRadius: "12px",
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          padding: "20px",
         }}
       >
-        <Grid
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            backgroundColor: "#0C628B",
-            padding: "10px",
-            borderBottom: "1px solid #e0e0e0",
-          }}
-        >
-          
-        </Grid>
-        <TableContainer sx={{ maxHeight: 440 }}>
-          <Table stickyHeader aria-label="sticky table">
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    align={column.align}
-                    style={{ minWidth: column.minWidth }}
-                    sx={{ color: "#333", fontWeight: "bold" }}
-                  >
-                    {column.label}
-                  </TableCell>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Input Barang Masuk
+          </Typography>
+          <Divider />
+        </Box>
+
+        <Box p={4}>
+          <Box display="flex" gap={2} mb={3}>
+            <TextField
+              label="No Transaksi Peminjaman"
+              value="IT-0001"
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="Tanggal"
+              value="02 Apr 2023"
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="Jam"
+              value="10:54:05"
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="Nama Peminjam"
+              value={peminjam}
+              onChange={(e) => setPeminjam(e.target.value)}
+            />
+          </Box>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#0C628B",
+              padding: "10px",
+              borderTopLeftRadius: "12px",
+              borderTopRightRadius: "12px",
+              borderBottom: "1px solid #e0e0e0",
+            }}
+          >
+            <Typography variant="h6" gutterBottom color="white">
+              Input Faktur Barang Masuk
+            </Typography>
+          </div>
+
+          <Box display="flex" gap={2} mb={2} mt={3}>
+            <TextField
+              label="Kode Barang"
+              value={kodeBarang}
+              onChange={(e) => setKodeBarang(e.target.value)}
+            />
+            <TextField
+              label="Nama Barang"
+              value={namaBarang}
+              onChange={(e) => setNamaBarang(e.target.value)}
+            />
+            <TextField
+              label="Kategori"
+              value={kategori}
+              onChange={(e) => setKategori(e.target.value)}
+            />
+            <TextField
+              label="Satuan"
+              value={satuan}
+              onChange={(e) => setSatuan(e.target.value)}
+            />
+            <TextField
+              type="number"
+              label="Jumlah"
+              value={jumlah}
+              onChange={(e) => setJumlah(e.target.value)}
+            />
+            <Box display="flex" gap={2} mb={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                onClick={handleAddItem}
+              >
+                Tambah
+              </Button>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<Replay />}
+                onClick={handleReset}
+              >
+                Ulang
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<ShoppingCart />}
+                onClick={handlePinjam}
+                disabled={items.length === 0}
+              >
+                Pinjam
+              </Button>
+            </Box>
+          </Box>
+
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Kode Barang</TableCell>
+                  <TableCell>Nama Barang</TableCell>
+                  <TableCell>Kategori</TableCell>
+                  <TableCell>QTY</TableCell>
+                  <TableCell>Aksi</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{item.kodeBarang}</TableCell>
+                    <TableCell>{item.namaBarang}</TableCell>
+                    <TableCell>{item.kategori}</TableCell>
+                    <TableCell>{item.jumlah}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDeleteItem(index)}
+                      >
+                        <Close />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((row) => {
-                  return (
-                    <TableRow hover role="checkbox" tabIndex={-1} key={row.no}>
-                      {columns.map((column) => {
-                        const value = row[column.id];
-                        if (column.id === "aksi") {
-                          return (
-                            <TableCell key={column.id} align="center">
-                              <Tooltip title="Edit">
-                                <IconButton style={{ color: "#0C628B" }}>
-                                  <BorderColorOutlinedIcon />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton style={{ color: "#0C628B" }}>
-                                  <DeleteOutlinedIcon />
-                                </IconButton>
-                              </Tooltip>
-                            </TableCell>
-                          );
-                        }
-                        return (
-                          <TableCell key={column.id} align={column.align}>
-                            {value}
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  );
-                })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 20]}
-          component="div"
-          count={rows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          sx={{
-            borderTop: "1px solid #e0e0e0",
-            "& .MuiTablePagination-toolbar": {
-              padding: "16px",
-            },
-          }}
-        />
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
       </Paper>
     </Grid>
   );
-}
+};
+
+export default PeminjamanBarang;

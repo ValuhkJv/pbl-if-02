@@ -17,7 +17,7 @@ const secretKey = 'react';
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "12345",
   database: "subbagian",
   port: 5432,
 });
