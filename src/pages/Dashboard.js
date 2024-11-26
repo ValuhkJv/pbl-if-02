@@ -43,6 +43,9 @@ import Request from "./Request";
 import RequestApproval from "./RequestApproval";
 import RequestHistory from "./RequestHistory";
 import Laporan from "./Laporan";
+import Barangkonsumsi from "./Barangkonsumsi";
+import Barangpeminjaman from "./Barangpeminjaman";
+import Barangrt from "./Barangrt";
 
 const drawerWidth = 280;
 
@@ -319,7 +322,7 @@ export default function Dashboard() {
                     <ListItemButton
                       sx={{ pl: 8, color: "white" }}
                       component={Link}
-                      to="/manage/barang"
+                      to="/manage/barangrt"
                     >
                       <ListItemText primary="Barang Rumah Tangga" />
                     </ListItemButton>
@@ -408,6 +411,9 @@ export default function Dashboard() {
           <Route path="/request" element={<Request />} />
           <Route path="/request/approval" element={<RequestApproval />} />
           <Route path="/request/history" element={<RequestHistory />} />
+          <Route path="/manage/barangkonsumsi" element={<Barangkonsumsi />} />
+          <Route path="/manage/barangrt" element={<Barangrt />} />
+          <Route path="/manage/barangpeminjaman" element={<Barangpeminjaman />} />
           {/* Route spesifik untuk setiap role */}
           {role === "staf" && (
             <Route path="/dashboard/staf" element={<DashboardStaf />} />
