@@ -1,0 +1,1672 @@
+const express = require("express");
+const { Pool } = require("pg");
+const cors = require("cors");
+const app = express();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const uploadDir = 'uploads/';
+const PORT = 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+const jwt = require("jsonwebtoken");
+const secretKey = "react";
+
+// Database connection
+const db = new Pool({
+  host: "localhost",
+  user: "postgres",
+  password: "password",
+  database: "subbagian",
+  port: 5432,
+});
+
+db.connect((err) => {
+  if (err) {
+    console.error("Error connection to database :", err);
+    return;
+  }
+  console.log("Connected to the Database");
+});
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+// Middleware untuk autentikasi
+const authenticateToken = (req, res, next) => {
+  const token = req.headers["authorization"];
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Access denied. No token provided." });
+  }
+
+  try {
+    const decoded = jwt.verify(token, secretKey);
+    req.user = decoded; // Simpan payload token ke req.user
+    next();
+  } catch (err) {
+    res.status(403).json({ message: "Invalid or expired token." });
+  }
+};
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+app.use('/uploads', express.static('uploads'));
+
+
+// Multer configuration for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
+
+// Endpoint login
+app.post("/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const query = "SELECT * FROM users WHERE username = $1 AND password = $2";
+    const result = await db.query(query, [username, password]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    const user = result.rows[0];
+
+    // Generate JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        nama: user.nama,
+        nim_nik_nidn: user.nim_nik_nidn,
+      },
+      secretKey,
+      { expiresIn: "1h" }
+    );
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        nama: user.nama,
+        nim_nik_nidn: user.nim_nik_nidn,
+      },
+    });
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET all barang konsumsi
+app.get("/barang-konsumsi", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM barang_konsumsi");
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error fetching barang konsumsi" });
+  }
+});
+
+// POST barang konsumsi
+app.post("/barang-konsumsi", async (req, res) => {
+  const { kode_barang, nama_barang, stok, satuan } = req.body;
+
+  try {
+    const result = await db.query(
+      "INSERT INTO barang_konsumsi (kode_barang, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
+      [kode_barang, nama_barang, stok, satuan]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505") {
+      // Unique constraint violation
+      res.status(409).json({ error: "Kode barang already exists" });
+    } else {
+      console.error(err);
+      res.status(500).json({ error: "Failed to insert barang konsumsi" });
+    }
+  }
+});
+
+// PUT barang konsumsi
+app.put("/barang-konsumsi/:id", async (req, res) => {
+  const { id } = req.params;
+  const { kode_barang, nama_barang, stok, satuan } = req.body;
+  try {
+    const result = await db.query(
+      "UPDATE barang_konsumsi SET kode_barang = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
+      [kode_barang, nama_barang, stok, satuan, id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang konsumsi not found" });
+    } else {
+      res.status(200).json(result.rows[0]);
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error updating barang konsumsi" });
+  }
+});
+
+// DELETE barang konsumsi
+app.delete("/barang-konsumsi/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query(
+      "DELETE FROM barang_konsumsi WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang konsumsi not found" });
+    } else {
+      res
+        .status(200)
+        .json({ message: "Barang konsumsi deleted", data: result.rows[0] });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error deleting barang konsumsi" });
+  }
+});
+
+// GET all barang rt
+app.get("/barangrt", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM barang_rt");
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error fetching barang rt" });
+  }
+});
+
+// POST barang rt
+app.post("/barangrt", async (req, res) => {
+  const { kode_barang, nama_barang, stok, satuan } = req.body;
+
+  try {
+    const result = await db.query(
+      "INSERT INTO barang_rt (kode_barang, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
+      [kode_barang, nama_barang, stok, satuan]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505") {
+      // Unique constraint violation
+      res.status(409).json({ error: "Kode barang already exists" });
+    } else {
+      console.error(err);
+      res.status(500).json({ error: "Failed to insert barang rt" });
+    }
+  }
+});
+
+// PUT barang rt
+app.put("/barangrt/:id", async (req, res) => {
+  const { id } = req.params;
+  const { kode_barang, nama_barang, stok, satuan } = req.body;
+  try {
+    const result = await db.query(
+      "UPDATE barang_rt SET kode_barang = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
+      [kode_barang, nama_barang, stok, satuan, id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang rt not found" });
+    } else {
+      res.status(200).json(result.rows[0]);
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error updating barang rt" });
+  }
+});
+
+// DELETE barang rt
+app.delete("/barangrt/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query(
+      "DELETE FROM barang_rt WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang rt not found" });
+    } else {
+      res
+        .status(200)
+        .json({ message: "Barang rt deleted", data: result.rows[0] });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error deleting barang rt" });
+  }
+});
+
+// GET all barang peminjaman
+app.get("/barang-peminjaman", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM barang_peminjaman");
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error fetching barang peminjaman" });
+  }
+});
+
+// POST barang peminjaman
+app.post("/barang-peminjaman", async (req, res) => {
+  const { no_inventaris, nama_barang, stok, satuan } = req.body;
+
+  try {
+    const result = await db.query(
+      "INSERT INTO barang_peminjaman (no_inventaris, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
+      [no_inventaris, nama_barang, stok, satuan]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === "23505") {
+      // Unique constraint violation
+      res.status(409).json({ error: "No inventaris barang already exists" });
+    } else {
+      console.error(err);
+      res.status(500).json({ error: "Failed to insert barang peminjaman" });
+    }
+  }
+});
+
+// PUT barang peminjaman
+app.put("/barang-peminjaman/:id", async (req, res) => {
+  const { id } = req.params;
+  const { no_inventaris, nama_barang, stok, satuan } = req.body;
+  try {
+    const result = await db.query(
+      "UPDATE barang_peminjaman SET no_inventaris = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
+      [no_inventaris, nama_barang, stok, satuan, id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang peminjaman not found" });
+    } else {
+      res.status(200).json(result.rows[0]);
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error updating barang peminjaman" });
+  }
+});
+
+// DELETE barang peminjaman
+app.delete("/barang-peminjaman/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await db.query(
+      "DELETE FROM barang_peminjaman WHERE id = $1 RETURNING *",
+      [id]
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Barang peminjaman not found" });
+    } else {
+      res
+        .status(200)
+        .json({ message: "Barang peminjaman deleted", data: result.rows[0] });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error deleting barang peminjaman" });
+  }
+});
+
+// Endpoint requests (autentikasi menggunakan middleware)
+app.get("/requests", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT r.request_id, u.full_name, d.division_name, r.request_date, r.purpose, 
+              r.requester_status, r.head_unit_status, r.sbum_staff_status
+       FROM requests r
+       JOIN users u ON r.user_id = u.user_id
+       JOIN divisions d ON r.division_id = d.division_id`
+    );
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error fetching requests" });
+  }
+});
+
+app.post("/requests", async (req, res) => {
+  const {
+    user_id,
+    division_id,
+    request_date,
+    purpose,
+    requester_status,
+    head_unit_status,
+    sbum_staff_status,
+  } = req.body;
+
+  try {
+    const result = await db.query(
+      `INSERT INTO requests (user_id, division_id, request_date, purpose, requester_status, head_unit_status, sbum_staff_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [
+        user_id,
+        division_id,
+        request_date,
+        purpose,
+        requester_status,
+        head_unit_status,
+        sbum_staff_status,
+      ]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json("Error creating request");
+  }
+});
+
+app.put("/requests/:id", async (req, res) => {
+  const { id } = req.params;
+  const { requester_status, head_unit_status, sbum_staff_status } = req.body;
+
+  try {
+    const result = await db.query(
+      `UPDATE requests 
+             SET requester_status = $1, head_unit_status = $2, sbum_staff_status = $3
+             WHERE request_id = $4 RETURNING *`,
+      [requester_status, head_unit_status, sbum_staff_status, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).send("Request not found");
+    }
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error updating request");
+  }
+});
+
+app.delete("/requests/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await db.query(
+      `DELETE FROM requests WHERE request_id = $1 RETURNING *`,
+      [id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).send("Request not found");
+    }
+    res.status(200).send(`Request with ID ${id} deleted`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error deleting request");
+  }
+});
+
+// Endpoint untuk mengambil semua data peminjaman
+app.get("/peminjaman", async (req, res) => {
+  try {
+    const result = await db.query("SELECT * FROM peminjaman");
+    console.log(result.rows);
+    res.status(200).json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
+  }
+});
+
+// Endpoint untuk pengajuan peminjaman
+app.post("/peminjaman", async (req, res) => {
+  const { no_inventaris, jumlah, peminjam, no_transaksi, keterangan, nama_barang, nim_nik_nidn, alasan_penolakan } = req.body;
+
+  try {
+    // Validasi ketersediaan barang
+    const barang = await db.query(
+      "SELECT stok FROM barang_peminjaman WHERE no_inventaris = $1",
+      [no_inventaris]
+    );
+
+    if (!barang.rows.length) {
+      return res.status(404).json({ error: "Barang tidak ditemukan" });
+    }
+
+    if (barang.rows[0].stok < jumlah) {
+      return res.status(400).json({ error: "Jumlah melebihi stok tersedia" });
+    }
+
+    // Simpan data peminjaman
+    await db.query(
+      `INSERT INTO peminjaman (no_transaksi, no_inventaris, jumlah, peminjam, status_peminjaman, keterangan, nama_barang, nim_nik_nidn, alasan_penolakan) 
+       VALUES ($1, $2, $3, $4, 'Menunggu Persetujuan', $5, $6, $7, $8)`,
+      [no_transaksi, no_inventaris, jumlah, peminjam, keterangan, nama_barang, nim_nik_nidn, alasan_penolakan]
+    );
+
+    res.status(201).json({ message: "Peminjaman berhasil diajukan, menunggu persetujuan." });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Terjadi kesalahan saat memproses peminjaman." });
+  }
+});
+
+app.put("/peminjaman/persetujuan/:no_transaksi", async (req, res) => {
+  const { no_transaksi } = req.params;
+  const { status_peminjaman, alasan } = req.body;
+
+  try {
+    if (!["Disetujui", "Ditolak"].includes(status_peminjaman)) {
+      return res.status(400).json({ error: "Status tidak valid." });
+    }
+
+     // Tambahkan blok ini untuk mengurangi stok saat disetujui
+     if (status_peminjaman === "Disetujui") {
+      // Ambil data peminjaman untuk mendapatkan detail barang
+      const peminjaman = await db.query(
+        "SELECT no_inventaris, jumlah FROM peminjaman WHERE no_transaksi = $1",
+        [no_transaksi]
+      );
+
+      // Kurangi stok barang
+      await db.query(
+        "UPDATE barang_peminjaman SET stok = stok - $1 WHERE no_inventaris = $2",
+        [peminjaman.rows[0].jumlah, peminjaman.rows[0].no_inventaris]
+      );
+    }
+
+    const query = status_peminjaman === "Ditolak"
+      ? `UPDATE peminjaman 
+         SET status_peminjaman = $1, alasan_penolakan = $2 
+         WHERE no_transaksi = $3`
+      : `UPDATE peminjaman 
+         SET status_peminjaman = $1, alasan_penolakan = NULL 
+         WHERE no_transaksi = $2`;
+
+    const params =
+      status_peminjaman === "Ditolak"
+        ? [status_peminjaman, alasan, no_transaksi]
+        : [status_peminjaman, no_transaksi];
+
+    await db.query(query, params);
+
+    res.status(200).json({ message: "Status peminjaman berhasil diperbarui." });
+  } catch (error) {
+    console.error("Error updating loan approval:", error);
+    res.status(500).json({ error: "Terjadi kesalahan pada server." });
+  }
+});
+
+
+// Endpoint Pengembalian Barang
+app.post('/pengembalian', upload.single('bukti_pengembalian'), async (req, res) => {
+  const { no_transaksi, kondisi_saat_ambil, kondisi_saat_kembali } = req.body;
+  
+  try {
+    // Debug log
+    console.log('Received request with:', {
+      no_transaksi,
+      kondisi_saat_ambil,
+      kondisi_saat_kembali,
+      file: req.file
+    });
+
+    // 1. Check if peminjaman exists and is approved
+    const checkLoan = await db.query(
+      'SELECT * FROM peminjaman WHERE no_transaksi = $1 AND status_peminjaman = $2',
+      [no_transaksi, 'Disetujui']
+    );
+
+    if (checkLoan.rows.length === 0) {
+      console.log('No loan found or not approved for:', no_transaksi);
+      return res.status(404).json({ error: 'Peminjaman tidak ditemukan atau belum disetujui' });
+    }
+
+    // 2. Begin transaction
+    await db.query('BEGIN');
+
+    // 3. Update peminjaman status
+    const updatePeminjaman = await db.query(
+      `UPDATE peminjaman 
+       SET status_peminjaman = 'Kembali',
+           tanggal_kembali = CURRENT_TIMESTAMP,
+           kondisi_saat_ambil = $2,
+           kondisi_saat_kembali = $3,
+           bukti_pengembalian = $4
+       WHERE no_transaksi = $1
+       RETURNING *`,
+      [no_transaksi, kondisi_saat_ambil, kondisi_saat_kembali, req.file.filename]
+    );
+
+    // 4. Update stock in barang_peminjaman
+    await db.query(
+      `UPDATE barang_peminjaman 
+       SET stok = stok + $1 
+       WHERE no_inventaris = $2`,
+      [checkLoan.rows[0].jumlah, checkLoan.rows[0].no_inventaris]
+    );
+
+    // 5. Commit transaction
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      message: 'Pengembalian berhasil diproses',
+      data: updatePeminjaman.rows[0]
+    });
+
+  } catch (error) {
+    // Rollback in case of error
+    await db.query('ROLLBACK');
+    console.error('Error in pengembalian:', error);
+    res.status(500).json({
+      error: 'Terjadi kesalahan pada server',
+      details: error.message
+    });
+  }
+});
+
+// Delete peminjaman
+app.delete("/peminjaman/:no_transaksi", async (req, res) => {
+  const { no_transaksi } = req.params;
+
+  try {
+    const result = await db.query(
+      "DELETE FROM peminjaman WHERE no_transaksi = $1 RETURNING *",
+      [no_transaksi]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Peminjaman tidak ditemukan" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Peminjaman berhasil dihapus", data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat menghapus peminjaman" });
+  }
+});
+
+
+// loan.js
+
+import React, { useState, useEffect } from "react";
+import {
+  Box,
+  TextField,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Typography,
+  IconButton,
+  Grid,
+  Divider,
+  Autocomplete,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from "@mui/material";
+import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
+import { format } from "date-fns";
+import PengembalianModal from "./PengembalianModal";
+
+const PeminjamanBarang = () => {
+  const [noInventaris, setNoInventaris] = useState("");
+  const [namaBarang, setNamaBarang] = useState("");
+  const [jumlah, setJumlah] = useState(1);
+  const [nim_nik_nidn, setNIM_NIK_NIDN] = useState("");
+  const [peminjam, setPeminjam] = useState("");
+  const [items, setItems] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [noTransaksi, setNoTransaksi] = useState([]);
+  const [barangList, setBarangList] = useState([]);
+  const [selectedBarang, setSelectedBarang] = useState(null);
+  const [tanggal, setTanggal] = useState(format(new Date(), "dd MMM yyyy"));
+  const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
+  const [openModal, setOpenModal] = useState(false);
+  const [keterangan, setKeterangan] = useState("");
+  const [openPengembalianModal, setOpenPengembalianModal] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+
+  useEffect(() => {
+    // Fetch barang dengan stok tersedia dari backend
+    const fetchBarang = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/barang-peminjaman");
+        if (!response.ok) throw new Error("Gagal mengambil data barang.");
+        const data = await response.json();
+        const availableBarang = data.filter((item) => item.stok > 0);
+        setBarangList(availableBarang);
+      } catch (error) {
+        console.error(error.message);
+        alert("Terjadi kesalahan saat mengambil data barang.");
+      }
+    };
+    fetchBarang();
+  }, []);
+
+  useEffect(() => {
+    // Generate nomor transaksi
+    setNoTransaksi(`TRX-${format(new Date(), "yyyyMMddHHmmss")}`);
+  }, []);
+
+  useEffect(() => {
+    // Update jam secara real-time
+    const interval = setInterval(() => {
+      setJam(format(new Date(), "HH:mm:ss"));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Ambil data user dari localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      console.log("Data User:", user);
+      setPeminjam(user.nama || ""); // Pastikan nama ada
+      setNIM_NIK_NIDN(user.nim_nik_nidn || ""); // Pastikan nim_nik_nidn ada
+    } else {
+      console.warn("User  data tidak ditemukan di localStorage.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const storedTransactions = localStorage.getItem("transactions");
+    if (storedTransactions) {
+      setTransactions(JSON.parse(storedTransactions));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("transactions", JSON.stringify(transactions));
+  }, [transactions]);
+
+  // Mengambil data dari localStorage saat komponen dimuat
+  useEffect(() => {
+    const storedItems = localStorage.getItem("items");
+    if (storedItems) {
+      setItems(JSON.parse(storedItems));
+    }
+  }, []);
+
+  // Menyimpan data ke localStorage setiap kali items diperbarui
+  useEffect(() => {
+    localStorage.setItem("items", JSON.stringify(items));
+  }, [items]);
+
+  const handleAddItem = () => {
+    if (noInventaris && namaBarang && jumlah > 0) {
+      setItems([...items, { noInventaris, namaBarang, jumlah }]);
+      setNoInventaris("");
+      setNamaBarang("");
+      setJumlah(1);
+    }
+  };
+
+  const handlePinjam = async () => {
+    const newTransaction = items.map((item) => ({
+      no_inventaris: item.noInventaris, // Sesuaikan dengan properti backend
+      nama_barang: item.namaBarang,
+      jumlah: item.jumlah,
+      keterangan,
+      status: "Menunggu Persetujuan",
+      no_transaksi: noTransaksi,
+      peminjam,
+      nim_nik_nidn,
+    }));
+
+    try {
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTransaction[0]), // Kirim data pertama
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal mengajukan peminjaman.");
+      }
+
+      if (!keterangan.trim()) {
+        alert("Keperluan tidak boleh kosong!");
+        return;
+      }
+
+      const result = await response.json();
+      alert(result.message);
+      setTransactions([...transactions, ...newTransaction]); // Tambahkan transaksi ke state
+      resetFields(); // Reset input fields
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat mengajukan peminjaman.");
+    }
+  };
+
+  const resetFields = () => {
+    setNoInventaris("");
+    setNamaBarang("");
+    setJumlah(1);
+    setItems([]);
+    setSelectedBarang(null);
+  };
+
+  const handleOpenPengembalianModal = (loan) => {
+    setSelectedLoan(loan);
+    setOpenPengembalianModal(true);
+  };
+
+  const handleClosePengembalianModal = () => {
+    setOpenPengembalianModal(false);
+  };
+
+  const handleUpdateTransactions = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/peminjaman");
+      if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat memperbarui transaksi.");
+    }
+  };
+
+  const handleDelete = async (no_transaksi) => {
+    console.log("Menghapus transaksi dengan no_transaksi:", no_transaksi); // Debug log
+    try {
+      const response = await fetch(
+        `http://localhost:5000/peminjaman/${no_transaksi}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Gagal menghapus peminjaman.");
+      }
+
+      const result = await response.json();
+      alert(result.message);
+
+      // Fetch ulang transaksi setelah penghapusan
+      const updatedTransactionsResponse = await fetch(
+        "http://localhost:5000/peminjaman"
+      );
+      if (!updatedTransactionsResponse.ok) {
+        throw new Error("Gagal memperbarui daftar transaksi.");
+      }
+
+      const updatedTransactions = await updatedTransactionsResponse.json();
+      setTransactions(updatedTransactions);
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menghapus peminjaman.");
+    }
+  };
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/peminjaman");
+        if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+        const data = await response.json();
+        setTransactions(data);
+        console.log("Data transaksi dari backend:", data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  return (
+    <Grid>
+      <Typography variant="h4" gutterBottom mb={5} mt={5}>
+        Peminjaman Barang
+      </Typography>
+      <Paper
+        sx={{
+          width: "100%",
+          marginTop: "15px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          padding: "20px",
+        }}
+      >
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Input Barang Peminjaman
+          </Typography>
+          <Divider />
+        </Box>
+
+        <Box p={4}>
+          <Box display="flex" gap={2} mb={3}>
+            <TextField
+              label="No Transaksi Peminjaman"
+              value={noTransaksi}
+              InputProps={{ readOnly: true }}
+            />
+
+            <TextField
+              label="Tanggal"
+              value={tanggal}
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="Jam"
+              value={jam}
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="Nama Peminjam"
+              value={peminjam}
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="NIK/NIM/NIDN"
+              value={nim_nik_nidn}
+              InputProps={{ readOnly: true }}
+            />
+          </Box>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              backgroundColor: "#0C628B",
+              padding: "10px",
+              borderTopLeftRadius: "12px",
+              borderTopRightRadius: "12px",
+              borderBottom: "1px solid #e0e0e0",
+            }}
+          >
+            <Typography variant="h6" gutterBottom color="white">
+              Barang Peminjaman
+            </Typography>
+          </div>
+
+          <Box display="flex" gap={2} mb={2} mt={3}>
+            {/* Input Fields dan Tombol */}
+            <Autocomplete
+              variant="outlined"
+              placeholder="No inventaris..."
+              options={barangList}
+              getOptionLabel={(option) =>
+                `${option.nama_barang} (${option.no_inventaris})`
+              }
+              onChange={(e, newValue) => {
+                setSelectedBarang(newValue);
+                if (newValue) {
+                  setNoInventaris(newValue.no_inventaris);
+                  setNamaBarang(newValue.nama_barang);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Cari Barang" />
+              )}
+              sx={{ width: "300px" }}
+            />
+            <TextField
+              label="Nama Barang"
+              value={namaBarang}
+              InputProps={{ readOnly: true }}
+              onChange={(e) => setNamaBarang(e.target.value)}
+            />
+            <TextField
+              label="Jumlah"
+              type="number"
+              value={jumlah}
+              onChange={(e) => {
+                const inputJumlah = Number(e.target.value);
+                if (selectedBarang && inputJumlah > selectedBarang.stok) {
+                  alert("Jumlah melebihi stok tersedia!");
+                } else {
+                  setJumlah(inputJumlah);
+                }
+              }}
+            />
+            <Box display="flex" gap={2} mb={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Add />}
+                onClick={handleAddItem}
+              >
+                Tambah
+              </Button>
+              <Button
+                variant="contained"
+                color="warning"
+                startIcon={<Replay />}
+                onClick={resetFields}
+              >
+                Ulang
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<ShoppingCart />}
+                onClick={handleOpenModal}
+                disabled={items.length === 0}
+              >
+                Pinjam
+              </Button>
+            </Box>
+          </Box>
+          {/* Tabel untuk menampilkan barang yang akan dipinjam */}
+          <TableContainer component={Paper} sx={{ mb: 3 }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>No Inventaris</TableCell>
+                  <TableCell>Nama Barang</TableCell>
+                  <TableCell>QTY</TableCell>
+                  <TableCell>Aksi</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{item.noInventaris}</TableCell>
+                    <TableCell>{item.namaBarang}</TableCell>
+                    <TableCell>{item.jumlah}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        color="error"
+                        onClick={() => {
+                          setItems(
+                            items.filter(
+                              (i) => i.noInventaris !== item.noInventaris
+                            )
+                          );
+                        }}
+                      >
+                        <Close />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Typography variant="h6" gutterBottom color="black">
+            Transaksi Peminjaman
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table sx={{ mt: "30px" }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>No Inventaris</TableCell>
+                  <TableCell>Nama Barang</TableCell>
+                  <TableCell>Jumlah</TableCell>
+                  <TableCell>Keperluan</TableCell>
+                  <TableCell>Status</TableCell>
+                  {/* New column for rejection reason */}
+                  {transactions.some(
+                    (t) => t.status_peminjaman === "Ditolak"
+                  ) && <TableCell>Alasan Penolakan</TableCell>}
+                  {transactions.some(
+                    (t) => t.status_peminjaman === "Disetujui"
+                  ) && (
+                    <>
+                      <TableCell>Kondisi Saat Pinjam</TableCell>
+                      <TableCell>Kondisi Saat Kembali</TableCell>
+                      <TableCell>Bukti Pengembalian</TableCell>
+                    </>
+                  )}
+                  <TableCell>Aksi</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.no_transaksi}>
+                    <TableCell>{transaction.no_inventaris}</TableCell>
+                    <TableCell>{transaction.nama_barang}</TableCell>
+                    <TableCell>{transaction.jumlah}</TableCell>
+                    <TableCell>{transaction.keterangan}</TableCell>
+                    <TableCell>{transaction.status_peminjaman}</TableCell>
+                    {transaction.status_peminjaman === "Ditolak" && (
+                      <TableCell>
+                        {transaction.alasan_penolakan || "-"}
+                      </TableCell>
+                    )}
+
+                    {transaction.status_peminjaman === "Disetujui" && (
+                      <>
+                        <TableCell>
+                          {transaction.kondisi_saat_ambil || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {transaction.kondisi_saat_kembali || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() =>
+                              handleOpenPengembalianModal(transaction)
+                            }
+                          >
+                            Upload Pengembalian
+                          </Button>
+                        </TableCell>
+                      </>
+                    )}
+
+                    <TableCell>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDelete(transaction.no_transaksi)}
+                      >
+                        <Close />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              {/* Pengembalian Modal */}
+              <PengembalianModal
+                open={openPengembalianModal}
+                onClose={handleClosePengembalianModal}
+                loanData={selectedLoan}
+                onUpdate={handleUpdateTransactions}
+              />
+            </Table>
+          </TableContainer>
+        </Box>
+      </Paper>
+      {/* Modal untuk konfirmasi peminjaman */}
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        sx={{
+          "& .MuiDialog-paper": {
+            width: "35%",
+            height: "35%",
+            maxWidth: "none",
+          },
+        }}
+      >
+        <DialogTitle>Keperluan Peminjaman</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="keperluan"
+            value={keterangan}
+            onChange={(e) => setKeterangan(e.target.value)}
+            sx={{ mt: "10px" }}
+            required
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCloseModal}
+            color="secondary"
+            sx={{
+              border: "2px solid ",
+              borderColor: "black",
+              color: "black", // Warna teks tombol
+              borderRadius: "8px", // Border radius tombol
+              padding: "8px 16px", // Padding tombol
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              handlePinjam(); // Simpan transaksi
+              handleCloseModal();
+            }}
+            sx={{
+              border: "2px solid #69D2FF",
+              backgroundColor: "#69D2FF",
+              color: "black",
+              padding: "8px 16px",
+            }}
+          >
+            Simpan Transaksi
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Grid>
+  );
+};
+
+export default PeminjamanBarang;
+
+
+// loanappproval.js:
+import React, { useState, useEffect } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  TextField,
+  Box,
+  Typography,
+  Modal,
+} from "@mui/material";
+import { styled } from "@mui/system";
+import axios from "axios";
+
+const StyledTableCell = styled(TableCell)({
+  border: "1px solid #ddd",
+  padding: "8px",
+});
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
+
+// Modal style
+const modalStyle = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 600,
+  bgcolor: "background.paper",
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 2,
+};
+
+export default function LoanApproval() {
+  const [filterStatus, setFilterStatus] = useState("Semua");
+  const [loanApproval, setLoanApproval] = useState([]);
+  const [alasanPenolakan, setAlasanPenolakan] = useState({});
+  const [showRejectInput, setShowRejectInput] = useState(null);
+  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+  const [requests, setRequests] = useState([]);
+
+  const fetchLoanApproval = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/peminjaman");
+      const removedItems = JSON.parse(
+        localStorage.getItem("removedLoanItems") || "[]"
+      );
+      
+      const filteredData = response.data.filter(
+        (item) => !removedItems.includes(item.no_transaksi)
+      );
+      
+      setLoanApproval(filteredData);
+    } catch (error) {
+      console.error("Error fetching loan data:", error);
+      alert("Terjadi kesalahan saat mengambil data peminjaman.");
+    }
+  };
+
+  useEffect(() => {
+    fetchLoanApproval();
+  }, []);
+
+  const handleFilterChange = (event) => {
+    setFilterStatus(event.target.value);
+  };
+
+  const handleApprove = async (no_transaksi) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5000/peminjaman/persetujuan/${no_transaksi}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status_peminjaman: "Disetujui" }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Gagal menyetujui peminjaman.");
+      alert("Peminjaman disetujui!");
+      fetchLoanApproval();
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menyetujui peminjaman.");
+    }
+  };
+
+  const handleReject = async (no_transaksi) => {
+    const alasan = alasanPenolakan[no_transaksi];
+
+    if (!alasan) {
+      alert("Mohon masukkan alasan penolakan.");
+      return;
+    }
+
+    try {
+      await axios.put(
+        `http://localhost:5000/peminjaman/persetujuan/${no_transaksi}`,
+        {
+          status_peminjaman: "Ditolak",
+          alasan,
+        }
+      );
+      alert("Penolakan berhasil disimpan.");
+      fetchLoanApproval();
+      setShowRejectInput(null);
+    } catch (error) {
+      console.error("Error rejecting loan:", error);
+      alert("Terjadi kesalahan saat menyimpan penolakan.");
+    }
+  };
+
+  const handleReasonChange = (no_transaksi, value) => {
+    setAlasanPenolakan((prev) => ({
+      ...prev,
+      [no_transaksi]: value,
+    }));
+  };
+
+  const toggleRejectInput = (no_transaksi) => {
+    setShowRejectInput((prev) => (prev === no_transaksi ? null : no_transaksi));
+  };
+
+  const formatTanggal = (dateString) => {
+    const tanggal = new Date(dateString);
+    return tanggal.toLocaleDateString("id-ID");
+  };
+
+  const handleRemoveRow = (no_transaksi) => {
+    // Ambil daftar item yang telah dihapus dari localStorage
+    const removedItems = JSON.parse(
+      localStorage.getItem("removedLoanItems") || "[]"
+    );
+
+    // Tambahkan item yang baru dihapus
+    const updatedRemovedItems = [...removedItems, no_transaksi];
+    localStorage.setItem(
+      "removedLoanItems",
+      JSON.stringify(updatedRemovedItems)
+    );
+
+    // Filter dan perbarui state
+    const updatedLoanApproval = loanApproval.filter(
+      (request) => request.no_transaksi !== no_transaksi
+    );
+    setLoanApproval(updatedLoanApproval);
+  };
+
+  const handleCloseReasonInput = (no_transaksi) => {
+    setShowRejectInput(null);
+    setAlasanPenolakan((prev) => ({
+      ...prev,
+      [no_transaksi]: "",
+    }));
+  };
+
+  useEffect(() => {
+    const storedTransactions = localStorage.getItem("transactions");
+    if (storedTransactions) {
+      setRequests(JSON.parse(storedTransactions));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("request", JSON.stringify(requests));
+  }, [requests]);
+
+  useEffect(() => {
+    try {
+      console.log("Opening modal with data:", selectedLoan);
+      if (selectedLoan) {
+        setOpenDetailModal(true);
+      }
+    } catch (error) {
+      console.error("Error opening modal:", error);
+    }
+  }, [selectedLoan]);
+
+  // Handler untuk membuka modal detail
+  const handleOpenDetail = (loan) => {
+    console.log("Opening detail for loan:", loan); // Tambahkan log ini
+    if (!loan) {
+      console.error("No loan data provided");
+      return;
+    }
+    setSelectedLoan(loan);
+    setOpenDetailModal(true);
+  };
+
+  // Handler untuk menutup modal detail
+  const handleCloseDetail = () => {
+    setOpenDetailModal(false);
+    setSelectedLoan(null);
+  };
+
+  useEffect(() => {
+    console.log("Modal state:", openDetailModal);
+    console.log("Selected loan:", selectedLoan);
+  }, [openDetailModal, selectedLoan]);
+
+  // Komponen Modal Detail
+  const DetailModal = ({ open, onClose, loan }) => {
+    if (!loan) return null;
+
+    return (
+     
+        <Modal
+      open={open}
+      onClose={onClose}
+      aria-labelledby="detail-modal-title"
+    >
+      <Box sx={modalStyle}>
+        <Typography
+          id="detail-modal-title"
+          variant="h6"
+          component="h2"
+          gutterBottom
+        >
+          Detail Peminjaman
+        </Typography>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Informasi Peminjam:
+          </Typography>
+          <Typography>Nama: {loan.peminjam}</Typography>
+          <Typography>NIM/NIK/NIDN: {loan.nim_nik_nidn}</Typography>
+          <Typography>Status: {loan.status_peminjaman}</Typography>
+        </Box>
+
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Informasi Barang:
+          </Typography>
+          <Typography>Nama Barang: {loan.nama_barang}</Typography>
+          <Typography>No Inventaris: {loan.no_inventaris}</Typography>
+          <Typography>Jumlah: {loan.jumlah}</Typography>
+        </Box>
+
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            Kondisi Barang:
+          </Typography>
+          <Typography>
+            Saat Dipinjam: {loan.kondisi_saat_ambil || "-"}
+          </Typography>
+          <Typography>
+            Saat Dikembalikan: {loan.kondisi_saat_kembali || "-"}
+          </Typography>
+        </Box>
+
+        {loan.bukti_pengembalian && (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Bukti Pengembalian:
+            </Typography>
+            <img
+              src={`http://localhost:5000/uploads/${loan.bukti_pengembalian}`}
+              alt="Bukti Pengembalian"
+              style={{ maxWidth: "100%", height: "auto" }}
+            />
+          </Box>
+        )}
+
+        <Button
+          onClick={onClose}
+          variant="contained"
+          sx={{ mt: 2 }}
+        >
+          Tutup
+        </Button>
+      </Box>
+    </Modal>
+      )
+      
+    }
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        marginTop: "15px",
+        borderRadius: "12px",
+        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+        padding: "20px",
+        backgroundColor: "white",
+      }}
+    >
+      <h2>Persetujuan Peminjaman</h2>
+      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2 }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={filterStatus}
+          onChange={handleFilterChange}
+          label="Status"
+        >
+          <MenuItem value="Semua">Semua</MenuItem>
+          <MenuItem value="Disetujui">Disetujui</MenuItem>
+          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
+          <MenuItem value="Ditolak">Ditolak</MenuItem>
+        </Select>
+      </FormControl>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      ></div>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
+        }}
+      >
+        <Table aria-label="loan approval table">
+          <TableHead>
+            <TableRow>
+              <StyledTableCell>No</StyledTableCell>
+              <StyledTableCell>Nama</StyledTableCell>
+              <StyledTableCell>NIM/NIK/NIDN</StyledTableCell>
+              <StyledTableCell>Nama Barang</StyledTableCell>
+              <StyledTableCell>No Inventaris</StyledTableCell>
+              <StyledTableCell>Jumlah</StyledTableCell>
+              <StyledTableCell>Keperluan</StyledTableCell>
+              <StyledTableCell>Tanggal Pinjam</StyledTableCell>
+              <StyledTableCell>Tanggal Kembali</StyledTableCell>
+              <StyledTableCell>Status</StyledTableCell>
+              {/* New column for rejection reason */}
+              {requests.some((t) => t.status_peminjaman === "Ditolak") && (
+                <TableCell>Alasan Penolakan</TableCell>
+              )}
+              <StyledTableCell>Aksi</StyledTableCell>
+              <StyledTableCell>Detail Kondisi</StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {(loanApproval.length > 0 ? loanApproval : [])
+              .filter(
+                (item) =>
+                  filterStatus === "Semua" ||
+                  item.status_peminjaman === filterStatus
+              )
+              .map((request, index) => (
+                <StyledTableRow key={request.no_transaksi}>
+                  <StyledTableCell>{index + 1}</StyledTableCell>
+                  <StyledTableCell>{request.peminjam}</StyledTableCell>
+                  <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
+                  <StyledTableCell>{request.nama_barang}</StyledTableCell>
+                  <StyledTableCell>{request.no_inventaris}</StyledTableCell>
+                  <StyledTableCell>{request.jumlah}</StyledTableCell>
+                  <StyledTableCell>{request.keterangan}</StyledTableCell>
+                  <StyledTableCell>
+                    {formatTanggal(request.tanggal_pinjam)}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    {request.tanggal_kembali
+                      ? formatTanggal(request.tanggal_kembali)
+                      : ""}
+                  </StyledTableCell>
+                  <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
+                  {request.status_peminjaman === "Ditolak" && (
+                    <TableCell>{request.alasan_penolakan || "-"}</TableCell>
+                  )}
+                  {(request.status_peminjaman === "Menunggu Persetujuan" ||
+                    request.status_peminjaman === "Disetujui" ||
+                    request.status_peminjaman === "Ditolak") && (
+                    <>
+                      <StyledTableCell>
+                        {" "}
+                        <Button
+                          variant="contained"
+                          color="success"
+                          sx={{ ml: 1 }}
+                          onClick={() => handleApprove(request.no_transaksi)}
+                        >
+                          Setujui
+                        </Button>
+                        <Button
+                          variant="contained"
+                          color="error"
+                          sx={{ ml: 1 }}
+                          onClick={() =>
+                            toggleRejectInput(request.no_transaksi)
+                          }
+                        >
+                          Tolak
+                        </Button>
+                      </StyledTableCell>
+                    </>
+                  )}
+                  <StyledTableCell>
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      sx={{ ml: 1 }}
+                      onClick={() => handleRemoveRow(request.no_transaksi)}
+                    >
+                      Hapus
+                    </Button>
+
+                    {showRejectInput === request.no_transaksi && (
+                      <>
+                        <TextField
+                          placeholder="Alasan penolakan"
+                          onChange={(e) =>
+                            handleReasonChange(
+                              request.no_transaksi,
+                              e.target.value
+                            )
+                          }
+                          value={alasanPenolakan[request.no_transaksi] || ""}
+                          sx={{ mt: 1, width: "100%" }}
+                        />
+                        <Button
+                          variant="contained"
+                          color="error"
+                          sx={{ mt: 1 }}
+                          onClick={() => handleReject(request.no_transaksi)}
+                        >
+                          Kirim
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          sx={{ mt: 1, ml: 1 }}
+                          onClick={() =>
+                            handleCloseReasonInput(request.no_transaksi)
+                          }
+                        >
+                          Tutup
+                        </Button>
+                      </>
+                    )}
+
+                    {request.status_peminjaman === "Menunggu persetujuan" && (
+                      <TextField
+                        placeholder="Alasan penolakan"
+                        onChange={(e) =>
+                          handleReasonChange(
+                            request.no_transaksi,
+                            e.target.value
+                          )
+                        }
+                        value={alasanPenolakan[request.no_transaksi] || ""}
+                        sx={{ mt: 1 }}
+                      />
+                    )}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    <Button
+                      variant="contained"
+                      color="info"
+                      onClick={() => {
+                        console.log("Button clicked!");
+                        handleOpenDetail(request);
+                      }}
+                    >
+                      Lihat Detail
+                    </Button>
+                  </StyledTableCell>
+                </StyledTableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      {/* Detail Modal */}
+      <DetailModal 
+        open={openDetailModal}
+        onClose={handleCloseDetail}
+        loan={selectedLoan}
+      />
+    </div>
+  );
+}

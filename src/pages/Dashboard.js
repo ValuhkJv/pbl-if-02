@@ -35,7 +35,6 @@ import DashboardStaf from "../component/DashboardStaf";
 import DashboardUnit from "../component/DashboardUnit";
 import DashboardUnitHead from "../component/DashboardUnitHead";
 import DashboardMahasiswa from "../component/DashboardMahasiswa";
-import Manage from "./Manage";
 import Loan from "./Loan";
 import LoanApproval from "./LoanApproval";
 import LoanHistory from "./LoanHistory";
@@ -403,7 +402,6 @@ export default function Dashboard() {
           <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
-          <Route path="/inventory" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
           <Route path="/loan" element={<Loan />} />
           <Route path="/loan/approval" element={<LoanApproval />} />

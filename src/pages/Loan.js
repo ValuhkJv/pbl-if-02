@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   TextField,
@@ -14,50 +14,228 @@ import {
   IconButton,
   Grid,
   Divider,
+  Autocomplete,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
 } from "@mui/material";
 import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
+import { format } from "date-fns";
+import PengembalianModal from "./PengembalianModal";
 
 const PeminjamanBarang = () => {
-  const [kodeBarang, setKodeBarang] = useState("");
+  const [noInventaris, setNoInventaris] = useState("");
   const [namaBarang, setNamaBarang] = useState("");
-  const [kategori, setKategori] = useState("");
-  const [satuan, setSatuan] = useState("");
   const [jumlah, setJumlah] = useState(1);
-  const [peminjam, setPeminjam] = useState("Toni");
+  const [nim_nik_nidn, setNIM_NIK_NIDN] = useState("");
+  const [peminjam, setPeminjam] = useState("");
   const [items, setItems] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [noTransaksi, setNoTransaksi] = useState([]);
+  const [barangList, setBarangList] = useState([]);
+  const [selectedBarang, setSelectedBarang] = useState(null);
+  const [tanggal, setTanggal] = useState(format(new Date(), "dd MMM yyyy"));
+  const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
+  const [openModal, setOpenModal] = useState(false);
+  const [keterangan, setKeterangan] = useState("");
+  const [openPengembalianModal, setOpenPengembalianModal] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState(null);
+
+  const handleOpenModal = () => setOpenModal(true);
+  const handleCloseModal = () => setOpenModal(false);
+
+  useEffect(() => {
+    // Fetch barang dengan stok tersedia dari backend
+    const fetchBarang = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/barang-peminjaman");
+        if (!response.ok) throw new Error("Gagal mengambil data barang.");
+        const data = await response.json();
+        const availableBarang = data.filter((item) => item.stok > 0);
+        setBarangList(availableBarang);
+      } catch (error) {
+        console.error(error.message);
+        alert("Terjadi kesalahan saat mengambil data barang.");
+      }
+    };
+    fetchBarang();
+  }, []);
+
+  useEffect(() => {
+    // Generate nomor transaksi
+    setNoTransaksi(`TRX-${format(new Date(), "yyyyMMddHHmmss")}`);
+  }, []);
+
+  useEffect(() => {
+    // Update jam secara real-time
+    const interval = setInterval(() => {
+      setJam(format(new Date(), "HH:mm:ss"));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Ambil data user dari localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      const user = JSON.parse(userData);
+      console.log("Data User:", user);
+      setPeminjam(user.nama || ""); // Pastikan nama ada
+      setNIM_NIK_NIDN(user.nim_nik_nidn || ""); // Pastikan nim_nik_nidn ada
+    } else {
+      console.warn("User  data tidak ditemukan di localStorage.");
+    }
+  }, []);
+
+  useEffect(() => {
+    const storedTransactions = localStorage.getItem("transactions");
+    if (storedTransactions) {
+      setTransactions(JSON.parse(storedTransactions));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("transactions", JSON.stringify(transactions));
+  }, [transactions]);
+
+  // Mengambil data dari localStorage saat komponen dimuat
+  useEffect(() => {
+    const storedItems = localStorage.getItem("items");
+    if (storedItems) {
+      setItems(JSON.parse(storedItems));
+    }
+  }, []);
+
+  // Menyimpan data ke localStorage setiap kali items diperbarui
+  useEffect(() => {
+    localStorage.setItem("items", JSON.stringify(items));
+  }, [items]);
 
   const handleAddItem = () => {
-    if (kodeBarang && namaBarang && kategori && satuan && jumlah > 0) {
-      setItems([
-        ...items,
-        { kodeBarang, namaBarang, kategori, satuan, jumlah },
-      ]);
-      setKodeBarang("");
+    if (noInventaris && namaBarang && jumlah > 0) {
+      setItems([...items, { noInventaris, namaBarang, jumlah }]);
+      setNoInventaris("");
       setNamaBarang("");
-      setKategori("");
-      setSatuan("");
       setJumlah(1);
     }
   };
 
-  const handleReset = () => {
-    setKodeBarang("");
-    setNamaBarang("");
-    setKategori("");
-    setSatuan("");
-    setJumlah(1);
-  };
+  const handlePinjam = async () => {
+    const newTransaction = items.map((item) => ({
+      no_inventaris: item.noInventaris, // Sesuaikan dengan properti backend
+      nama_barang: item.namaBarang,
+      jumlah: item.jumlah,
+      keterangan,
+      status: "Menunggu Persetujuan",
+      no_transaksi: noTransaksi,
+      peminjam,
+      nim_nik_nidn,
+    }));
 
-  const handleDeleteItem = (index) => {
-    if (index >= 0 && index < items.length) {
-      setItems(items.filter((_, i) => i !== index));
+    try {
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTransaction[0]), // Kirim data pertama
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal mengajukan peminjaman.");
+      }
+
+      if (!keterangan.trim()) {
+        alert("Keperluan tidak boleh kosong!");
+        return;
+      }
+
+      const result = await response.json();
+      alert(result.message);
+      setTransactions([...transactions, ...newTransaction]); // Tambahkan transaksi ke state
+      resetFields(); // Reset input fields
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat mengajukan peminjaman.");
     }
   };
 
-  const handlePinjam = () => {
-    alert("Barang berhasil dipinjam!");
+  const resetFields = () => {
+    setNoInventaris("");
+    setNamaBarang("");
+    setJumlah(1);
     setItems([]);
+    setSelectedBarang(null);
   };
+
+  const handleOpenPengembalianModal = (loan) => {
+    setSelectedLoan(loan);
+    setOpenPengembalianModal(true);
+  };
+
+  const handleClosePengembalianModal = () => {
+    setOpenPengembalianModal(false);
+  };
+
+  const handleUpdateTransactions = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/peminjaman");
+      if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat memperbarui transaksi.");
+    }
+  };
+
+  const handleDelete = async (no_transaksi) => {
+    console.log("Menghapus transaksi dengan no_transaksi:", no_transaksi); // Debug log
+    try {
+      const response = await fetch(
+        `http://localhost:5000/peminjaman/${no_transaksi}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Gagal menghapus peminjaman.");
+      }
+
+      const result = await response.json();
+      alert(result.message);
+
+      // Fetch ulang transaksi setelah penghapusan
+      const updatedTransactionsResponse = await fetch(
+        "http://localhost:5000/peminjaman"
+      );
+      if (!updatedTransactionsResponse.ok) {
+        throw new Error("Gagal memperbarui daftar transaksi.");
+      }
+
+      const updatedTransactions = await updatedTransactionsResponse.json();
+      setTransactions(updatedTransactions);
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menghapus peminjaman.");
+    }
+  };
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/peminjaman");
+        if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+        const data = await response.json();
+        setTransactions(data);
+        console.log("Data transaksi dari backend:", data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
 
   return (
     <Grid>
@@ -75,7 +253,7 @@ const PeminjamanBarang = () => {
       >
         <Box>
           <Typography variant="h6" gutterBottom>
-            Input Barang Masuk
+            Input Barang Peminjaman
           </Typography>
           <Divider />
         </Box>
@@ -84,23 +262,29 @@ const PeminjamanBarang = () => {
           <Box display="flex" gap={2} mb={3}>
             <TextField
               label="No Transaksi Peminjaman"
-              value="IT-0001"
+              value={noTransaksi}
               InputProps={{ readOnly: true }}
             />
+
             <TextField
               label="Tanggal"
-              value="02 Apr 2023"
+              value={tanggal}
               InputProps={{ readOnly: true }}
             />
             <TextField
               label="Jam"
-              value="10:54:05"
+              value={jam}
               InputProps={{ readOnly: true }}
             />
             <TextField
               label="Nama Peminjam"
               value={peminjam}
-              onChange={(e) => setPeminjam(e.target.value)}
+              InputProps={{ readOnly: true }}
+            />
+            <TextField
+              label="NIK/NIM/NIDN"
+              value={nim_nik_nidn}
+              InputProps={{ readOnly: true }}
             />
           </Box>
           <div
@@ -115,36 +299,49 @@ const PeminjamanBarang = () => {
             }}
           >
             <Typography variant="h6" gutterBottom color="white">
-              Input Faktur Barang Masuk
+              Barang Peminjaman
             </Typography>
           </div>
 
           <Box display="flex" gap={2} mb={2} mt={3}>
-            <TextField
-              label="Kode Barang"
-              value={kodeBarang}
-              onChange={(e) => setKodeBarang(e.target.value)}
+            {/* Input Fields dan Tombol */}
+            <Autocomplete
+              variant="outlined"
+              placeholder="No inventaris..."
+              options={barangList}
+              getOptionLabel={(option) =>
+                `${option.nama_barang} (${option.no_inventaris})`
+              }
+              onChange={(e, newValue) => {
+                setSelectedBarang(newValue);
+                if (newValue) {
+                  setNoInventaris(newValue.no_inventaris);
+                  setNamaBarang(newValue.nama_barang);
+                }
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Cari Barang" />
+              )}
+              sx={{ width: "300px" }}
             />
             <TextField
               label="Nama Barang"
               value={namaBarang}
+              InputProps={{ readOnly: true }}
               onChange={(e) => setNamaBarang(e.target.value)}
             />
             <TextField
-              label="Kategori"
-              value={kategori}
-              onChange={(e) => setKategori(e.target.value)}
-            />
-            <TextField
-              label="Satuan"
-              value={satuan}
-              onChange={(e) => setSatuan(e.target.value)}
-            />
-            <TextField
-              type="number"
               label="Jumlah"
+              type="number"
               value={jumlah}
-              onChange={(e) => setJumlah(e.target.value)}
+              onChange={(e) => {
+                const inputJumlah = Number(e.target.value);
+                if (selectedBarang && inputJumlah > selectedBarang.stok) {
+                  alert("Jumlah melebihi stok tersedia!");
+                } else {
+                  setJumlah(inputJumlah);
+                }
+              }}
             />
             <Box display="flex" gap={2} mb={2}>
               <Button
@@ -159,7 +356,7 @@ const PeminjamanBarang = () => {
                 variant="contained"
                 color="warning"
                 startIcon={<Replay />}
-                onClick={handleReset}
+                onClick={resetFields}
               >
                 Ulang
               </Button>
@@ -167,21 +364,20 @@ const PeminjamanBarang = () => {
                 variant="contained"
                 color="success"
                 startIcon={<ShoppingCart />}
-                onClick={handlePinjam}
+                onClick={handleOpenModal}
                 disabled={items.length === 0}
               >
                 Pinjam
               </Button>
             </Box>
           </Box>
-
+          {/* Tabel untuk menampilkan barang yang akan dipinjam */}
           <TableContainer component={Paper} sx={{ mb: 3 }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Kode Barang</TableCell>
+                  <TableCell>No Inventaris</TableCell>
                   <TableCell>Nama Barang</TableCell>
-                  <TableCell>Kategori</TableCell>
                   <TableCell>QTY</TableCell>
                   <TableCell>Aksi</TableCell>
                 </TableRow>
@@ -189,14 +385,19 @@ const PeminjamanBarang = () => {
               <TableBody>
                 {items.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell>{item.kodeBarang}</TableCell>
+                    <TableCell>{item.noInventaris}</TableCell>
                     <TableCell>{item.namaBarang}</TableCell>
-                    <TableCell>{item.kategori}</TableCell>
                     <TableCell>{item.jumlah}</TableCell>
                     <TableCell>
                       <IconButton
                         color="error"
-                        onClick={() => handleDeleteItem(index)}
+                        onClick={() => {
+                          setItems(
+                            items.filter(
+                              (i) => i.noInventaris !== item.noInventaris
+                            )
+                          );
+                        }}
                       >
                         <Close />
                       </IconButton>
@@ -206,8 +407,148 @@ const PeminjamanBarang = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <Typography variant="h6" gutterBottom color="black">
+            Transaksi Peminjaman
+          </Typography>
+          <TableContainer component={Paper}>
+            <Table sx={{ mt: "30px" }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>No Inventaris</TableCell>
+                  <TableCell>Nama Barang</TableCell>
+                  <TableCell>Jumlah</TableCell>
+                  <TableCell>Keperluan</TableCell>
+                  <TableCell>Status</TableCell>
+                  {/* New column for rejection reason */}
+                  {transactions.some(
+                    (t) => t.status_peminjaman === "Ditolak"
+                  ) && <TableCell>Alasan Penolakan</TableCell>}
+                  {transactions.some(
+                    (t) => t.status_peminjaman === "Disetujui"
+                  ) && (
+                    <>
+                      <TableCell>Kondisi Saat Pinjam</TableCell>
+                      <TableCell>Kondisi Saat Kembali</TableCell>
+                      <TableCell>Bukti Pengembalian</TableCell>
+                    </>
+                  )}
+                  <TableCell>Aksi</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.no_transaksi}>
+                    <TableCell>{transaction.no_inventaris}</TableCell>
+                    <TableCell>{transaction.nama_barang}</TableCell>
+                    <TableCell>{transaction.jumlah}</TableCell>
+                    <TableCell>{transaction.keterangan}</TableCell>
+                    <TableCell>{transaction.status_peminjaman}</TableCell>
+                    {transaction.status_peminjaman === "Ditolak" && (
+                      <TableCell>
+                        {transaction.alasan_penolakan || "-"}
+                      </TableCell>
+                    )}
+
+                    {transaction.status_peminjaman === "Disetujui" && (
+                      <>
+                        <TableCell>
+                          {transaction.kondisi_saat_ambil || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {transaction.kondisi_saat_kembali || "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() =>
+                              handleOpenPengembalianModal(transaction)
+                            }
+                          >
+                            Upload Pengembalian
+                          </Button>
+                        </TableCell>
+                      </>
+                    )}
+
+                    <TableCell>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDelete(transaction.no_transaksi)}
+                      >
+                        <Close />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              {/* Pengembalian Modal */}
+              <PengembalianModal
+                open={openPengembalianModal}
+                onClose={handleClosePengembalianModal}
+                loanData={selectedLoan}
+                onUpdate={handleUpdateTransactions}
+              />
+            </Table>
+          </TableContainer>
         </Box>
       </Paper>
+      {/* Modal untuk konfirmasi peminjaman */}
+      <Dialog
+        open={openModal}
+        onClose={handleCloseModal}
+        sx={{
+          "& .MuiDialog-paper": {
+            width: "35%",
+            height: "35%",
+            maxWidth: "none",
+          },
+        }}
+      >
+        <DialogTitle>Keperluan Peminjaman</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="keperluan"
+            value={keterangan}
+            onChange={(e) => setKeterangan(e.target.value)}
+            sx={{ mt: "10px" }}
+            required
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={handleCloseModal}
+            color="secondary"
+            sx={{
+              border: "2px solid ",
+              borderColor: "black",
+              color: "black", // Warna teks tombol
+              borderRadius: "8px", // Border radius tombol
+              padding: "8px 16px", // Padding tombol
+            }}
+          >
+            Close
+          </Button>
+          <Button
+            onClick={() => {
+              handlePinjam(); // Simpan transaksi
+              handleCloseModal();
+            }}
+            sx={{
+              border: "2px solid #69D2FF",
+              backgroundColor: "#69D2FF",
+              color: "black",
+              padding: "8px 16px",
+            }}
+          >
+            Simpan Transaksi
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Grid>
   );
 };

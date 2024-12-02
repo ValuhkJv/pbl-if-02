@@ -33,40 +33,42 @@ import {
   Search as SearchIcon,
 } from "@mui/icons-material";
 
-const columns = [
-  { id: "no", label: "No", minWidth: 80 },
-  { id: "kode_barang", label: "Kode Barang", minWidth: 100, align: "center" },
-  { id: "nama_barang", label: "Nama Barang", minWidth: 170, align: "center" },
-  { id: "stok", label: "Stock", minWidth: 100, align: "center" },
-  { id: "satuan", label: "Satuan", minWidth: 100, align: "center" },
-  { id: "opsi", label: "Opsi", minWidth: 100, align: "center" },
-];
-
-// Daftar satuan yang akan ditampilkan di dropdown
-const satuanOptions = [
-  { value: "pcs", label: "Pieces" },
-  { value: "pack", label: "Pack" },
-  { value: "roll", label: "Roll" },
-  { value: "rim", label: "Rim" },
-  { value: "box", label: "Box" },
-  { value: "pad", label: "Pad" },
-  { value: "btl", label: "Botol" },
-  { value: "bngks", label: "Bungkus" },
-];
-
 export default function BarangKonsumsiTable() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [rows, setRows] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState(null);
   const [formData, setFormData] = useState({
     kode_barang: "",
     nama_barang: "",
     stok: "",
     satuan: "",
   });
-  const [isEdit, setIsEdit] = useState(false);
+
+  const columns = [
+    { id: "no", label: "No", minWidth: 80 },
+    { id: "kode_barang", label: "Kode Barang", minWidth: 100, align: "center" },
+    { id: "nama_barang", label: "Nama Barang", minWidth: 170, align: "center" },
+    { id: "stok", label: "Stock", minWidth: 100, align: "center" },
+    { id: "satuan", label: "Satuan", minWidth: 100, align: "center" },
+    { id: "opsi", label: "Opsi", minWidth: 100, align: "center" },
+  ];
+
+  // Daftar satuan yang akan ditampilkan di dropdown
+  const satuanOptions = [
+    { value: "pcs", label: "Pieces" },
+    { value: "pack", label: "Pack" },
+    { value: "roll", label: "Roll" },
+    { value: "rim", label: "Rim" },
+    { value: "box", label: "Box" },
+    { value: "pad", label: "Pad" },
+    { value: "btl", label: "Botol" },
+    { value: "bngks", label: "Bungkus" },
+  ];
 
   const fetchData = () => {
     fetch("http://localhost:5000/barang-konsumsi")
@@ -154,6 +156,23 @@ export default function BarangKonsumsiTable() {
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(+event.target.value);
     setPage(0);
+  };
+
+  const handleOpenDeleteDialog = (id) => {
+    setSelectedItemId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setSelectedItemId(null);
+  };
+
+  const confirmDelete = () => {
+    if (selectedItemId) {
+      handleDeleteBarang(selectedItemId);
+      handleCloseDeleteDialog();
+    }
   };
 
   return (
@@ -284,7 +303,7 @@ export default function BarangKonsumsiTable() {
                       </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
-                          onClick={() => handleDeleteBarang(row.id)}
+                          onClick={() => handleOpenDeleteDialog(row.id)}
                           style={{ color: "#0C628B" }}
                         >
                           <DeleteOutlinedIcon />
@@ -307,7 +326,58 @@ export default function BarangKonsumsiTable() {
         />
       </Paper>
 
-      <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: { borderRadius: "12px", padding: "8px" }, // Atur border-radius sesuai kebutuhan
+        }}
+      >
+        <DialogTitle id="alert-dialog-title">
+          {"Apakah Anda yakin ingin menghapus?"}
+        </DialogTitle>
+        <DialogActions
+          sx={{
+            justifyContent: "center", // Tombol berada di tengah
+            gap: 2, // Jarak antara tombol
+          }}
+        >
+          <Button
+            onClick={handleCloseDeleteDialog}
+            sx={{
+              border: "2px solid ",
+              borderColor: "black",
+              color: "black", // Warna teks tombol
+              borderRadius: "8px", // Border radius tombol
+              padding: "8px 16px", // Padding tombol
+            }}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            sx={{
+              border: "2px solid #69D2FF",
+              backgroundColor: "#69D2FF",
+              color: "black",
+              padding: "8px 16px",
+            }}
+            autoFocus
+          >
+            Hapus
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        PaperProps={{
+          sx: { borderRadius: "12px" }, // Atur border-radius sesuai kebutuhan
+        }}
+      >
         <DialogTitle>{isEdit ? "Edit Barang" : "Tambah Barang"}</DialogTitle>
         <DialogContent>
           <TextField
