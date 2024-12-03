@@ -82,7 +82,6 @@ export default function Dashboard() {
   const handleLogout = () => {
     // Hapus data user dari localStorage
     localStorage.removeItem("user");
-
     // Redirect ke halaman login
     navigate("/");
   };

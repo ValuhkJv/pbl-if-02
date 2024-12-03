@@ -21,8 +21,10 @@ import { styled } from "@mui/system";
 import axios from "axios";
 
 const StyledTableCell = styled(TableCell)({
-  border: "1px solid #ddd",
   padding: "8px",
+  border: "1px solid #ddd",
+  textAlign: "left",
+  wordWrap: "break-word",
 });
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -62,11 +64,11 @@ export default function LoanApproval() {
       const removedItems = JSON.parse(
         localStorage.getItem("removedLoanItems") || "[]"
       );
-      
+
       const filteredData = response.data.filter(
         (item) => !removedItems.includes(item.no_transaksi)
       );
-      
+
       setLoanApproval(filteredData);
     } catch (error) {
       console.error("Error fetching loan data:", error);
@@ -107,6 +109,8 @@ export default function LoanApproval() {
   const handleReject = async (no_transaksi) => {
     const alasan = alasanPenolakan[no_transaksi];
 
+    console.log("Alasan penolakan:", alasan);
+
     if (!alasan) {
       alert("Mohon masukkan alasan penolakan.");
       return;
@@ -117,7 +121,7 @@ export default function LoanApproval() {
         `http://localhost:5000/peminjaman/persetujuan/${no_transaksi}`,
         {
           status_peminjaman: "Ditolak",
-          alasan,
+          alasan_penolakan: alasan,
         }
       );
       alert("Penolakan berhasil disimpan.");
@@ -222,76 +226,66 @@ export default function LoanApproval() {
     if (!loan) return null;
 
     return (
-     
-        <Modal
-      open={open}
-      onClose={onClose}
-      aria-labelledby="detail-modal-title"
-    >
-      <Box sx={modalStyle}>
-        <Typography
-          id="detail-modal-title"
-          variant="h6"
-          component="h2"
-          gutterBottom
-        >
-          Detail Peminjaman
-        </Typography>
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Informasi Peminjam:
+      <Modal open={open} onClose={onClose} aria-labelledby="detail-modal-title">
+        <Box sx={modalStyle}>
+          <Typography
+            id="detail-modal-title"
+            variant="h6"
+            component="h2"
+            gutterBottom
+          >
+            Detail Peminjaman
           </Typography>
-          <Typography>Nama: {loan.peminjam}</Typography>
-          <Typography>NIM/NIK/NIDN: {loan.nim_nik_nidn}</Typography>
-          <Typography>Status: {loan.status_peminjaman}</Typography>
-        </Box>
-
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Informasi Barang:
-          </Typography>
-          <Typography>Nama Barang: {loan.nama_barang}</Typography>
-          <Typography>No Inventaris: {loan.no_inventaris}</Typography>
-          <Typography>Jumlah: {loan.jumlah}</Typography>
-        </Box>
-
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
-            Kondisi Barang:
-          </Typography>
-          <Typography>
-            Saat Dipinjam: {loan.kondisi_saat_ambil || "-"}
-          </Typography>
-          <Typography>
-            Saat Dikembalikan: {loan.kondisi_saat_kembali || "-"}
-          </Typography>
-        </Box>
-
-        {loan.bukti_pengembalian && (
           <Box sx={{ mb: 2 }}>
             <Typography variant="subtitle1" gutterBottom>
-              Bukti Pengembalian:
+              Informasi Peminjam:
             </Typography>
-            <img
-              src={`http://localhost:5000/uploads/${loan.bukti_pengembalian}`}
-              alt="Bukti Pengembalian"
-              style={{ maxWidth: "100%", height: "auto" }}
-            />
+            <Typography>Nama: {loan.peminjam}</Typography>
+            <Typography>NIM/NIK/NIDN: {loan.nim_nik_nidn}</Typography>
+            <Typography>Status: {loan.status_peminjaman}</Typography>
           </Box>
-        )}
 
-        <Button
-          onClick={onClose}
-          variant="contained"
-          sx={{ mt: 2 }}
-        >
-          Tutup
-        </Button>
-      </Box>
-    </Modal>
-      )
-      
-    }
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Informasi Barang:
+            </Typography>
+            <Typography>Nama Barang: {loan.nama_barang}</Typography>
+            <Typography>No Inventaris: {loan.no_inventaris}</Typography>
+            <Typography>Jumlah: {loan.jumlah}</Typography>
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Kondisi Barang:
+            </Typography>
+            <Typography>
+              Saat Dipinjam: {loan.kondisi_saat_ambil || "-"}
+            </Typography>
+            <Typography>
+              Saat Dikembalikan: {loan.kondisi_saat_kembali || "-"}
+            </Typography>
+          </Box>
+
+          {loan.bukti_pengembalian && (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Bukti Pengembalian:
+              </Typography>
+              <img
+                src={`http://localhost:5000/uploads/${loan.bukti_pengembalian}`}
+                alt="Bukti Pengembalian"
+                style={{ maxWidth: "100%", height: "auto" }}
+              />
+            </Box>
+          )}
+
+          <Button onClick={onClose} variant="contained" sx={{ mt: 2 }}>
+            Tutup
+          </Button>
+        </Box>
+      </Modal>
+    );
+  };
 
   return (
     <div
@@ -349,11 +343,8 @@ export default function LoanApproval() {
               <StyledTableCell>Keperluan</StyledTableCell>
               <StyledTableCell>Tanggal Pinjam</StyledTableCell>
               <StyledTableCell>Tanggal Kembali</StyledTableCell>
+              <StyledTableCell>Alasan Penolakan</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
-              {/* New column for rejection reason */}
-              {requests.some((t) => t.status_peminjaman === "Ditolak") && (
-                <TableCell>Alasan Penolakan</TableCell>
-              )}
               <StyledTableCell>Aksi</StyledTableCell>
               <StyledTableCell>Detail Kondisi</StyledTableCell>
             </TableRow>
@@ -382,20 +373,17 @@ export default function LoanApproval() {
                       ? formatTanggal(request.tanggal_kembali)
                       : ""}
                   </StyledTableCell>
+                  <StyledTableCell>
+                    {request.alasan_penolakan || "-"}
+                  </StyledTableCell>
+
                   <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
-                  {request.status_peminjaman === "Ditolak" && (
-                    <TableCell>{request.alasan_penolakan || "-"}</TableCell>
-                  )}
-                  {(request.status_peminjaman === "Menunggu Persetujuan" ||
-                    request.status_peminjaman === "Disetujui" ||
-                    request.status_peminjaman === "Ditolak") && (
-                    <>
-                      <StyledTableCell>
-                        {" "}
+                  <StyledTableCell>
+                    {request.status_peminjaman === "Menunggu persetujuan" && (
+                      <>
                         <Button
                           variant="contained"
                           color="success"
-                          sx={{ ml: 1 }}
                           onClick={() => handleApprove(request.no_transaksi)}
                         >
                           Setujui
@@ -405,15 +393,33 @@ export default function LoanApproval() {
                           color="error"
                           sx={{ ml: 1 }}
                           onClick={() =>
-                            toggleRejectInput(request.no_transaksi)
+                            setShowRejectInput(request.no_transaksi)
                           }
                         >
                           Tolak
                         </Button>
-                      </StyledTableCell>
-                    </>
-                  )}
-                  <StyledTableCell>
+                      </>
+                    )}
+
+                    {request.status_peminjaman === "Disetujui" && (
+                      <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setShowRejectInput(request.no_transaksi)}
+                      >
+                        Tolak
+                      </Button>
+                    )}
+                    {request.status_peminjaman === "Ditolak" && (
+                      <Button
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleApprove(request.no_transaksi)}
+                      >
+                        Setujui
+                      </Button>
+                    )}
+
                     <Button
                       variant="contained"
                       color="warning"
@@ -471,6 +477,8 @@ export default function LoanApproval() {
                       />
                     )}
                   </StyledTableCell>
+
+                 
                   <StyledTableCell>
                     <Button
                       variant="contained"
@@ -489,7 +497,7 @@ export default function LoanApproval() {
         </Table>
       </TableContainer>
       {/* Detail Modal */}
-      <DetailModal 
+      <DetailModal
         open={openDetailModal}
         onClose={handleCloseDetail}
         loan={selectedLoan}

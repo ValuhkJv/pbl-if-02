@@ -72,17 +72,26 @@ const upload = multer({ storage });
 
 // Endpoint login
 app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, role } = req.body;
+
+  console.log("Login attempt:", { username, password, role }); // Debugging
 
   try {
     const query = "SELECT * FROM users WHERE username = $1 AND password = $2";
     const result = await db.query(query, [username, password]);
 
     if (result.rows.length === 0) {
+      console.log("Invalid username or password."); // Debugging
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
     const user = result.rows[0];
+
+    // Periksa apakah role sesuai
+    if (user.role.toLowerCase() !== role.toLowerCase()) {
+      console.log("Role does not match with username."); // Debugging
+      return res.status(401).json({ message: "Role does not match with username" });
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -124,6 +133,7 @@ app.get("/barang-konsumsi", async (req, res) => {
     res.status(500).json({ error: "Error fetching barang konsumsi" });
   }
 });
+
 
 // POST barang konsumsi
 app.post("/barang-konsumsi", async (req, res) => {
@@ -617,16 +627,6 @@ app.post(
   }
 });
 
-// Error handling untuk multer
-app.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'Ukuran file terlalu besar (max: 5MB)' });
-    }
-    return res.status(400).json({ error: err.message });
-  }
-  next(err);
-});
 
 // Delete peminjaman
 app.delete("/peminjaman/:no_transaksi", async (req, res) => {
