@@ -52,7 +52,7 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
         kondisi_saat_kembali: kondisiBarangSaatKembali
       });
   
-      const response = await axios.post(`http://localhost:5000/pengembalian/${loanData.no_transaksi}`, formData, {
+      const response = await axios.post(`http://localhost:5000/pengembalian/${loanData.id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -80,7 +80,7 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const allowedTypes = ["image/jpeg", "image/png", "image/gif"];
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg",  "image/jfif"];
       const maxSize = 5 * 1024 * 1024; // 5MB
 
       if (!allowedTypes.includes(file.type)) {

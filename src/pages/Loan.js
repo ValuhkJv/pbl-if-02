@@ -127,32 +127,26 @@ const PeminjamanBarang = () => {
       nama_barang: item.namaBarang,
       jumlah: item.jumlah,
       keterangan,
-      status: "Menunggu Persetujuan",
+      status_peminjaman: "Menunggu Persetujuan",
       no_transaksi: noTransaksi,
       peminjam,
       nim_nik_nidn,
     }));
 
     try {
-      const response = await fetch("http://localhost:5000/peminjaman", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newTransaction[0]), // Kirim data pertama
-      });
+      // Kirim semua item secara parallel
+      const promises = newTransaction.map((transaction) =>
+        fetch("http://localhost:5000/peminjaman", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(transaction),
+        })
+      );
 
-      if (!response.ok) {
-        throw new Error("Gagal mengajukan peminjaman.");
-      }
-
-      if (!keterangan.trim()) {
-        alert("Keperluan tidak boleh kosong!");
-        return;
-      }
-
-      const result = await response.json();
-      alert(result.message);
-      setTransactions([...transactions, ...newTransaction]); // Tambahkan transaksi ke state
-      resetFields(); // Reset input fields
+      await Promise.all(promises);
+      alert("Peminjaman berhasil diajukan");
+      setTransactions([...transactions, ...newTransaction]);
+      resetFields();
     } catch (error) {
       console.error(error);
       alert("Terjadi kesalahan saat mengajukan peminjaman.");
@@ -167,8 +161,8 @@ const PeminjamanBarang = () => {
     setSelectedBarang(null);
   };
 
-  const handleOpenPengembalianModal = (loan) => {
-    setSelectedLoan(loan);
+  const handleOpenPengembalianModal = (transaction) => {
+    setSelectedLoan(transaction);
     setOpenPengembalianModal(true);
   };
 
@@ -188,33 +182,34 @@ const PeminjamanBarang = () => {
     }
   };
 
-  const handleDelete = async (no_transaksi) => {
-    console.log("Menghapus transaksi dengan no_transaksi:", no_transaksi); // Debug log
+  const refreshTransactions = async () => {
     try {
-      const response = await fetch(
-        `http://localhost:5000/peminjaman/${no_transaksi}`,
-        {
-          method: "DELETE",
-        }
-      );
+      const response = await fetch("http://localhost:5000/peminjaman");
+      if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
+      const data = await response.json();
+      setTransactions(data);
+      // Update localStorage jika diperlukan
+      localStorage.setItem("transactions", JSON.stringify(data));
+    } catch (error) {
+      console.error("Error refreshing transactions:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5000/peminjaman/${id}`, {
+        method: "DELETE",
+      });
+
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Gagal menghapus peminjaman.");
+        throw new Error(data.error || "Gagal menghapus peminjaman");
       }
 
-      const result = await response.json();
-      alert(result.message);
-
-      // Fetch ulang transaksi setelah penghapusan
-      const updatedTransactionsResponse = await fetch(
-        "http://localhost:5000/peminjaman"
-      );
-      if (!updatedTransactionsResponse.ok) {
-        throw new Error("Gagal memperbarui daftar transaksi.");
-      }
-
-      const updatedTransactions = await updatedTransactionsResponse.json();
-      setTransactions(updatedTransactions);
+      alert(data.message);
+      // Refresh data setelah penghapusan
+      await refreshTransactions();
     } catch (error) {
       console.error(error);
       alert("Terjadi kesalahan saat menghapus peminjaman.");
@@ -303,7 +298,7 @@ const PeminjamanBarang = () => {
             </Typography>
           </div>
 
-          <Box display="flex" gap={2} mb={2} mt={3}>
+          <Box display="flex" gap={2} mb={2} mt={3} mx={1}>
             {/* Input Fields dan Tombol */}
             <Autocomplete
               variant="outlined"
@@ -343,7 +338,7 @@ const PeminjamanBarang = () => {
                 }
               }}
             />
-            <Box display="flex" gap={2} mb={2}>
+            <Box display="flex" gap={2} mb={2} mt={1}>
               <Button
                 variant="contained"
                 color="primary"
@@ -362,6 +357,7 @@ const PeminjamanBarang = () => {
               </Button>
               <Button
                 variant="contained"
+                style={{ backgroundColor: "#0C628B", color: "white" }}
                 color="success"
                 startIcon={<ShoppingCart />}
                 onClick={handleOpenModal}
@@ -420,19 +416,10 @@ const PeminjamanBarang = () => {
                   <TableCell>Jumlah</TableCell>
                   <TableCell>Keperluan</TableCell>
                   <TableCell>Status</TableCell>
-                  {/* New column for rejection reason */}
-                  {transactions.some(
-                    (t) => t.status_peminjaman === "Ditolak"
-                  ) && <TableCell>Alasan Penolakan</TableCell>}
-                  {transactions.some(
-                    (t) => t.status_peminjaman === "Disetujui"
-                  ) && (
-                    <>
-                      <TableCell>Kondisi Saat Pinjam</TableCell>
-                      <TableCell>Kondisi Saat Kembali</TableCell>
-                      <TableCell>Bukti Pengembalian</TableCell>
-                    </>
-                  )}
+                  <TableCell>Alasan Penolakan</TableCell>
+                  <TableCell>Kondisi Saat Pinjam</TableCell>
+                  <TableCell>Kondisi Saat Kembali</TableCell>
+                  <TableCell>Bukti Pengembalian</TableCell>
                   <TableCell>Aksi</TableCell>
                 </TableRow>
               </TableHead>
@@ -444,38 +431,43 @@ const PeminjamanBarang = () => {
                     <TableCell>{transaction.jumlah}</TableCell>
                     <TableCell>{transaction.keterangan}</TableCell>
                     <TableCell>{transaction.status_peminjaman}</TableCell>
-                    {transaction.status_peminjaman === "Ditolak" && (
-                      <TableCell>
-                        {transaction.alasan_penolakan || "-"}
-                      </TableCell>
-                    )}
-
-                    {transaction.status_peminjaman === "Disetujui" && (
-                      <>
-                        <TableCell>
-                          {transaction.kondisi_saat_ambil || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {transaction.kondisi_saat_kembali || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={() =>
-                              handleOpenPengembalianModal(transaction)
-                            }
-                          >
-                            Upload Pengembalian
-                          </Button>
-                        </TableCell>
-                      </>
-                    )}
+                    <TableCell>{transaction.alasan_penolakan || "-"}</TableCell>
+                    <TableCell>
+                      {transaction.kondisi_saat_ambil || "-"}
+                    </TableCell>
+                    <TableCell>
+                      {transaction.kondisi_saat_kembali || "-"}
+                    </TableCell>
+                    <TableCell>
+                     
+                      <img
+                        src={`http://localhost:5000/uploads/${transaction.bukti_pengembalian}`}
+                        alt=""
+                        style={{
+                          width: "100px",
+                          height: "100px",
+                          objectFit: "cover",
+                          marginTop: "5px",
+                        }}
+                        
+                      />
+                      {transaction.status_peminjaman === "Disetujui" && (
+                        <Button
+                          variant="contained"
+                          color="primary"
+                          onClick={() =>
+                            handleOpenPengembalianModal(transaction)
+                          }
+                        >
+                          Upload Pengembalian
+                        </Button>
+                      )}
+                    </TableCell>
 
                     <TableCell>
                       <IconButton
                         color="error"
-                        onClick={() => handleDelete(transaction.no_transaksi)}
+                        onClick={() => handleDelete(transaction.id)}
                       >
                         <Close />
                       </IconButton>

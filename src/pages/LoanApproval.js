@@ -16,12 +16,19 @@ import {
   Box,
   Typography,
   Modal,
+  Tooltip,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
+import {
+  InfoOutlined as InfoOutlinedIcon,
+  DeleteForeverOutlined as DeleteForeverOutlinedIcon,
+  ThumbDownAltOutlined as ThumbDownAltOutlinedIcon,
+  ThumbUpOffAltOutlined as ThumbUpOffAltOutlinedIcon,
+} from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)({
-  padding: "8px",
+  padding: "12px",
   border: "1px solid #ddd",
   textAlign: "left",
   wordWrap: "break-word",
@@ -49,6 +56,67 @@ const modalStyle = {
   borderRadius: 2,
 };
 
+// Tombol Setujui (Hijau)
+const ApproveButton = styled(Button)(({ theme }) => ({
+  backgroundColor: "#2e7d32", // Hijau gelap
+  color: "white",
+  "&:hover": {
+    backgroundColor: "#1b5e20", // Hijau lebih gelap saat hover
+    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+  },
+  textTransform: "none", // Mencegah uppercase otomatis
+  fontWeight: 600,
+  padding: "8px 16px",
+  borderRadius: "12px",
+  transition: "all 0.3s ease",
+}));
+
+// Tombol Tolak (Merah)
+const RejectButton = styled(Button)(({ theme }) => ({
+  backgroundColor: "#d32f2f", // Merah
+  color: "white",
+  "&:hover": {
+    backgroundColor: "#b71c1c", // Merah lebih gelap saat hover
+    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+  },
+  textTransform: "none",
+  fontWeight: 600,
+  padding: "8px 16px",
+  borderRadius: "12px",
+  transition: "all 0.3s ease",
+}));
+
+// Tombol Detail (Biru)
+const DetailButton = styled(Button)(({ theme }) => ({
+  backgroundColor: "#1976d2", // Biru
+  color: "white",
+  "&:hover": {
+    backgroundColor: "#0d47a1", // Biru lebih gelap saat hover
+    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+  },
+  textTransform: "none",
+  fontWeight: 600,
+  padding: "8px 16px",
+  borderRadius: "12px",
+  transition: "all 0.3s ease",
+}));
+
+// Tombol Hapus (Oranye)
+const RemoveButton = styled(Button)(({ theme }) => ({
+  backgroundColor: "#ed6c02", // Oranye
+  justifyContent: "center",
+  color: "white",
+  "&:hover": {
+    backgroundColor: "#e65100", // Oranye lebih gelap saat hover
+    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+  },
+  textTransform: "none",
+  fontWeight: 600,
+  padding: "8px 16px",
+  borderRadius: "12px",
+  transition: "all 0.3s ease",
+}));
+
 export default function LoanApproval() {
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [loanApproval, setLoanApproval] = useState([]);
@@ -66,7 +134,7 @@ export default function LoanApproval() {
       );
 
       const filteredData = response.data.filter(
-        (item) => !removedItems.includes(item.no_transaksi)
+        (item) => !removedItems.includes(item.id)
       );
 
       setLoanApproval(filteredData);
@@ -84,10 +152,10 @@ export default function LoanApproval() {
     setFilterStatus(event.target.value);
   };
 
-  const handleApprove = async (no_transaksi) => {
+  const handleApprove = async (id) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/peminjaman/persetujuan/${no_transaksi}`,
+        `http://localhost:5000/peminjaman/persetujuan/${id}`,
         {
           method: "PUT",
           headers: {
@@ -106,10 +174,8 @@ export default function LoanApproval() {
     }
   };
 
-  const handleReject = async (no_transaksi) => {
-    const alasan = alasanPenolakan[no_transaksi];
-
-    console.log("Alasan penolakan:", alasan);
+  const handleReject = async (id) => {
+    const alasan = alasanPenolakan[id];
 
     if (!alasan) {
       alert("Mohon masukkan alasan penolakan.");
@@ -117,31 +183,34 @@ export default function LoanApproval() {
     }
 
     try {
-      await axios.put(
-        `http://localhost:5000/peminjaman/persetujuan/${no_transaksi}`,
+      const response = await axios.put(
+        `http://localhost:5000/peminjaman/persetujuan/${id}`,
         {
           status_peminjaman: "Ditolak",
           alasan_penolakan: alasan,
         }
       );
-      alert("Penolakan berhasil disimpan.");
-      fetchLoanApproval();
-      setShowRejectInput(null);
+
+      if (response.data) {
+        alert("Penolakan berhasil disimpan.");
+        setShowRejectInput(null); // Reset input visibility
+        setAlasanPenolakan((prev) => ({
+          ...prev,
+          [id]: "", // Reset input value
+        }));
+        fetchLoanApproval();
+      }
     } catch (error) {
       console.error("Error rejecting loan:", error);
       alert("Terjadi kesalahan saat menyimpan penolakan.");
     }
   };
 
-  const handleReasonChange = (no_transaksi, value) => {
+  const handleReasonChange = (id, value) => {
     setAlasanPenolakan((prev) => ({
       ...prev,
-      [no_transaksi]: value,
+      [id]: value,
     }));
-  };
-
-  const toggleRejectInput = (no_transaksi) => {
-    setShowRejectInput((prev) => (prev === no_transaksi ? null : no_transaksi));
   };
 
   const formatTanggal = (dateString) => {
@@ -149,14 +218,14 @@ export default function LoanApproval() {
     return tanggal.toLocaleDateString("id-ID");
   };
 
-  const handleRemoveRow = (no_transaksi) => {
+  const handleRemoveRow = (id) => {
     // Ambil daftar item yang telah dihapus dari localStorage
     const removedItems = JSON.parse(
       localStorage.getItem("removedLoanItems") || "[]"
     );
 
     // Tambahkan item yang baru dihapus
-    const updatedRemovedItems = [...removedItems, no_transaksi];
+    const updatedRemovedItems = [...removedItems, id];
     localStorage.setItem(
       "removedLoanItems",
       JSON.stringify(updatedRemovedItems)
@@ -164,16 +233,16 @@ export default function LoanApproval() {
 
     // Filter dan perbarui state
     const updatedLoanApproval = loanApproval.filter(
-      (request) => request.no_transaksi !== no_transaksi
+      (request) => request.id !== id
     );
     setLoanApproval(updatedLoanApproval);
   };
 
-  const handleCloseReasonInput = (no_transaksi) => {
+  const handleCloseReasonInput = (id) => {
     setShowRejectInput(null);
     setAlasanPenolakan((prev) => ({
       ...prev,
-      [no_transaksi]: "",
+      [id]: "",
     }));
   };
 
@@ -345,8 +414,8 @@ export default function LoanApproval() {
               <StyledTableCell>Tanggal Kembali</StyledTableCell>
               <StyledTableCell>Alasan Penolakan</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
+              <StyledTableCell>Validasi</StyledTableCell>
               <StyledTableCell>Aksi</StyledTableCell>
-              <StyledTableCell>Detail Kondisi</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -357,7 +426,7 @@ export default function LoanApproval() {
                   item.status_peminjaman === filterStatus
               )
               .map((request, index) => (
-                <StyledTableRow key={request.no_transaksi}>
+                <StyledTableRow key={request.id}>
                   <StyledTableCell>{index + 1}</StyledTableCell>
                   <StyledTableCell>{request.peminjam}</StyledTableCell>
                   <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
@@ -379,117 +448,113 @@ export default function LoanApproval() {
 
                   <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
                   <StyledTableCell>
-                    {request.status_peminjaman === "Menunggu persetujuan" && (
-                      <>
-                        <Button
-                          variant="contained"
-                          color="success"
-                          onClick={() => handleApprove(request.no_transaksi)}
-                        >
-                          Setujui
-                        </Button>
-                        <Button
-                          variant="contained"
-                          color="error"
-                          sx={{ ml: 1 }}
-                          onClick={() =>
-                            setShowRejectInput(request.no_transaksi)
-                          }
-                        >
-                          Tolak
-                        </Button>
-                      </>
-                    )}
-
-                    {request.status_peminjaman === "Disetujui" && (
-                      <Button
+                    {(request.status_peminjaman === "Menunggu Persetujuan" ||
+                      request.status_peminjaman === "Ditolak") && (
+                      <ApproveButton
+                        startIcon={<ThumbUpOffAltOutlinedIcon />}
                         variant="contained"
-                        color="error"
-                        onClick={() => setShowRejectInput(request.no_transaksi)}
-                      >
-                        Tolak
-                      </Button>
-                    )}
-                    {request.status_peminjaman === "Ditolak" && (
-                      <Button
-                        variant="contained"
-                        color="success"
-                        onClick={() => handleApprove(request.no_transaksi)}
+                        sx={{
+                          my: 1,
+                          mx: 1,
+                          borderRadius: "8px",
+                          height: "45px",
+                        }}
+                        onClick={() => handleApprove(request.id)}
                       >
                         Setujui
-                      </Button>
+                      </ApproveButton>
                     )}
 
-                    <Button
-                      variant="contained"
-                      color="warning"
-                      sx={{ ml: 1 }}
-                      onClick={() => handleRemoveRow(request.no_transaksi)}
-                    >
-                      Hapus
-                    </Button>
+                    {(request.status_peminjaman === "Disetujui" || request.status_peminjaman === "Menunggu Persetujuan") && (
+                      <RejectButton
+                        variant="contained"
+                        startIcon={<ThumbDownAltOutlinedIcon />}
+                        sx={{
+                          my: 1,
+                          mx: 1,
+                          padding: "8px 16 px",
+                          borderRadius: "8px",
+                          height: "45px",
+                        }}
+                        onClick={() => setShowRejectInput(request.id)}
+                      >
+                        Tolak
+                      </RejectButton>
+                    )}
 
-                    {showRejectInput === request.no_transaksi && (
+                    {showRejectInput === request.id && (
                       <>
                         <TextField
                           placeholder="Alasan penolakan"
                           onChange={(e) =>
-                            handleReasonChange(
-                              request.no_transaksi,
-                              e.target.value
-                            )
+                            handleReasonChange(request.id, e.target.value)
                           }
-                          value={alasanPenolakan[request.no_transaksi] || ""}
+                          value={alasanPenolakan[request.id] || ""}
                           sx={{ mt: 1, width: "100%" }}
                         />
                         <Button
                           variant="contained"
-                          color="error"
-                          sx={{ mt: 1 }}
-                          onClick={() => handleReject(request.no_transaksi)}
+                          sx={{
+                            mt: 1,
+                            padding: "8px 16 px",
+                            borderRadius: "8px",
+                            height: "45px",
+                          }}
+                          onClick={() => handleReject(request.id)}
                         >
                           Kirim
                         </Button>
                         <Button
                           variant="outlined"
-                          color="secondary"
-                          sx={{ mt: 1, ml: 1 }}
-                          onClick={() =>
-                            handleCloseReasonInput(request.no_transaksi)
-                          }
+                          sx={{
+                            mt: 1,
+                            my: 1,
+                            mx: 2,
+                            padding: "8px 16 px",
+                            borderRadius: "8px",
+                            height: "45px",
+                          }}
+                          onClick={() => handleCloseReasonInput(request.id)}
                         >
                           Tutup
                         </Button>
                       </>
                     )}
 
-                    {request.status_peminjaman === "Menunggu persetujuan" && (
-                      <TextField
-                        placeholder="Alasan penolakan"
-                        onChange={(e) =>
-                          handleReasonChange(
-                            request.no_transaksi,
-                            e.target.value
-                          )
-                        }
-                        value={alasanPenolakan[request.no_transaksi] || ""}
-                        sx={{ mt: 1 }}
-                      />
-                    )}
                   </StyledTableCell>
 
-                 
                   <StyledTableCell>
-                    <Button
-                      variant="contained"
-                      color="info"
-                      onClick={() => {
-                        console.log("Button clicked!");
-                        handleOpenDetail(request);
-                      }}
-                    >
-                      Lihat Detail
-                    </Button>
+                    <Tooltip title="Detail">
+                      {" "}
+                      <DetailButton
+                        variant="contained"
+                        startIcon={<InfoOutlinedIcon />}
+                        sx={{
+                          padding: "8px 16 px",
+                          borderRadius: "8px",
+                          height: "45px",
+                        }}
+                        onClick={() => {
+                          console.log("DetailButton clicked!");
+                          handleOpenDetail(request);
+                        }}
+                      ></DetailButton>
+                    </Tooltip>
+                    <Tooltip title="Hapus">
+                      {" "}
+                      <RemoveButton
+                        variant="contained"
+                        startIcon={<DeleteForeverOutlinedIcon />}
+                        sx={{
+                          my: 1,
+                          mx: 2,
+                          padding: "8px 16 px",
+                          borderRadius: "8px",
+                          height: "45px",
+                        }}
+                        onClick={() => handleRemoveRow(request.id)}
+                      ></RemoveButton>
+                    </Tooltip>
                   </StyledTableCell>
                 </StyledTableRow>
               ))}

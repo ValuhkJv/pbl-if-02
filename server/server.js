@@ -5,6 +5,7 @@ const app = express();
 const multer = require("multer");
 const fs = require("fs");
 const uploadDir = "uploads/";
+const path = require('path');
 const PORT = 5000;
 
 // Middleware
@@ -57,41 +58,44 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-app.use("/uploads", express.static("uploads"));
+// Pastikan folder uploads ada dan dapat diakses
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer configuration for file uploads
+// Konfigurasi multer yang benar
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
+  destination: function(req, file, cb) {
+    cb(null, path.join(__dirname, 'uploads/'));
   },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
+  filename: function(req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
 });
-const upload = multer({ storage });
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function(req, file, cb) {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Hanya file gambar yang diperbolehkan'));
+    }
+  }
+});
 
 // Endpoint login
 app.post("/login", async (req, res) => {
   const { username, password, role } = req.body;
 
-  console.log("Login attempt:", { username, password, role }); // Debugging
-
   try {
-    const query = "SELECT * FROM users WHERE username = $1 AND password = $2";
-    const result = await db.query(query, [username, password]);
+    const query =
+      "SELECT * FROM users WHERE username = $1 AND password = $2 AND role = $3";
+    const result = await db.query(query, [username, password, role]);
 
     if (result.rows.length === 0) {
-      console.log("Invalid username or password."); // Debugging
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
     const user = result.rows[0];
-
-    // Periksa apakah role sesuai
-    if (user.role.toLowerCase() !== role.toLowerCase()) {
-      console.log("Role does not match with username."); // Debugging
-      return res.status(401).json({ message: "Role does not match with username" });
-    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -133,7 +137,6 @@ app.get("/barang-konsumsi", async (req, res) => {
     res.status(500).json({ error: "Error fetching barang konsumsi" });
   }
 });
-
 
 // POST barang konsumsi
 app.post("/barang-konsumsi", async (req, res) => {
@@ -448,12 +451,13 @@ app.get("/peminjaman", async (req, res) => {
 // Endpoint untuk pengajuan peminjaman
 app.post("/peminjaman", async (req, res) => {
   const {
-    no_inventaris,
-    jumlah,
-    peminjam,
     no_transaksi,
-    keterangan,
+    no_inventaris,
     nama_barang,
+    jumlah,
+    keterangan,
+    status_peminjaman,
+    peminjam,
     nim_nik_nidn,
   } = req.body;
 
@@ -476,15 +480,16 @@ app.post("/peminjaman", async (req, res) => {
 
     // Simpan data peminjaman
     await db.query(
-      `INSERT INTO peminjaman (no_transaksi, no_inventaris, jumlah, peminjam, status_peminjaman, keterangan, nama_barang, nim_nik_nidn) 
-       VALUES ($1, $2, $3, $4, 'Menunggu Persetujuan', $5, $6, $7)`,
+      `INSERT INTO peminjaman ( no_inventaris, nama_barang, jumlah, keterangan, status_peminjaman, no_transaksi, peminjam,  nim_nik_nidn) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [
-        no_transaksi,
         no_inventaris,
-        jumlah,
-        peminjam,
-        keterangan,
         nama_barang,
+        jumlah,
+        keterangan,
+        status_peminjaman,
+        no_transaksi,
+        peminjam,
         nim_nik_nidn,
       ]
     );
@@ -502,8 +507,8 @@ app.post("/peminjaman", async (req, res) => {
   }
 });
 
-app.put("/peminjaman/persetujuan/:no_transaksi", async (req, res) => {
-  const { no_transaksi } = req.params;
+app.put("/peminjaman/persetujuan/:id", async (req, res) => {
+  const { id } = req.params;
   const { status_peminjaman, alasan_penolakan } = req.body;
 
   try {
@@ -518,8 +523,8 @@ app.put("/peminjaman/persetujuan/:no_transaksi", async (req, res) => {
     if (status_peminjaman === "Disetujui") {
       // Ambil data peminjaman untuk mendapatkan detail barang
       const peminjaman = await db.query(
-        "SELECT no_inventaris, jumlah FROM peminjaman WHERE no_transaksi = $1",
-        [no_transaksi]
+        "SELECT no_inventaris, jumlah FROM peminjaman WHERE id = $1",
+        [id]
       );
 
       if (!peminjaman.rows.length) {
@@ -544,11 +549,11 @@ app.put("/peminjaman/persetujuan/:no_transaksi", async (req, res) => {
       `UPDATE peminjaman 
        SET status_peminjaman = $1, 
            alasan_penolakan = $2
-       WHERE no_transaksi = $3`,
+       WHERE id = $3`,
       [
         status_peminjaman,
         status_peminjaman === "Ditolak" ? alasan_penolakan : null,
-        no_transaksi,
+        id,
       ]
     );
 
@@ -563,11 +568,13 @@ app.put("/peminjaman/persetujuan/:no_transaksi", async (req, res) => {
 
 // Endpoint Pengembalian Barang
 app.post(
-  "/pengembalian/:no_transaksi",
+  "/pengembalian/:id",
   upload.single("bukti_pengembalian"),
   async (req, res) => {
-    const { no_transaksi } = req.params;
+    const { id } = req.params;
     const { kondisi_saat_ambil, kondisi_saat_kembali } = req.body;
+
+    console.log("File uploaded:", req.file);
 
     // Validasi file upload
     if (!req.file) {
@@ -581,8 +588,8 @@ app.post(
 
       // Cek status peminjaman
       const peminjaman = await db.query(
-        "SELECT no_inventaris, jumlah, status_peminjaman FROM peminjaman WHERE no_transaksi = $1",
-        [no_transaksi]
+        "SELECT no_inventaris, jumlah, status_peminjaman FROM peminjaman WHERE id = $1",
+        [id]
       );
 
       if (!peminjaman.rows.length) {
@@ -597,58 +604,78 @@ app.post(
           .json({ error: "Status peminjaman tidak valid untuk pengembalian" });
       }
 
-    // Update status peminjaman dengan bukti pengembalian
-    await db.query(
-      `UPDATE peminjaman 
+      // Update status peminjaman dengan bukti pengembalian
+      await db.query(
+        `UPDATE peminjaman 
        SET status_peminjaman = 'Kembali',
            kondisi_saat_ambil = $1,
            kondisi_saat_kembali = $2,
            tanggal_kembali = CURRENT_TIMESTAMP,
            bukti_pengembalian = $3
-       WHERE no_transaksi = $4`,
-      [kondisi_saat_ambil, kondisi_saat_kembali, req.file.filename, no_transaksi]
-    );
+       WHERE id = $4`,
+        [
+          kondisi_saat_ambil,
+          kondisi_saat_kembali,
+          req.file.filename,
+          id,
+        ]
+      );
 
-    // Kembalikan stok
-    await db.query(
-      "UPDATE barang_peminjaman SET stok = stok + $1 WHERE no_inventaris = $2",
-      [peminjaman.rows[0].jumlah, peminjaman.rows[0].no_inventaris]
-    );
+      // Kembalikan stok
+      await db.query(
+        "UPDATE barang_peminjaman SET stok = stok + $1 WHERE no_inventaris = $2",
+        [peminjaman.rows[0].jumlah, peminjaman.rows[0].no_inventaris]
+      );
 
-    await db.query('COMMIT');
-    res.json({ 
-      message: "Pengembalian berhasil diproses",
-      bukti_pengembalian: req.file.filename 
-    });
-  } catch (err) {
-    await db.query('ROLLBACK');
-    console.error(err);
-    res.status(500).json({ error: "Terjadi kesalahan pada server" });
+      await db.query("COMMIT");
+      res.json({
+        message: "Pengembalian berhasil diproses",
+        bukti_pengembalian: req.file.filename,
+      });
+    } catch (err) {
+      await db.query("ROLLBACK");
+      console.error(err);
+      res.status(500).json({ error: "Terjadi kesalahan pada server" });
+    }
   }
-});
-
+);
 
 // Delete peminjaman
-app.delete("/peminjaman/:no_transaksi", async (req, res) => {
-  const { no_transaksi } = req.params;
+app.delete("/peminjaman/:id", async (req, res) => {
+  const { id } = req.params;
+  const client = await db.connect();
 
   try {
-    const result = await db.query(
-      "DELETE FROM peminjaman WHERE no_transaksi = $1 RETURNING *",
-      [no_transaksi]
+    await client.query("BEGIN");
+
+    // Cek status peminjaman terlebih dahulu
+    const checkStatus = await client.query(
+      "SELECT status_peminjaman FROM peminjaman WHERE id = $1",
+      [id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Peminjaman tidak ditemukan" });
+    if (checkStatus.rows.length === 0) {
+      throw new Error("Peminjaman tidak ditemukan");
     }
+    // Hapus data peminjaman
+    const result = await db.query(
+      "DELETE FROM peminjaman WHERE id = $1 RETURNING *",
+      [id]
+    );
 
-    res
-      .status(200)
-      .json({ message: "Peminjaman berhasil dihapus", data: result.rows[0] });
+    await client.query("COMMIT");
+    res.status(200).json({
+      message: "Peminjaman berhasil dihapus",
+      data: result.rows[0],
+    });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err);
-    res
-      .status(500)
-      .json({ error: "Terjadi kesalahan saat menghapus peminjaman" });
+    res.status(500).json({
+      error: "Terjadi kesalahan saat menghapus peminjaman",
+      detail: err.message,
+    });
+  } finally {
+    client.release();
   }
 });
