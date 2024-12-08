@@ -128,19 +128,30 @@ export default function LoanApproval() {
 
   const fetchLoanApproval = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/peminjaman");
-      const removedItems = JSON.parse(
-        localStorage.getItem("removedLoanItems") || "[]"
-      );
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
 
-      const filteredData = response.data.filter(
-        (item) => !removedItems.includes(item.id)
-      );
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data peminjaman");
+      }
 
-      setLoanApproval(filteredData);
+      const data = await response.json();
+      
+      // Debug: Log fetched data
+      console.log("Fetched Transactions:", data);
+      
+      setLoanApproval(data);
+      localStorage.setItem("transactions", JSON.stringify(data));
     } catch (error) {
-      console.error("Error fetching loan data:", error);
-      alert("Terjadi kesalahan saat mengambil data peminjaman.");
+      console.error("Error fetching transactions:", error);
+      alert("Gagal memuat data peminjaman");
     }
   };
 

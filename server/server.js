@@ -5,7 +5,7 @@ const app = express();
 const multer = require("multer");
 const fs = require("fs");
 const uploadDir = "uploads/";
-const path = require('path');
+const path = require("path");
 const PORT = 5000;
 
 // Middleware
@@ -37,20 +37,28 @@ app.listen(PORT, () => {
 
 // Middleware untuk autentikasi
 const authenticateToken = (req, res, next) => {
-  const token = req.headers["authorization"];
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
   if (!token) {
     return res
       .status(401)
       .json({ message: "Access denied. No token provided." });
   }
 
-  try {
-    const decoded = jwt.verify(token, secretKey);
-    req.user = decoded; // Simpan payload token ke req.user
+  jwt.verify(token, secretKey, (err, user) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    req.user = user; // Attach decoded user to the request
     next();
-  } catch (err) {
-    res.status(403).json({ message: "Invalid or expired token." });
+  });
+};
+
+const authorizeRole = (allowedRoles) => (req, res, next) => {
+  const { role } = req.user;
+  if (!allowedRoles.includes(role)) {
+    return res.status(403).json({ error: "Access denied" });
   }
+  next();
 };
 
 // Create uploads directory if it doesn't exist
@@ -59,27 +67,27 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Pastikan folder uploads ada dan dapat diakses
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Konfigurasi multer yang benar
 const storage = multer.diskStorage({
-  destination: function(req, file, cb) {
-    cb(null, path.join(__dirname, 'uploads/'));
+  destination: function (req, file, cb) {
+    cb(null, path.join(__dirname, "uploads/"));
   },
-  filename: function(req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
-  fileFilter: function(req, file, cb) {
-    if (file.mimetype.startsWith('image/')) {
+  fileFilter: function (req, file, cb) {
+    if (file.mimetype.startsWith("image/")) {
       cb(null, true);
     } else {
-      cb(new Error('Hanya file gambar yang diperbolehkan'));
+      cb(new Error("Hanya file gambar yang diperbolehkan"));
     }
-  }
+  },
 });
 
 // Endpoint login
@@ -435,17 +443,43 @@ app.delete("/requests/:id", async (req, res) => {
 });
 
 // Endpoint untuk mengambil semua data peminjaman
-app.get("/peminjaman", async (req, res) => {
+app.get("/peminjaman", authenticateToken, async (req, res) => {
+  const { role, nim_nik_nidn, nama } = req.user;
+
   try {
-    const result = await db.query("SELECT * FROM peminjaman");
-    console.log(result.rows);
+    let query, queryParams;
+
+    switch (role) {
+      case "mahasiswa":
+      case "kepalaUnit":
+      case "unit":
+        query = `
+          SELECT * FROM peminjaman 
+          WHERE (nim_nik_nidn = $1 OR peminjam = $2) 
+          AND is_deleted = false
+        `;
+        queryParams = [nim_nik_nidn, nama];
+        break;
+
+      case "staf":
+        query = "SELECT * FROM peminjaman WHERE is_deleted = false";
+        queryParams = [];
+        break;
+
+      default:
+        return res.status(403).json({ error: "Akses tidak diizinkan" });
+    }
+
+    const result = await db.query(query, queryParams);
     res.status(200).json(result.rows);
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
+    res.status(500).json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
   }
+});
+
+app.get("/validate-token", authenticateToken, (req, res) => {
+  res.status(200).json({ message: "Valid token" });
 });
 
 // Endpoint untuk pengajuan peminjaman
@@ -613,12 +647,7 @@ app.post(
            tanggal_kembali = CURRENT_TIMESTAMP,
            bukti_pengembalian = $3
        WHERE id = $4`,
-        [
-          kondisi_saat_ambil,
-          kondisi_saat_kembali,
-          req.file.filename,
-          id,
-        ]
+        [kondisi_saat_ambil, kondisi_saat_kembali, req.file.filename, id]
       );
 
       // Kembalikan stok

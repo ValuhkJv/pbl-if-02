@@ -138,7 +138,7 @@ const Login = () => {
                 }}
               >
                 <MenuItem value="staf">Staf</MenuItem>
-                <MenuItem value="kepalaunit">Kepala Unit</MenuItem>
+                <MenuItem value="kepalaUnit">Kepala Unit</MenuItem>
                 <MenuItem value="unit">Unit</MenuItem>
                 <MenuItem value="mahasiswa">Mahasiswa</MenuItem>
               </Select>

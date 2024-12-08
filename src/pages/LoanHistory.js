@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -7,11 +7,11 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button,
-  FormControl,
-  InputLabel,
   Select,
   MenuItem,
+  FormControl,
+  InputLabel,
+  TablePagination,
 } from "@mui/material";
 import { styled } from "@mui/system";
 
@@ -32,39 +32,74 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 export default function LoanHistory() {
   // state untuk menyimpan status filter
   const [filterStatus, setFilterStatus] = useState("Semua");
+  const [history, setHistory] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  // data dummy
-  const loanHistory = [
-    {
-      id: 1,
-      name: "lala",
-      nik: "2343546",
-      itemName: "infocus",
-      inventoryNo: "234567",
-      quantity: 2,
-      purpose: "untuk kegiatan kuliah",
-      borrowDate: "10/09/2024",
-      returnDate: "10/15/2024",
-      status: "Menunggu persetujuan",
-    },
-    {
-      id: 2,
-      name: "budi",
-      nik: "12345678",
-      itemName: "laptop",
-      inventoryNo: "09876",
-      quantity: 1,
-      purpose: "untuk kegiatan kuliah",
-      borrowDate: "10/10/2024",
-      returnDate: "10/18/2024",
-      status: "Disetujui",
-    },
-  ];
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        console.log("Token from localStorage:", token);
+
+        if (!token) {
+          console.error("No token found in localStorage");
+          return;
+        }
+
+        const response = await fetch("http://localhost:5000/peminjaman", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log("Response status:", response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Error response:", errorText);
+          throw new Error("Gagal mengambil data peminjaman");
+        }
+
+        const data = await response.json();
+        console.log("Fetched Transactions:", data); // Detailed data log
+
+        if (data.length === 0) {
+          console.warn("No transactions found");
+        }
+
+        setHistory(data);
+      } catch (error) {
+        console.error("Detailed Error:", error);
+        alert("Gagal memuat data peminjaman: " + error.message);
+      }
+    };
+    fetchHistory();
+  }, []);
 
   // handle perubahan dropdown
   const handleFilterChange = (event) => {
     setFilterStatus(event.target.value);
   };
+
+  const formatTanggalDanJam = (dateString) => {
+    if (!dateString) return "-";
+    const tanggal = new Date(dateString);
+  
+    if (isNaN(tanggal)) return "-";
+  
+    return `${tanggal.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    })} WIB`; // Tambahkan zona waktu
+  };  
+  
 
   return (
     <div
@@ -77,6 +112,26 @@ export default function LoanHistory() {
       }}
     >
       <h2>Riwayat Transaksi Peminjaman</h2>
+      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2 }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={filterStatus}
+          onChange={handleFilterChange}
+          label="Status"
+        >
+          <MenuItem value="Semua">Semua</MenuItem>
+          <MenuItem value="Disetujui">Disetujui</MenuItem>
+          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
+          <MenuItem value="Ditolak">Ditolak</MenuItem>
+        </Select>
+      </FormControl>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      ></TableContainer>
       <div
         style={{
           display: "flex",
@@ -113,28 +168,44 @@ export default function LoanHistory() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {loanHistory
+            {history
               .filter(
-                (history) =>
-                  filterStatus === "Semua" || history.status === filterStatus
+                (item) =>
+                  filterStatus === "Semua" || item.status === filterStatus
               )
-              .map((history, index) => (
-                <StyledTableRow key={history.id}>
+              .map((item, index) => (
+                <StyledTableRow key={item.id}>
                   <StyledTableCell>{index + 1}</StyledTableCell>
-                  <StyledTableCell>{history.name}</StyledTableCell>
-                  <StyledTableCell>{history.nik}</StyledTableCell>
-                  <StyledTableCell>{history.itemName}</StyledTableCell>
-                  <StyledTableCell>{history.inventoryNo}</StyledTableCell>
-                  <StyledTableCell>{history.quantity}</StyledTableCell>
-                  <StyledTableCell>{history.purpose}</StyledTableCell>
-                  <StyledTableCell>{history.borrowDate}</StyledTableCell>
-                  <StyledTableCell>{history.returnDate}</StyledTableCell>
-                  <StyledTableCell>{history.status}</StyledTableCell>
+                  <StyledTableCell>{item.peminjam}</StyledTableCell>
+                  <StyledTableCell>{item.nim_nik_nidn}</StyledTableCell>
+                  <StyledTableCell>{item.nama_barang}</StyledTableCell>
+                  <StyledTableCell>{item.no_inventaris}</StyledTableCell>
+                  <StyledTableCell>{item.jumlah}</StyledTableCell>
+                  <StyledTableCell>{item.keterangan}</StyledTableCell>
+                  <StyledTableCell>
+                    {formatTanggalDanJam(item.tanggal_pinjam)}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    {formatTanggalDanJam(item.tanggal_kembali)}
+                  </StyledTableCell>
+                  <StyledTableCell>{item.status_peminjaman}</StyledTableCell>
                   <StyledTableCell></StyledTableCell>
                 </StyledTableRow>
               ))}
           </TableBody>
         </Table>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={history.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={(event, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+        />
       </TableContainer>
     </div>
   );

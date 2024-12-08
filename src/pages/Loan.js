@@ -28,14 +28,14 @@ const PeminjamanBarang = () => {
   const [noInventaris, setNoInventaris] = useState("");
   const [namaBarang, setNamaBarang] = useState("");
   const [jumlah, setJumlah] = useState(1);
-  const [nim_nik_nidn, setNIM_NIK_NIDN] = useState("");
+  const [nim_nik_nidn, setNimNikNidn] = useState("");
   const [peminjam, setPeminjam] = useState("");
   const [items, setItems] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [noTransaksi, setNoTransaksi] = useState([]);
   const [barangList, setBarangList] = useState([]);
   const [selectedBarang, setSelectedBarang] = useState(null);
-  const [tanggal, setTanggal] = useState(format(new Date(), "dd MMM yyyy"));
+  const [tanggal] = useState(format(new Date(), "dd MMM yyyy"));
   const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
   const [openModal, setOpenModal] = useState(false);
   const [keterangan, setKeterangan] = useState("");
@@ -82,7 +82,7 @@ const PeminjamanBarang = () => {
       const user = JSON.parse(userData);
       console.log("Data User:", user);
       setPeminjam(user.nama || ""); // Pastikan nama ada
-      setNIM_NIK_NIDN(user.nim_nik_nidn || ""); // Pastikan nim_nik_nidn ada
+      setNimNikNidn(user.nim_nik_nidn || ""); // Pastikan nim_nik_nidn ada
     } else {
       console.warn("User  data tidak ditemukan di localStorage.");
     }
@@ -91,7 +91,9 @@ const PeminjamanBarang = () => {
   useEffect(() => {
     const storedTransactions = localStorage.getItem("transactions");
     if (storedTransactions) {
-      setTransactions(JSON.parse(storedTransactions));
+      const parsedTransactions = JSON.parse(storedTransactions);
+      console.log("Stored Transactions:", parsedTransactions);
+      setTransactions(parsedTransactions);
     }
   }, []);
 
@@ -145,6 +147,7 @@ const PeminjamanBarang = () => {
 
       await Promise.all(promises);
       alert("Peminjaman berhasil diajukan");
+      await refreshTransactions();
       setTransactions([...transactions, ...newTransaction]);
       resetFields();
     } catch (error) {
@@ -172,23 +175,34 @@ const PeminjamanBarang = () => {
 
   const handleUpdateTransactions = async () => {
     try {
-      const response = await fetch("http://localhost:5000/peminjaman");
-      if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
       const data = await response.json();
       setTransactions(data);
+      localStorage.setItem("transactions", JSON.stringify(data));
     } catch (error) {
-      console.error(error);
-      alert("Terjadi kesalahan saat memperbarui transaksi.");
+      console.error("Error refreshing transactions:", error);
     }
   };
 
   const refreshTransactions = async () => {
     try {
-      const response = await fetch("http://localhost:5000/peminjaman");
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
       const data = await response.json();
       setTransactions(data);
-      // Update localStorage jika diperlukan
       localStorage.setItem("transactions", JSON.stringify(data));
     } catch (error) {
       console.error("Error refreshing transactions:", error);
@@ -219,18 +233,35 @@ const PeminjamanBarang = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const response = await fetch("http://localhost:5000/peminjaman");
-        if (!response.ok) throw new Error("Gagal mengambil data transaksi.");
+        const token = localStorage.getItem("token");
+
+        const response = await fetch("http://localhost:5000/peminjaman", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data peminjaman");
+        }
+
         const data = await response.json();
+
+        // Debug: Log fetched data
+        console.log("Fetched Transactions:", data);
+
         setTransactions(data);
-        console.log("Data transaksi dari backend:", data);
+        localStorage.setItem("transactions", JSON.stringify(data));
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching transactions:", error);
+        alert("Gagal memuat data peminjaman");
       }
     };
 
     fetchTransactions();
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on component mount
 
   return (
     <Grid>
@@ -425,7 +456,7 @@ const PeminjamanBarang = () => {
               </TableHead>
               <TableBody>
                 {transactions.map((transaction) => (
-                  <TableRow key={transaction.no_transaksi}>
+                  <TableRow key={transaction.id}>
                     <TableCell>{transaction.no_inventaris}</TableCell>
                     <TableCell>{transaction.nama_barang}</TableCell>
                     <TableCell>{transaction.jumlah}</TableCell>
@@ -439,29 +470,31 @@ const PeminjamanBarang = () => {
                       {transaction.kondisi_saat_kembali || "-"}
                     </TableCell>
                     <TableCell>
-                     
-                      <img
-                        src={`http://localhost:5000/uploads/${transaction.bukti_pengembalian}`}
-                        alt=""
-                        style={{
-                          width: "100px",
-                          height: "100px",
-                          objectFit: "cover",
-                          marginTop: "5px",
-                        }}
-                        
-                      />
-                      {transaction.status_peminjaman === "Disetujui" && (
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          onClick={() =>
-                            handleOpenPengembalianModal(transaction)
-                          }
-                        >
-                          Upload Pengembalian
-                        </Button>
+                      {transaction.bukti_pengembalian ? (
+                        <img
+                          src={`http://localhost:5000/uploads/${transaction.bukti_pengembalian}`}
+                          alt="Bukti Pengembalian"
+                          style={{
+                            width: "100px",
+                            height: "100px",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        ""
                       )}
+                      {transaction.status_peminjaman === "Disetujui" &&
+                        !transaction.bukti_pengembalian && (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() =>
+                              handleOpenPengembalianModal(transaction)
+                            }
+                          >
+                            Upload Pengembalian
+                          </Button>
+                        )}
                     </TableCell>
 
                     <TableCell>
@@ -493,7 +526,7 @@ const PeminjamanBarang = () => {
         sx={{
           "& .MuiDialog-paper": {
             width: "35%",
-            height: "35%",
+            height: "30%",
             maxWidth: "none",
           },
         }}
@@ -511,10 +544,9 @@ const PeminjamanBarang = () => {
             required
           />
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ mb: "20px", mx: 2 }}>
           <Button
             onClick={handleCloseModal}
-            color="secondary"
             sx={{
               border: "2px solid ",
               borderColor: "black",
@@ -534,6 +566,7 @@ const PeminjamanBarang = () => {
               border: "2px solid #69D2FF",
               backgroundColor: "#69D2FF",
               color: "black",
+              borderRadius: "8px",
               padding: "8px 16px",
             }}
           >
