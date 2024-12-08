@@ -125,6 +125,7 @@ export default function LoanApproval() {
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [requests, setRequests] = useState([]);
+  
 
   const fetchLoanApproval = async () => {
     try {

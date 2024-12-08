@@ -19,6 +19,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
 import { format } from "date-fns";
@@ -41,9 +43,19 @@ const PeminjamanBarang = () => {
   const [keterangan, setKeterangan] = useState("");
   const [openPengembalianModal, setOpenPengembalianModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
-
   const handleOpenModal = () => setOpenModal(true);
   const handleCloseModal = () => setOpenModal(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   useEffect(() => {
     // Fetch barang dengan stok tersedia dari backend
@@ -210,23 +222,48 @@ const PeminjamanBarang = () => {
   };
 
   const handleDelete = async (id) => {
+    if (!id) {
+      setSnackbar({
+        open: true,
+        message: "ID peminjaman tidak valid",
+        severity: "error",
+      });
+      return;
+    }
+
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(`http://localhost:5000/peminjaman/${id}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.error || "Gagal menghapus peminjaman");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Gagal menghapus peminjaman");
       }
 
-      alert(data.message);
-      // Refresh data setelah penghapusan
+      const data = await response.json();
+      setSnackbar({
+        open: true,
+        message: data.message,
+        severity: "success",
+      });
+
+      setTransactions((prevTransactions) =>
+        prevTransactions.filter((t) => t.id !== id)
+      );
       await refreshTransactions();
     } catch (error) {
       console.error(error);
-      alert("Terjadi kesalahan saat menghapus peminjaman.");
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
     }
   };
 
@@ -262,6 +299,73 @@ const PeminjamanBarang = () => {
 
     fetchTransactions();
   }, []); // Empty dependency array ensures this runs only once on component mount
+
+  // Fungsi untuk membuka dialog konfirmasi hapus
+  const handleOpenDeleteDialog = (id) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  // Fungsi untuk menutup dialog konfirmasi hapus
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
+  };
+
+  // Fungsi konfirmasi delete
+  const confirmDelete = async () => {
+    if (itemToDelete) {
+      await handleDelete(itemToDelete);
+      handleCloseDeleteDialog();
+    }
+  };
+
+  const handleCancel = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `http://localhost:5000/peminjaman/cancel/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Gagal membatalkan peminjaman");
+      }
+
+      // Try to parse the response as JSON
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        throw new Error("Response bukan dalam format JSON");
+      }
+
+      setSnackbar({
+        open: true,
+        message: data.message || "Peminjaman berhasil dibatalkan",
+        severity: "success",
+      });
+
+
+      // Refresh transaksi setelah pembatalan
+      await refreshTransactions();
+    } catch (error) {
+      console.error(error);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
+    }
+  };
 
   return (
     <Grid>
@@ -500,10 +604,20 @@ const PeminjamanBarang = () => {
                     <TableCell>
                       <IconButton
                         color="error"
-                        onClick={() => handleDelete(transaction.id)}
+                        onClick={() => handleOpenDeleteDialog(transaction.id)}
                       >
                         <Close />
                       </IconButton>
+                      {transaction.status_peminjaman ===
+                        "Menunggu Persetujuan" && (
+                        <Button
+                          variant="contained"
+                          color="error"
+                          onClick={() => handleCancel(transaction.id)}
+                        >
+                          Batalkan
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -526,7 +640,7 @@ const PeminjamanBarang = () => {
         sx={{
           "& .MuiDialog-paper": {
             width: "35%",
-            height: "30%",
+            height: "35%",
             maxWidth: "none",
           },
         }}
@@ -574,6 +688,67 @@ const PeminjamanBarang = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: { borderRadius: "12px", padding: "8px" },
+        }}
+      >
+        <DialogTitle id="alert-dialog-title">
+          {"Apakah Anda yakin ingin menghapus?"}
+        </DialogTitle>
+
+        <DialogActions
+          sx={{
+            justifyContent: "center",
+            gap: 2,
+          }}
+        >
+          <Button
+            onClick={handleCloseDeleteDialog}
+            sx={{
+              border: "2px solid ",
+              borderColor: "black",
+              color: "black",
+              borderRadius: "8px",
+              padding: "8px 16px",
+            }}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            sx={{
+              border: "2px solid #69D2FF",
+              backgroundColor: "#69D2FF",
+              color: "black",
+              padding: "8px 16px",
+            }}
+            autoFocus
+          >
+            Hapus
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Add Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Grid>
   );
 };

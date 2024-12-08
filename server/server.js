@@ -474,7 +474,9 @@ app.get("/peminjaman", authenticateToken, async (req, res) => {
     res.status(200).json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
   }
 });
 
@@ -670,7 +672,7 @@ app.post(
 );
 
 // Delete peminjaman
-app.delete("/peminjaman/:id", async (req, res) => {
+app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const client = await db.connect();
 
@@ -699,9 +701,53 @@ app.delete("/peminjaman/:id", async (req, res) => {
     });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error(err);
+    console.error("Error details:", err); // Tambahkan log ini
     res.status(500).json({
       error: "Terjadi kesalahan saat menghapus peminjaman",
+      detail: err.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Batalkan peminjaman
+app.delete("/peminjaman/cancel/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Cek status peminjaman terlebih dahulu
+    const checkStatus = await client.query(
+      "SELECT status_peminjaman FROM peminjaman WHERE id = $1",
+      [id]
+    );
+
+    if (checkStatus.rows.length === 0) {
+      throw new Error("Peminjaman tidak ditemukan");
+    }
+
+    if (checkStatus.rows[0].status_peminjaman !== "Menunggu Persetujuan") {
+      throw new Error("Hanya peminjaman dengan status 'Menunggu Persetujuan' yang dapat dibatalkan");
+    }
+
+    // Hapus data peminjaman
+    await client.query(
+      "DELETE FROM peminjaman WHERE id = $1",
+      [id]
+    );
+
+    await client.query("COMMIT");
+    res.status(200).json({
+      message: "Peminjaman berhasil dibatalkan",
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error details:", err);
+    res.status(500).json({
+      error: "Terjadi kesalahan saat membatalkan peminjaman",
       detail: err.message,
     });
   } finally {
