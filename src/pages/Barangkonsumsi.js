@@ -286,7 +286,7 @@ export default function BarangKonsumsiTable() {
               {filteredRows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row, index) => (
-                  <TableRow hover role="checkbox" tabIndex={-1} key={row.id}>
+                  <TableRow hover tabIndex={-1} key={row.id}>
                     <TableCell>{index + 1 + page * rowsPerPage}</TableCell>
                     <TableCell align="center">{row.kode_barang}</TableCell>
                     <TableCell align="center">{row.nama_barang}</TableCell>

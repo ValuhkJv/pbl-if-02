@@ -462,7 +462,7 @@ app.get("/peminjaman", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-        query = "SELECT * FROM peminjaman WHERE is_deleted = false";
+        query = "SELECT * FROM peminjaman ";
         queryParams = [];
         break;
 
@@ -674,23 +674,50 @@ app.post(
 // Delete peminjaman
 app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
+  const { role, nim_nik_nidn, peminjam } = req.user;
   const client = await db.connect();
 
   try {
     await client.query("BEGIN");
 
-    // Cek status peminjaman terlebih dahulu
-    const checkStatus = await client.query(
-      "SELECT status_peminjaman FROM peminjaman WHERE id = $1",
-      [id]
-    );
+    // Query untuk cek peminjaman berdasarkan role
+    let checkQuery, checkParams;
+    
+    switch (role) {
+      case "mahasiswa":
+      case "kepalaUnit":
+      case "unit":
+        checkQuery = `
+          SELECT * FROM peminjaman 
+          WHERE id = $1 
+          AND (nim_nik_nidn = $2 OR peminjam = $3)
+          AND is_deleted = false
+        `;
+        checkParams = [id, nim_nik_nidn, peminjam];
+        break;
 
-    if (checkStatus.rows.length === 0) {
-      throw new Error("Peminjaman tidak ditemukan");
+      case "staf":
+        checkQuery = "SELECT * FROM peminjaman WHERE id = $1";
+        checkParams = [id];
+        break;
+
+      default:
+        throw new Error("Akses tidak diizinkan");
     }
-    // Hapus data peminjaman
-    const result = await db.query(
-      "DELETE FROM peminjaman WHERE id = $1 RETURNING *",
+
+    // Cek kepemilikan peminjaman
+    const checkResult = await client.query(checkQuery, checkParams);
+
+    if (checkResult.rows.length === 0) {
+      throw new Error("Peminjaman tidak ditemukan atau Anda tidak memiliki akses");
+    }
+
+    // Soft delete peminjaman
+    const result = await client.query(
+      `UPDATE peminjaman 
+       SET is_deleted = true 
+       WHERE id = $1
+       RETURNING *`,
       [id]
     );
 
@@ -701,7 +728,7 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
     });
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("Error details:", err); // Tambahkan log ini
+    console.error("Error details:", err);
     res.status(500).json({
       error: "Terjadi kesalahan saat menghapus peminjaman",
       detail: err.message,
@@ -730,14 +757,13 @@ app.delete("/peminjaman/cancel/:id", authenticateToken, async (req, res) => {
     }
 
     if (checkStatus.rows[0].status_peminjaman !== "Menunggu Persetujuan") {
-      throw new Error("Hanya peminjaman dengan status 'Menunggu Persetujuan' yang dapat dibatalkan");
+      throw new Error(
+        "Hanya peminjaman dengan status 'Menunggu Persetujuan' yang dapat dibatalkan"
+      );
     }
 
     // Hapus data peminjaman
-    await client.query(
-      "DELETE FROM peminjaman WHERE id = $1",
-      [id]
-    );
+    await client.query("DELETE FROM peminjaman WHERE id = $1", [id]);
 
     await client.query("COMMIT");
     res.status(200).json({

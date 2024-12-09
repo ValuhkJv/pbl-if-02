@@ -17,6 +17,12 @@ import {
   Typography,
   Modal,
   Tooltip,
+  Dialog,
+  DialogActions,
+  DialogTitle,
+  Snackbar,
+  Alert,
+  TablePagination,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
@@ -27,96 +33,6 @@ import {
   ThumbUpOffAltOutlined as ThumbUpOffAltOutlinedIcon,
 } from "@mui/icons-material";
 
-const StyledTableCell = styled(TableCell)({
-  padding: "12px",
-  border: "1px solid #ddd",
-  textAlign: "left",
-  wordWrap: "break-word",
-});
-
-const StyledTableRow = styled(TableRow)(({ theme }) => ({
-  "&:nth-of-type(odd)": {
-    backgroundColor: theme.palette.action.hover,
-  },
-  "&:hover": {
-    backgroundColor: theme.palette.action.selected,
-  },
-}));
-
-// Modal style
-const modalStyle = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 600,
-  bgcolor: "background.paper",
-  boxShadow: 24,
-  p: 4,
-  borderRadius: 2,
-};
-
-// Tombol Setujui (Hijau)
-const ApproveButton = styled(Button)(({ theme }) => ({
-  backgroundColor: "#2e7d32", // Hijau gelap
-  color: "white",
-  "&:hover": {
-    backgroundColor: "#1b5e20", // Hijau lebih gelap saat hover
-    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-  },
-  textTransform: "none", // Mencegah uppercase otomatis
-  fontWeight: 600,
-  padding: "8px 16px",
-  borderRadius: "12px",
-  transition: "all 0.3s ease",
-}));
-
-// Tombol Tolak (Merah)
-const RejectButton = styled(Button)(({ theme }) => ({
-  backgroundColor: "#d32f2f", // Merah
-  color: "white",
-  "&:hover": {
-    backgroundColor: "#b71c1c", // Merah lebih gelap saat hover
-    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-  },
-  textTransform: "none",
-  fontWeight: 600,
-  padding: "8px 16px",
-  borderRadius: "12px",
-  transition: "all 0.3s ease",
-}));
-
-// Tombol Detail (Biru)
-const DetailButton = styled(Button)(({ theme }) => ({
-  backgroundColor: "#1976d2", // Biru
-  color: "white",
-  "&:hover": {
-    backgroundColor: "#0d47a1", // Biru lebih gelap saat hover
-    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-  },
-  textTransform: "none",
-  fontWeight: 600,
-  padding: "8px 16px",
-  borderRadius: "12px",
-  transition: "all 0.3s ease",
-}));
-
-// Tombol Hapus (Oranye)
-const RemoveButton = styled(Button)(({ theme }) => ({
-  backgroundColor: "#ed6c02", // Oranye
-  justifyContent: "center",
-  color: "white",
-  "&:hover": {
-    backgroundColor: "#e65100", // Oranye lebih gelap saat hover
-    boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-  },
-  textTransform: "none",
-  fontWeight: 600,
-  padding: "8px 16px",
-  borderRadius: "12px",
-  transition: "all 0.3s ease",
-}));
-
 export default function LoanApproval() {
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [loanApproval, setLoanApproval] = useState([]);
@@ -125,18 +41,120 @@ export default function LoanApproval() {
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [requests, setRequests] = useState([]);
-  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const StyledTableCell = styled(TableCell)({
+    padding: "12px",
+    border: "1px solid #ddd",
+    textAlign: "left",
+    wordWrap: "break-word",
+  });
+
+  const StyledTableRow = styled(TableRow)(({ theme }) => ({
+    "&:nth-of-type(odd)": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    "&:hover": {
+      backgroundColor: theme.palette.action.selected,
+    },
+  }));
+
+  // Modal style
+  const modalStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 600,
+    bgcolor: "background.paper",
+    boxShadow: 24,
+    p: 4,
+    borderRadius: 2,
+  };
+
+  // Tombol Setujui (Hijau)
+  const ApproveButton = styled(Button)(({ theme }) => ({
+    backgroundColor: "#2e7d32", // Hijau gelap
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#1b5e20", // Hijau lebih gelap saat hover
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+    },
+    textTransform: "none", // Mencegah uppercase otomatis
+    fontWeight: 600,
+    padding: "8px 16px",
+    borderRadius: "12px",
+    transition: "all 0.3s ease",
+  }));
+
+  // Tombol Tolak (Merah)
+  const RejectButton = styled(Button)(({ theme }) => ({
+    backgroundColor: "#d32f2f", // Merah
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#b71c1c", // Merah lebih gelap saat hover
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+    },
+    textTransform: "none",
+    fontWeight: 600,
+    padding: "8px 16px",
+    borderRadius: "12px",
+    transition: "all 0.3s ease",
+  }));
+
+  // Tombol Detail (Biru)
+  const DetailButton = styled(Button)(({ theme }) => ({
+    backgroundColor: "#1976d2", // Biru
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#0d47a1", // Biru lebih gelap saat hover
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+    },
+    textTransform: "none",
+    fontWeight: 600,
+    padding: "8px 16px",
+    borderRadius: "12px",
+    transition: "all 0.3s ease",
+  }));
+
+  // Tombol Hapus (Oranye)
+  const RemoveButton = styled(Button)(({ theme }) => ({
+    backgroundColor: "#ed6c02", // Oranye
+    justifyContent: "center",
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#e65100", // Oranye lebih gelap saat hover
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+    },
+    textTransform: "none",
+    fontWeight: 600,
+    padding: "8px 16px",
+    borderRadius: "12px",
+    transition: "all 0.3s ease",
+  }));
 
   const fetchLoanApproval = async () => {
     try {
       const token = localStorage.getItem("token");
-      
+
       const response = await fetch("http://localhost:5000/peminjaman", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       });
 
       if (!response.ok) {
@@ -144,10 +162,10 @@ export default function LoanApproval() {
       }
 
       const data = await response.json();
-      
+
       // Debug: Log fetched data
       console.log("Fetched Transactions:", data);
-      
+
       setLoanApproval(data);
       localStorage.setItem("transactions", JSON.stringify(data));
     } catch (error) {
@@ -188,14 +206,13 @@ export default function LoanApproval() {
 
   const handleReject = async (id) => {
     const alasan = alasanPenolakan[id];
-
     if (!alasan) {
       alert("Mohon masukkan alasan penolakan.");
       return;
     }
 
     try {
-      const response = await axios.put(
+     await axios.put(
         `http://localhost:5000/peminjaman/persetujuan/${id}`,
         {
           status_peminjaman: "Ditolak",
@@ -203,25 +220,23 @@ export default function LoanApproval() {
         }
       );
 
-      if (response.data) {
-        alert("Penolakan berhasil disimpan.");
-        setShowRejectInput(null); // Reset input visibility
-        setAlasanPenolakan((prev) => ({
-          ...prev,
-          [id]: "", // Reset input value
-        }));
-        fetchLoanApproval();
-      }
+      alert("Penolakan berhasil disimpan.");
+      fetchLoanApproval();
+      setShowRejectInput(null);
     } catch (error) {
       console.error("Error rejecting loan:", error);
       alert("Terjadi kesalahan saat menyimpan penolakan.");
     }
   };
 
+  const toggleRejectInput = (id) => {
+    setShowRejectInput((prev) => (prev === id ? null : id));
+  };
+
   const handleReasonChange = (id, value) => {
-    setAlasanPenolakan((prev) => ({
+    setAlasanPenolakan(prev => ({
       ...prev,
-      [id]: value,
+      [id]: value
     }));
   };
 
@@ -230,33 +245,23 @@ export default function LoanApproval() {
     return tanggal.toLocaleDateString("id-ID");
   };
 
-  const handleRemoveRow = (id) => {
-    // Ambil daftar item yang telah dihapus dari localStorage
-    const removedItems = JSON.parse(
-      localStorage.getItem("removedLoanItems") || "[]"
-    );
-
-    // Tambahkan item yang baru dihapus
-    const updatedRemovedItems = [...removedItems, id];
-    localStorage.setItem(
-      "removedLoanItems",
-      JSON.stringify(updatedRemovedItems)
-    );
-
-    // Filter dan perbarui state
-    const updatedLoanApproval = loanApproval.filter(
-      (request) => request.id !== id
-    );
-    setLoanApproval(updatedLoanApproval);
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
   };
 
-  const handleCloseReasonInput = (id) => {
-    setShowRejectInput(null);
-    setAlasanPenolakan((prev) => ({
-      ...prev,
-      [id]: "",
-    }));
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
   };
+
+  const filteredLoanApproval = loanApproval.filter(
+    (item) =>
+      filterStatus === "Semua" || item.status_peminjaman === filterStatus
+  );
+
+  const startIndex = page * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const displayedRows = filteredLoanApproval.slice(startIndex, endIndex);
 
   useEffect(() => {
     const storedTransactions = localStorage.getItem("transactions");
@@ -268,6 +273,126 @@ export default function LoanApproval() {
   useEffect(() => {
     localStorage.setItem("request", JSON.stringify(requests));
   }, [requests]);
+
+  const refreshTransactions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/peminjaman", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
+      const data = await response.json();
+      setRequests(data);
+      localStorage.setItem("transactions", JSON.stringify(data));
+    } catch (error) {
+      console.error("Error refreshing transactions:", error);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!id) {
+      setSnackbar({
+        open: true,
+        message: "ID peminjaman tidak valid",
+        severity: "error",
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/peminjaman/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Gagal menghapus peminjaman");
+      }
+
+      const data = await response.json();
+      setSnackbar({
+        open: true,
+        message: data.message,
+        severity: "success",
+      });
+
+      setRequests((prevTransactions) =>
+        prevTransactions.filter((t) => t.id !== id)
+      );
+      await refreshTransactions();
+    } catch (error) {
+      console.error(error);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
+    }
+  };
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        const response = await fetch("http://localhost:5000/peminjaman", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data peminjaman");
+        }
+
+        const data = await response.json();
+
+        // Filter hanya data yang belum dihapus
+        const activeTransactions = data.filter((t) => !t.is_deleted);
+
+        // Debug: Log fetched data
+        console.log("Fetched Transactions:", data);
+        setRequests(activeTransactions);
+        setRequests(data);
+        localStorage.setItem("transactions", JSON.stringify(data));
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+        alert("Gagal memuat data peminjaman");
+      }
+    };
+
+    fetchTransactions();
+  }, []); // Empty dependency array ensures this runs only once on component mount
+
+  // Fungsi untuk membuka dialog konfirmasi hapus
+  const handleOpenDeleteDialog = (id) => {
+    setItemToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  // Fungsi untuk menutup dialog konfirmasi hapus
+  const handleCloseDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setItemToDelete(null);
+  };
+
+  // Fungsi konfirmasi delete
+  const confirmDelete = async () => {
+    if (itemToDelete) {
+      await handleDelete(itemToDelete);
+      handleCloseDeleteDialog();
+    }
+  };
 
   useEffect(() => {
     try {
@@ -431,147 +556,154 @@ export default function LoanApproval() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {(loanApproval.length > 0 ? loanApproval : [])
-              .filter(
-                (item) =>
-                  filterStatus === "Semua" ||
-                  item.status_peminjaman === filterStatus
-              )
-              .map((request, index) => (
-                <StyledTableRow key={request.id}>
-                  <StyledTableCell>{index + 1}</StyledTableCell>
-                  <StyledTableCell>{request.peminjam}</StyledTableCell>
-                  <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
-                  <StyledTableCell>{request.nama_barang}</StyledTableCell>
-                  <StyledTableCell>{request.no_inventaris}</StyledTableCell>
-                  <StyledTableCell>{request.jumlah}</StyledTableCell>
-                  <StyledTableCell>{request.keterangan}</StyledTableCell>
-                  <StyledTableCell>
-                    {formatTanggal(request.tanggal_pinjam)}
-                  </StyledTableCell>
-                  <StyledTableCell>
-                    {request.tanggal_kembali
-                      ? formatTanggal(request.tanggal_kembali)
-                      : ""}
-                  </StyledTableCell>
-                  <StyledTableCell>
-                    {request.alasan_penolakan || "-"}
-                  </StyledTableCell>
+            {displayedRows.map((request, index) => (
+              <StyledTableRow hover key={request.id}>
+                <StyledTableCell>
+                  {index + 1 + page * rowsPerPage}
+                </StyledTableCell>
+                <StyledTableCell>{request.peminjam}</StyledTableCell>
+                <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
+                <StyledTableCell>{request.nama_barang}</StyledTableCell>
+                <StyledTableCell>{request.no_inventaris}</StyledTableCell>
+                <StyledTableCell>{request.jumlah}</StyledTableCell>
+                <StyledTableCell>{request.keterangan}</StyledTableCell>
+                <StyledTableCell>
+                  {formatTanggal(request.tanggal_pinjam)}
+                </StyledTableCell>
+                <StyledTableCell>
+                  {request.tanggal_kembali
+                    ? formatTanggal(request.tanggal_kembali)
+                    : ""}
+                </StyledTableCell>
+                <StyledTableCell>
+                  {request.alasan_penolakan || "-"}
+                </StyledTableCell>
 
-                  <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
-                  <StyledTableCell>
-                    {(request.status_peminjaman === "Menunggu Persetujuan" ||
-                      request.status_peminjaman === "Ditolak") && (
-                      <ApproveButton
-                        startIcon={<ThumbUpOffAltOutlinedIcon />}
-                        variant="contained"
-                        sx={{
-                          my: 1,
-                          mx: 1,
-                          borderRadius: "8px",
-                          height: "45px",
-                        }}
-                        onClick={() => handleApprove(request.id)}
-                      >
-                        Setujui
-                      </ApproveButton>
-                    )}
+                <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
+                <StyledTableCell>
+                  {(request.status_peminjaman === "Menunggu Persetujuan" ||
+                    request.status_peminjaman === "Ditolak") && (
+                    <ApproveButton
+                      startIcon={<ThumbUpOffAltOutlinedIcon />}
+                      variant="contained"
+                      sx={{
+                        my: 1,
+                        mx: 1,
+                        borderRadius: "8px",
+                        height: "45px",
+                      }}
+                      onClick={() => handleApprove(request.id)}
+                    >
+                      Setujui
+                    </ApproveButton>
+                  )}
 
-                    {(request.status_peminjaman === "Disetujui" || request.status_peminjaman === "Menunggu Persetujuan") && (
-                      <RejectButton
-                        variant="contained"
-                        startIcon={<ThumbDownAltOutlinedIcon />}
-                        sx={{
-                          my: 1,
-                          mx: 1,
-                          padding: "8px 16 px",
-                          borderRadius: "8px",
-                          height: "45px",
-                        }}
-                        onClick={() => setShowRejectInput(request.id)}
-                      >
-                        Tolak
-                      </RejectButton>
-                    )}
+                  {(request.status_peminjaman === "Disetujui" ||
+                    request.status_peminjaman === "Menunggu Persetujuan") && (
+                    <RejectButton
+                      variant="contained"
+                      startIcon={<ThumbDownAltOutlinedIcon />}
+                      sx={{
+                        my: 1,
+                        mx: 1,
+                        padding: "8px 16 px",
+                        borderRadius: "8px",
+                        height: "45px",
+                      }}
+                      onClick={() => toggleRejectInput(request.id)}
+                    >
+                      Tolak
+                    </RejectButton>
+                  )}
 
-                    {showRejectInput === request.id && (
-                      <>
-                        <TextField
-                          placeholder="Alasan penolakan"
-                          onChange={(e) =>
-                            handleReasonChange(request.id, e.target.value)
-                          }
-                          value={alasanPenolakan[request.id] || ""}
-                          sx={{ mt: 1, width: "100%" }}
-                        />
+                  {showRejectInput === request.id && (
+                    <Dialog
+                      open={true}
+                      onClose={() => setShowRejectInput(null)}
+                      keepMounted // Menjaga state tetap ada
+                      sx={{
+                        "& .MuiDialog-paper": {
+                          width: "35%",
+                          height: "30%",
+                          maxWidth: "none",
+                        },
+                      }}
+                    >
+                      <DialogTitle>Masukkan Alasan Penolakan</DialogTitle>
+                      <TextField
+                        autoFocus
+                        placeholder="Alasan penolakan"
+                        multiline
+                        rows={3}
+                        onChange={(e) => handleReasonChange(request.id, e.target.value)}
+                        value={alasanPenolakan[request.id] || ""}
+                        sx={{ mx: 2 }}
+                        required
+                      />
+                      <DialogActions sx={{ mr: 1, mt: 2 }}>
                         <Button
-                          variant="contained"
-                          sx={{
-                            mt: 1,
-                            padding: "8px 16 px",
-                            borderRadius: "8px",
-                            height: "45px",
-                          }}
                           onClick={() => handleReject(request.id)}
+                          variant="contained"
                         >
                           Kirim
                         </Button>
                         <Button
+                          onClick={() => setShowRejectInput(null)}
                           variant="outlined"
-                          sx={{
-                            mt: 1,
-                            my: 1,
-                            mx: 2,
-                            padding: "8px 16 px",
-                            borderRadius: "8px",
-                            height: "45px",
-                          }}
-                          onClick={() => handleCloseReasonInput(request.id)}
                         >
                           Tutup
                         </Button>
-                      </>
-                    )}
+                      </DialogActions>
+                    </Dialog>
+                  )}
+                </StyledTableCell>
 
-                  </StyledTableCell>
-
-                  <StyledTableCell>
-                    <Tooltip title="Detail">
-                      {" "}
-                      <DetailButton
-                        variant="contained"
-                        startIcon={<InfoOutlinedIcon />}
-                        sx={{
-                          padding: "8px 16 px",
-                          borderRadius: "8px",
-                          height: "45px",
-                        }}
-                        onClick={() => {
-                          console.log("DetailButton clicked!");
-                          handleOpenDetail(request);
-                        }}
-                      ></DetailButton>
-                    </Tooltip>
-                    <Tooltip title="Hapus">
-                      {" "}
-                      <RemoveButton
-                        variant="contained"
-                        startIcon={<DeleteForeverOutlinedIcon />}
-                        sx={{
-                          my: 1,
-                          mx: 2,
-                          padding: "8px 16 px",
-                          borderRadius: "8px",
-                          height: "45px",
-                        }}
-                        onClick={() => handleRemoveRow(request.id)}
-                      ></RemoveButton>
-                    </Tooltip>
-                  </StyledTableCell>
-                </StyledTableRow>
-              ))}
+                <StyledTableCell>
+                  <Tooltip title="Detail">
+                    {" "}
+                    <DetailButton
+                      variant="contained"
+                      startIcon={<InfoOutlinedIcon />}
+                      sx={{
+                        padding: "8px 16 px",
+                        borderRadius: "8px",
+                        height: "45px",
+                      }}
+                      onClick={() => {
+                        console.log("DetailButton clicked!");
+                        handleOpenDetail(request);
+                      }}
+                    ></DetailButton>
+                  </Tooltip>
+                  <Tooltip title="Hapus">
+                    {" "}
+                    <RemoveButton
+                      variant="contained"
+                      startIcon={<DeleteForeverOutlinedIcon />}
+                      sx={{
+                        my: 1,
+                        mx: 2,
+                        padding: "8px 16 px",
+                        borderRadius: "8px",
+                        height: "45px",
+                      }}
+                      onClick={() => handleOpenDeleteDialog(request.id)}
+                    ></RemoveButton>
+                  </Tooltip>
+                </StyledTableCell>
+              </StyledTableRow>
+            ))}
           </TableBody>
         </Table>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={loanApproval.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
       </TableContainer>
       {/* Detail Modal */}
       <DetailModal
@@ -579,6 +711,68 @@ export default function LoanApproval() {
         onClose={handleCloseDetail}
         loan={selectedLoan}
       />
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCloseDeleteDialog}
+        aria-labelledby="alert-dialog-title"
+        aria-describedby="alert-dialog-description"
+        PaperProps={{
+          sx: { borderRadius: "12px", padding: "8px" },
+        }}
+      >
+        <DialogTitle id="alert-dialog-title">
+          {"Apakah Anda yakin ingin menghapus?"}
+        </DialogTitle>
+
+        <DialogActions
+          sx={{
+            justifyContent: "center",
+            gap: 2,
+          }}
+        >
+          <Button
+            onClick={handleCloseDeleteDialog}
+            sx={{
+              border: "2px solid ",
+              borderColor: "black",
+              color: "black",
+              borderRadius: "8px",
+              padding: "8px 16px",
+            }}
+          >
+            Batal
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            sx={{
+              border: "2px solid #69D2FF",
+              backgroundColor: "#69D2FF",
+              color: "black",
+              padding: "8px 16px",
+            }}
+            autoFocus
+          >
+            Hapus
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

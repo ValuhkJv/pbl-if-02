@@ -87,9 +87,9 @@ export default function LoanHistory() {
   const formatTanggalDanJam = (dateString) => {
     if (!dateString) return "-";
     const tanggal = new Date(dateString);
-  
+
     if (isNaN(tanggal)) return "-";
-  
+
     return `${tanggal.toLocaleString("id-ID", {
       day: "2-digit",
       month: "2-digit",
@@ -98,8 +98,25 @@ export default function LoanHistory() {
       minute: "2-digit",
       hour12: false,
     })} WIB`; // Tambahkan zona waktu
-  };  
-  
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(+event.target.value);
+    setPage(0);
+  };
+
+  const filteredLoanApproval = history.filter(
+    (item) =>
+      filterStatus === "Semua" || item.status_peminjaman === filterStatus
+  );
+
+  const startIndex = page * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const displayedRows = filteredLoanApproval.slice(startIndex, endIndex);
 
   return (
     <div
@@ -109,6 +126,7 @@ export default function LoanHistory() {
         borderRadius: "12px",
         boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
         padding: "20px",
+        backgroundColor: "white"
       }}
     >
       <h2>Riwayat Transaksi Peminjaman</h2>
@@ -168,30 +186,25 @@ export default function LoanHistory() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {history
-              .filter(
-                (item) =>
-                  filterStatus === "Semua" || item.status === filterStatus
-              )
-              .map((item, index) => (
-                <StyledTableRow key={item.id}>
-                  <StyledTableCell>{index + 1}</StyledTableCell>
-                  <StyledTableCell>{item.peminjam}</StyledTableCell>
-                  <StyledTableCell>{item.nim_nik_nidn}</StyledTableCell>
-                  <StyledTableCell>{item.nama_barang}</StyledTableCell>
-                  <StyledTableCell>{item.no_inventaris}</StyledTableCell>
-                  <StyledTableCell>{item.jumlah}</StyledTableCell>
-                  <StyledTableCell>{item.keterangan}</StyledTableCell>
-                  <StyledTableCell>
-                    {formatTanggalDanJam(item.tanggal_pinjam)}
-                  </StyledTableCell>
-                  <StyledTableCell>
-                    {formatTanggalDanJam(item.tanggal_kembali)}
-                  </StyledTableCell>
-                  <StyledTableCell>{item.status_peminjaman}</StyledTableCell>
-                  <StyledTableCell></StyledTableCell>
-                </StyledTableRow>
-              ))}
+            {displayedRows.map((item, index) => (
+              <StyledTableRow key={item.id}>
+                <StyledTableCell>{index + 1}</StyledTableCell>
+                <StyledTableCell>{item.peminjam}</StyledTableCell>
+                <StyledTableCell>{item.nim_nik_nidn}</StyledTableCell>
+                <StyledTableCell>{item.nama_barang}</StyledTableCell>
+                <StyledTableCell>{item.no_inventaris}</StyledTableCell>
+                <StyledTableCell>{item.jumlah}</StyledTableCell>
+                <StyledTableCell>{item.keterangan}</StyledTableCell>
+                <StyledTableCell>
+                  {formatTanggalDanJam(item.tanggal_pinjam)}
+                </StyledTableCell>
+                <StyledTableCell>
+                  {formatTanggalDanJam(item.tanggal_kembali)}
+                </StyledTableCell>
+                <StyledTableCell>{item.status_peminjaman}</StyledTableCell>
+                <StyledTableCell></StyledTableCell>
+              </StyledTableRow>
+            ))}
           </TableBody>
         </Table>
         <TablePagination
@@ -200,11 +213,8 @@ export default function LoanHistory() {
           count={history.length}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={(event, newPage) => setPage(newPage)}
-          onRowsPerPageChange={(event) => {
-            setRowsPerPage(parseInt(event.target.value, 10));
-            setPage(0);
-          }}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
     </div>
