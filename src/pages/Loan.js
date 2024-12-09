@@ -213,11 +213,19 @@ const PeminjamanBarang = () => {
         },
       });
       if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
+
       const data = await response.json();
-      setTransactions(data);
-      localStorage.setItem("transactions", JSON.stringify(data));
+
+      // Filter hanya data yang belum dihapus
+      const activeTransactions = data.filter((t) => !t.is_deleted);
+      setTransactions(activeTransactions);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
+      setSnackbar({
+        open: true,
+        message: "Gagal memperbarui data",
+        severity: "error",
+      });
     }
   };
 
@@ -247,15 +255,27 @@ const PeminjamanBarang = () => {
       }
 
       const data = await response.json();
+
+      // Refresh data setelah delete berhasil
+      await refreshTransactions();
+
+      console.log("Before delete:", transactions);
+      setTransactions((prevTransactions) =>
+        prevTransactions.filter((t) => t.id !== id)
+      );
+      console.log("After delete:", transactions);
+
       setSnackbar({
         open: true,
         message: data.message,
         severity: "success",
       });
 
-      setTransactions((prevTransactions) =>
-        prevTransactions.filter((t) => t.id !== id)
-      );
+      // Update local storage
+      const updatedTransactions = transactions.filter((t) => t.id !== id);
+      localStorage.setItem("transactions", JSON.stringify(updatedTransactions));
+
+      // Refresh the transactions list to ensure sync with server
       await refreshTransactions();
     } catch (error) {
       console.error(error);
@@ -286,9 +306,12 @@ const PeminjamanBarang = () => {
 
         const data = await response.json();
 
+        // Filter hanya data yang belum dihapus
+        const activeTransactions = data.filter((t) => !t.is_deleted);
+
         // Debug: Log fetched data
         console.log("Fetched Transactions:", data);
-
+        setTransactions(activeTransactions);
         setTransactions(data);
         localStorage.setItem("transactions", JSON.stringify(data));
       } catch (error) {
@@ -317,6 +340,7 @@ const PeminjamanBarang = () => {
     if (itemToDelete) {
       await handleDelete(itemToDelete);
       handleCloseDeleteDialog();
+      await refreshTransactions();
     }
   };
 
@@ -353,7 +377,6 @@ const PeminjamanBarang = () => {
         message: data.message || "Peminjaman berhasil dibatalkan",
         severity: "success",
       });
-
 
       // Refresh transaksi setelah pembatalan
       await refreshTransactions();
@@ -464,6 +487,7 @@ const PeminjamanBarang = () => {
               label="Jumlah"
               type="number"
               value={jumlah}
+              inputProps={{ max: 3, min: 1}}
               onChange={(e) => {
                 const inputJumlah = Number(e.target.value);
                 if (selectedBarang && inputJumlah > selectedBarang.stok) {
@@ -477,6 +501,7 @@ const PeminjamanBarang = () => {
               <Button
                 variant="contained"
                 color="primary"
+                disabled={items.length >= 3}
                 startIcon={<Add />}
                 onClick={handleAddItem}
               >
