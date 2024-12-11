@@ -462,7 +462,7 @@ app.get("/peminjaman", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-        query = "SELECT * FROM peminjaman ";
+        query = "SELECT * FROM peminjaman";
         queryParams = [];
         break;
 
@@ -543,65 +543,6 @@ app.post("/peminjaman", async (req, res) => {
   }
 });
 
-app.put("/peminjaman/persetujuan/:id", async (req, res) => {
-  const { id } = req.params;
-  const { status_peminjaman, alasan_penolakan } = req.body;
-
-  try {
-    await db.query("BEGIN");
-
-    if (!["Disetujui", "Ditolak"].includes(status_peminjaman)) {
-      await db.query("ROLLBACK");
-      return res.status(400).json({ error: "Status tidak valid." });
-    }
-
-    // Tambahkan blok ini untuk mengurangi stok saat disetujui
-    if (status_peminjaman === "Disetujui") {
-      // Ambil data peminjaman untuk mendapatkan detail barang
-      const peminjaman = await db.query(
-        "SELECT no_inventaris, jumlah FROM peminjaman WHERE id = $1",
-        [id]
-      );
-
-      if (!peminjaman.rows.length) {
-        await db.query("ROLLBACK");
-        return res.status(404).json({ error: "Peminjaman tidak ditemukan" });
-      }
-
-      // Update stok
-      const updateStok = await db.query(
-        "UPDATE barang_peminjaman SET stok = stok - $1 WHERE no_inventaris = $2 RETURNING stok",
-        [peminjaman.rows[0].jumlah, peminjaman.rows[0].no_inventaris]
-      );
-
-      if (updateStok.rows[0].stok < 0) {
-        await db.query("ROLLBACK");
-        return res.status(400).json({ error: "Stok tidak mencukupi" });
-      }
-    }
-
-    // Update status peminjaman
-    await db.query(
-      `UPDATE peminjaman 
-       SET status_peminjaman = $1, 
-           alasan_penolakan = $2
-       WHERE id = $3`,
-      [
-        status_peminjaman,
-        status_peminjaman === "Ditolak" ? alasan_penolakan : null,
-        id,
-      ]
-    );
-
-    await db.query("COMMIT");
-    res.json({ message: "Status peminjaman berhasil diperbarui" });
-  } catch (err) {
-    await db.query("ROLLBACK");
-    console.error(err);
-    res.status(500).json({ error: "Terjadi kesalahan pada server" });
-  }
-});
-
 // Endpoint Pengembalian Barang
 app.post(
   "/pengembalian/:id",
@@ -671,7 +612,56 @@ app.post(
   }
 );
 
-// Delete peminjaman
+// Approve Endpoint
+app.put("/peminjaman/persetujuan/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { status_peminjaman, alasan_penolakan } = req.body;
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Validasi status
+    if (!["Disetujui", "Ditolak"].includes(status_peminjaman)) {
+      throw new Error("Status tidak valid");
+    }
+
+    // Query update dengan prepared statement
+    const query = `
+      UPDATE peminjaman 
+      SET 
+        status_peminjaman = $1, 
+        alasan_penolakan = $2
+      WHERE id = $3
+    `;
+
+    const values = [
+      status_peminjaman,
+      status_peminjaman === "Ditolak" ? alasan_penolakan : null,
+      id
+    ];
+
+    const result = await client.query(query, values);
+
+    await client.query("COMMIT");
+    res.json({ 
+      message: "Status peminjaman berhasil diperbarui",
+      rowsAffected: result.rowCount 
+    });
+
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error updating loan status:", error);
+    res.status(500).json({ 
+      error: "Terjadi kesalahan pada server",
+      details: error.message 
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Delete Endpoint
 app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { role, nim_nik_nidn, peminjam } = req.user;
@@ -680,7 +670,7 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Query untuk cek peminjaman berdasarkan role
+    // Cek akses berdasarkan role
     let checkQuery, checkParams;
     
     switch (role) {
@@ -697,7 +687,7 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-        checkQuery = "SELECT * FROM peminjaman ";
+        checkQuery = "SELECT * FROM peminjaman WHERE id = $1 ";
         checkParams = [id];
         break;
 
@@ -705,33 +695,34 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
         throw new Error("Akses tidak diizinkan");
     }
 
-    // Cek kepemilikan peminjaman
     const checkResult = await client.query(checkQuery, checkParams);
 
     if (checkResult.rows.length === 0) {
       throw new Error("Peminjaman tidak ditemukan atau Anda tidak memiliki akses");
     }
 
-    // Soft delete peminjaman
-    const result = await client.query(
-      `UPDATE peminjaman 
-       SET is_deleted = true 
-       WHERE id = $1
-       RETURNING *`,
-      [id]
-    );
+    // Soft delete dengan prepared statement
+    const deleteQuery = `
+      UPDATE peminjaman 
+      SET is_deleted = true 
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const result = await client.query(deleteQuery, [id]);
 
     await client.query("COMMIT");
     res.status(200).json({
       message: "Peminjaman berhasil dihapus",
-      data: result.rows[0],
+      data: result.rows[0]
     });
-  } catch (err) {
+
+  } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error details:", err);
+    console.error("Error details:", error);
     res.status(500).json({
       error: "Terjadi kesalahan saat menghapus peminjaman",
-      detail: err.message,
+      details: error.message
     });
   } finally {
     client.release();
