@@ -194,6 +194,7 @@ const PeminjamanBarang = () => {
           "Content-Type": "application/json",
         },
       });
+
       if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
       const data = await response.json();
       setTransactions(data);
@@ -487,7 +488,7 @@ const PeminjamanBarang = () => {
               label="Jumlah"
               type="number"
               value={jumlah}
-              inputProps={{ max: 3, min: 1}}
+              inputProps={{ max: 3, min: 1 }}
               onChange={(e) => {
                 const inputJumlah = Number(e.target.value);
                 if (selectedBarang && inputJumlah > selectedBarang.stok) {
@@ -627,12 +628,16 @@ const PeminjamanBarang = () => {
                     </TableCell>
 
                     <TableCell>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleOpenDeleteDialog(transaction.id)}
-                      >
-                        <Close />
-                      </IconButton>
+                      {["Disetujui", "Ditolak", "Kembali"].includes(
+                        transaction.status_peminjaman
+                      ) && (
+                        <IconButton
+                          color="error"
+                          onClick={() => handleOpenDeleteDialog(transaction.id)}
+                        >
+                          <Close />
+                        </IconButton>
+                      )}
                       {transaction.status_peminjaman ===
                         "Menunggu Persetujuan" && (
                         <Button
@@ -713,7 +718,6 @@ const PeminjamanBarang = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
       <Dialog
         open={deleteDialogOpen}
         onClose={handleCloseDeleteDialog}
@@ -759,6 +763,7 @@ const PeminjamanBarang = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
       {/* Add Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}

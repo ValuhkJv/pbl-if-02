@@ -462,11 +462,7 @@ app.get("/peminjaman", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-<<<<<<< HEAD
-        query = "SELECT * FROM peminjaman";
-=======
         query = "SELECT * FROM peminjaman ";
->>>>>>> e59c1a250ac78f37f921db47ada893c751d5ce8b
         queryParams = [];
         break;
 
@@ -701,11 +697,7 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-<<<<<<< HEAD
-        checkQuery = "SELECT * FROM peminjaman WHERE id = $1 AND is_deleted = false";
-=======
-        checkQuery = "SELECT * FROM peminjaman WHERE id = $1";
->>>>>>> e59c1a250ac78f37f921db47ada893c751d5ce8b
+        checkQuery = "SELECT * FROM peminjaman ";
         checkParams = [id];
         break;
 

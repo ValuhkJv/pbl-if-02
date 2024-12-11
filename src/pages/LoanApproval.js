@@ -9,10 +9,10 @@ import {
   Paper,
   FormControl,
   InputLabel,
+  TextField,
   Select,
   MenuItem,
   Button,
-  TextField,
   Box,
   Typography,
   Modal,
@@ -25,7 +25,6 @@ import {
   TablePagination,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import axios from "axios";
 import {
   InfoOutlined as InfoOutlinedIcon,
   DeleteForeverOutlined as DeleteForeverOutlinedIcon,
@@ -36,8 +35,8 @@ import {
 export default function LoanApproval() {
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [loanApproval, setLoanApproval] = useState([]);
-  const [alasanPenolakan, setAlasanPenolakan] = useState({});
   const [showRejectInput, setShowRejectInput] = useState(null);
+  const [rejectReasons, setRejectReasons] = useState({});
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -196,33 +195,72 @@ export default function LoanApproval() {
       );
 
       if (!response.ok) throw new Error("Gagal menyetujui peminjaman.");
+
       alert("Peminjaman disetujui!");
-      fetchLoanApproval();
+
+      // Update state secara lokal
+      setLoanApproval((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status_peminjaman: "Disetujui" } : item
+        )
+      );
     } catch (error) {
       console.error(error);
       alert("Terjadi kesalahan saat menyetujui peminjaman.");
     }
   };
 
+  const handleRejectReasonChange = (id, reason) => {
+    setRejectReasons((prev) => ({
+      ...prev,
+      [id]: reason,
+    }));
+  };
+
   const handleReject = async (id) => {
-    const alasan = alasanPenolakan[id];
-    if (!alasan) {
+    if (!rejectReasons[id]?.trim()) {
       alert("Mohon masukkan alasan penolakan.");
       return;
     }
 
     try {
-     await axios.put(
+      const response = await fetch(
         `http://localhost:5000/peminjaman/persetujuan/${id}`,
         {
-          status_peminjaman: "Ditolak",
-          alasan_penolakan: alasan,
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status_peminjaman: "Ditolak",
+            alasan_penolakan: rejectReasons[id],
+          }),
         }
       );
 
+      if (!response.ok) throw new Error("Gagal menolak peminjaman.");
+
       alert("Penolakan berhasil disimpan.");
-      fetchLoanApproval();
+
+      // Update state secara lokal
+      setLoanApproval((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status_peminjaman: "Ditolak",
+                alasan_penolakan: rejectReasons[id],
+              }
+            : item
+        )
+      );
+
       setShowRejectInput(null);
+      setRejectReasons((prev) => {
+        const newReasons = { ...prev };
+        delete newReasons[id];
+        return newReasons;
+      });
     } catch (error) {
       console.error("Error rejecting loan:", error);
       alert("Terjadi kesalahan saat menyimpan penolakan.");
@@ -231,13 +269,12 @@ export default function LoanApproval() {
 
   const toggleRejectInput = (id) => {
     setShowRejectInput((prev) => (prev === id ? null : id));
-  };
-
-  const handleReasonChange = (id, value) => {
-    setAlasanPenolakan(prev => ({
-      ...prev,
-      [id]: value
-    }));
+    if (!rejectReasons[id]) {
+      setRejectReasons((prev) => ({
+        ...prev,
+        [id]: "",
+      }));
+    }
   };
 
   const formatTanggal = (dateString) => {
@@ -514,7 +551,7 @@ export default function LoanApproval() {
         >
           <MenuItem value="Semua">Semua</MenuItem>
           <MenuItem value="Disetujui">Disetujui</MenuItem>
-          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
+          <MenuItem value="Menunggu Persetujuan">Menunggu persetujuan</MenuItem>
           <MenuItem value="Ditolak">Ditolak</MenuItem>
         </Select>
       </FormControl>
@@ -610,7 +647,13 @@ export default function LoanApproval() {
                         borderRadius: "8px",
                         height: "45px",
                       }}
-                      onClick={() => toggleRejectInput(request.id)}
+                      onClick={() => {
+                        console.log(
+                          "Button Tolak diklik untuk ID:",
+                          request.id
+                        );
+                        toggleRejectInput(request.id);
+                      }}
                     >
                       Tolak
                     </RejectButton>
@@ -635,8 +678,10 @@ export default function LoanApproval() {
                         placeholder="Alasan penolakan"
                         multiline
                         rows={3}
-                        onChange={(e) => handleReasonChange(request.id, e.target.value)}
-                        value={alasanPenolakan[request.id] || ""}
+                        onChange={(e) =>
+                          handleRejectReasonChange(request.id, e.target.value)
+                        }
+                        value={rejectReasons[request.id] || ""} // Ensures controlled component
                         sx={{ mx: 2 }}
                         required
                       />
