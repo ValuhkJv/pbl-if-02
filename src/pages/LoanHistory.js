@@ -182,7 +182,6 @@ export default function LoanHistory() {
               <StyledTableCell>Tanggal Pinjam</StyledTableCell>
               <StyledTableCell>Tanggal Kembali</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
-              <StyledTableCell>Aksi</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -202,7 +201,6 @@ export default function LoanHistory() {
                   {formatTanggalDanJam(item.tanggal_kembali)}
                 </StyledTableCell>
                 <StyledTableCell>{item.status_peminjaman}</StyledTableCell>
-                <StyledTableCell></StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>

@@ -93,10 +93,11 @@ export default function LoanApproval() {
       boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
     },
     textTransform: "none", // Mencegah uppercase otomatis
-    fontWeight: 600,
-    padding: "8px 16px",
-    borderRadius: "12px",
+    fontWeight: 100,
+    padding: "4px 8px",
+    borderRadius: "8px",
     transition: "all 0.3s ease",
+    fontSize: "12px",
   }));
 
   // Tombol Tolak (Merah)
@@ -108,9 +109,9 @@ export default function LoanApproval() {
       boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
     },
     textTransform: "none",
-    fontWeight: 600,
-    padding: "8px 16px",
-    borderRadius: "12px",
+    fontWeight: 100,
+    padding: "4px 8px",
+    borderRadius: "8px",
     transition: "all 0.3s ease",
   }));
 
@@ -123,10 +124,11 @@ export default function LoanApproval() {
       boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
     },
     textTransform: "none",
-    fontWeight: 600,
-    padding: "8px 16px",
-    borderRadius: "12px",
+    fontWeight: 100,
+    padding: "4px 8px",
+    borderRadius: "50%",
     transition: "all 0.3s ease",
+    fontSize: "12px",
   }));
 
   // Tombol Hapus (Oranye)
@@ -139,10 +141,10 @@ export default function LoanApproval() {
       boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
     },
     textTransform: "none",
-    fontWeight: 600,
-    padding: "8px 16px",
-    borderRadius: "12px",
+    fontWeight: 100,
+    padding: "2px 4px",
     transition: "all 0.3s ease",
+    fontSize: "8px",
   }));
 
   const fetchLoanApproval = async () => {
@@ -623,114 +625,167 @@ export default function LoanApproval() {
 
                 <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
                 <StyledTableCell>
-                  {(request.status_peminjaman === "Menunggu Persetujuan" ||
-                    request.status_peminjaman === "Ditolak") && (
-                    <ApproveButton
-                      startIcon={<ThumbUpOffAltOutlinedIcon />}
-                      variant="contained"
-                      sx={{
-                        my: 1,
-                        mx: 1,
-                        borderRadius: "8px",
-                        height: "45px",
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column", // Ubah menjadi column
+                      alignItems: "center", // Tambahkan ini
+                      justifyContent: "center", // Tambahkan ini
+                      width: "100%", // Pastikan full width
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "100%", // Pastikan full width
                       }}
-                      onClick={() => handleApprove(request.id)}
                     >
-                      Setujui
-                    </ApproveButton>
-                  )}
+                      {(request.status_peminjaman === "Menunggu Persetujuan" ||
+                        request.status_peminjaman === "Ditolak") && (
+                        <ApproveButton
+                          startIcon={<ThumbUpOffAltOutlinedIcon />}
+                          variant="contained"
+                          sx={{
+                            my: 1,
+                            mx: 1,
+                            borderRadius: "8px",
+                            height: "35px",
+                          }}
+                          onClick={() => handleApprove(request.id)}
+                        >
+                          Setujui
+                        </ApproveButton>
+                      )}
 
-                  {(request.status_peminjaman === "Disetujui" ||
-                    request.status_peminjaman === "Menunggu Persetujuan") && (
-                    <RejectButton
-                      variant="contained"
-                      startIcon={<ThumbDownAltOutlinedIcon />}
-                      sx={{
-                        my: 1,
-                        mx: 1,
-                        padding: "8px 16 px",
-                        borderRadius: "8px",
-                        height: "45px",
-                      }}
-                      onClick={() => setShowRejectInput(request.id)}
-                    >
-                      Tolak
-                    </RejectButton>
-                  )}
+                      {(request.status_peminjaman === "Disetujui" ||
+                        request.status_peminjaman ===
+                          "Menunggu Persetujuan") && (
+                        <RejectButton
+                          variant="contained"
+                          startIcon={<ThumbDownAltOutlinedIcon />}
+                          sx={{
+                            my: 1,
+                            mx: 1,
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            height: "35px",
+                          }}
+                          onClick={() => setShowRejectInput(request.id)}
+                        >
+                          Tolak
+                        </RejectButton>
+                      )}
+                    </div>
 
-                  {showRejectInput === request.id && (
-                    <>
-                      <TextField
-                        placeholder="Alasan penolakan"
-                        autoFocus
-                        onChange={(e) =>
-                          handleReasonChange(request.id, e.target.value)
-                        }
-                        value={alasanPenolakan[request.id] || ""}
-                        sx={{ mt: 1, width: "100%" }}
-                      />
-                      <Button
-                        variant="contained"
-                        sx={{
-                          mt: 1,
-                          padding: "8px 16 px",
-                          borderRadius: "8px",
-                          height: "45px",
+                    {showRejectInput === request.id && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          width: "100%", // Pastikan full width
+                          marginTop: "10px", // Tambahkan margin top
                         }}
-                        onClick={() => handleReject(request.id)}
                       >
-                        Kirim
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        sx={{
-                          mt: 1,
-                          my: 1,
-                          mx: 2,
-                          padding: "8px 16 px",
-                          borderRadius: "8px",
-                          height: "45px",
-                        }}
-                        onClick={() => handleCloseReasonInput(request.id)}
-                      >
-                        Tutup
-                      </Button>
-                    </>
-                  )}
+                        <TextField
+                          placeholder="Alasan penolakan"
+                          autoFocus
+                          fullWidth // Gunakan fullWidth untuk TextField
+                          onChange={(e) =>
+                            handleReasonChange(request.id, e.target.value)
+                          }
+                          value={alasanPenolakan[request.id] || ""}
+                          sx={{
+                            width: "100%",
+                            marginBottom: "10px", // Tambahkan margin bottom
+                          }}
+                        />
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <Button
+                            variant="contained"
+                            sx={{
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              height: "45px",
+                            }}
+                            onClick={() => handleReject(request.id)}
+                          >
+                            Kirim
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            sx={{
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              height: "45px",
+                            }}
+                            onClick={() => handleCloseReasonInput(request.id)}
+                          >
+                            Tutup
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </StyledTableCell>
 
                 <StyledTableCell>
-                  <Tooltip title="Detail">
-                    {" "}
-                    <DetailButton
-                      variant="contained"
-                      startIcon={<InfoOutlinedIcon />}
-                      sx={{
-                        padding: "8px 16 px",
-                        borderRadius: "8px",
-                        height: "45px",
-                      }}
-                      onClick={() => {
-                        console.log("DetailButton clicked!");
-                        handleOpenDetail(request);
-                      }}
-                    ></DetailButton>
-                  </Tooltip>
-                  <Tooltip title="Hapus">
-                    {" "}
-                    <RemoveButton
-                      variant="contained"
-                      startIcon={<DeleteForeverOutlinedIcon />}
-                      sx={{
-                        my: 1,
-                        mx: 2,
-                        padding: "8px 16 px",
-                        borderRadius: "8px",
-                        height: "45px",
-                      }}
-                      onClick={() => handleOpenDeleteDialog(request.id)}
-                    ></RemoveButton>
-                  </Tooltip>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Tooltip title="Detail">
+                      <DetailButton
+                        variant="contained"
+                        sx={{
+                          padding: "0",
+                          borderRadius: "50%",
+                          height: "35px",
+                          width: "35px",
+                          minWidth: "35px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() => {
+                          console.log("DetailButton clicked!");
+                          handleOpenDetail(request);
+                        }}
+                      >
+                        <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
+                      </DetailButton>
+                    </Tooltip>
+                    <Tooltip title="Hapus">
+                      <RemoveButton
+                        variant="contained"
+                        sx={{
+                          my: 1,
+                          mx: 2,
+                          padding: "0",
+                          borderRadius: "50%",
+                          height: "35px",
+                          width: "35px",
+                          minWidth: "35px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() => handleOpenDeleteDialog(request.id)}
+                      >
+                        <DeleteForeverOutlinedIcon sx={{ fontSize: "20px" }} />
+                      </RemoveButton>
+                    </Tooltip>
+                  </div>
                 </StyledTableCell>
               </StyledTableRow>
             ))}
