@@ -53,14 +53,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-const authorizeRole = (allowedRoles) => (req, res, next) => {
-  const { role } = req.user;
-  if (!allowedRoles.includes(role)) {
-    return res.status(403).json({ error: "Access denied" });
-  }
-  next();
-};
-
 // Create uploads directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -687,7 +679,7 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
         break;
 
       case "staf":
-        checkQuery = "SELECT * FROM peminjaman WHERE id = $1 ";
+        checkQuery = "SELECT * FROM peminjaman WHERE id = $1";
         checkParams = [id];
         break;
 
@@ -701,13 +693,12 @@ app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
       throw new Error("Peminjaman tidak ditemukan atau Anda tidak memiliki akses");
     }
 
-    // Soft delete dengan prepared statement
-    const deleteQuery = `
-      UPDATE peminjaman 
-      SET is_deleted = true 
-      WHERE id = $1
-      RETURNING *
-    `;
+    let deleteQuery;
+    if (role === "staf") {
+      deleteQuery = "DELETE FROM peminjaman WHERE id = $1 RETURNING *";
+    } else {
+      deleteQuery = "UPDATE peminjaman SET is_deleted = true WHERE id = $1 RETURNING *";
+    }
 
     const result = await client.query(deleteQuery, [id]);
 

@@ -23,14 +23,17 @@ import {
   Snackbar,
   Alert,
   TablePagination,
+  InputAdornment,
+  Stack,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
 import {
   InfoOutlined as InfoOutlinedIcon,
   DeleteForeverOutlined as DeleteForeverOutlinedIcon,
-  ThumbDownAltOutlined as ThumbDownAltOutlinedIcon,
-  ThumbUpOffAltOutlined as ThumbUpOffAltOutlinedIcon,
+  ClearOutlined as ClearOutlinedIcon,
+  CheckOutlined as CheckOutlinedIcon,
+  Search as SearchIcon,
 } from "@mui/icons-material";
 
 export default function LoanApproval() {
@@ -45,6 +48,7 @@ export default function LoanApproval() {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [searchTerm, setSearchTerm] = useState("");
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -295,6 +299,19 @@ export default function LoanApproval() {
     setPage(0);
   };
 
+  // Filter rows based on search term
+  const filteredRows = requests.filter(
+    (item) =>
+      item.nama_barang &&
+      item.nama_barang.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      // Filter by status
+      (filterStatus === "Semua" || item.status_peminjaman === filterStatus)
+  );
+
+  useEffect(() => {
+    setPage(0); // Reset to the first page whenever the search term changes
+  }, [searchTerm]);
+
   const filteredLoanApproval = loanApproval.filter(
     (item) =>
       filterStatus === "Semua" || item.status_peminjaman === filterStatus
@@ -353,12 +370,13 @@ export default function LoanApproval() {
         },
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Gagal menghapus peminjaman");
       }
 
-      const data = await response.json();
       setSnackbar({
         open: true,
         message: data.message,
@@ -381,6 +399,7 @@ export default function LoanApproval() {
       });
     }
   };
+
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -538,32 +557,82 @@ export default function LoanApproval() {
   };
 
   return (
-    <div
-      style={{
+    <Box
+      sx={{
         width: "100%",
-        marginTop: "15px",
-        borderRadius: "12px",
-        boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        padding: "20px",
-        backgroundColor: "white",
+        margin: "0 auto", // Pusatkan di layar
+        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        mt: 2,
+        borderRadius: 2,
+        p: 2,
+        px: 2,
+        mb: 2,
+        bgcolor: "background.paper",
       }}
     >
-      <h2>Persetujuan Peminjaman</h2>
-      <FormControl variant="outlined" sx={{ minWidth: 200, my: 2 }}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={handleFilterChange}
-          label="Status"
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{
+          pb: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h4">Persetujuan Peminjaman</Typography>
+        </Box>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+          sx={{ mt: "4px" }}
         >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Disetujui">Disetujui</MenuItem>
-          <MenuItem value="Menunggu persetujuan">Menunggu persetujuan</MenuItem>
-          <MenuItem value="Ditolak">Ditolak</MenuItem>
-        </Select>
-      </FormControl>
+          <FormControl variant="outlined" sx={{ minWidth: 200, width: "100%" }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filterStatus}
+              onChange={handleFilterChange}
+              label="Status"
+            >
+              <MenuItem value="Semua">Semua</MenuItem>
+              <MenuItem value="Disetujui">Disetujui</MenuItem>
+              <MenuItem value="Menunggu persetujuan">
+                Menunggu persetujuan
+              </MenuItem>
+              <MenuItem value="Ditolak">Ditolak</MenuItem>
+            </Select>
+          </FormControl>
+
+          <TextField
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              width: 250,
+            }}
+          />
+        </Stack>
+      </Stack>
+
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      ></TableContainer>
       <div
         style={{
+          marginTop: "10px",
           display: "flex",
           justifyContent: "flex-start",
           alignItems: "center",
@@ -587,10 +656,6 @@ export default function LoanApproval() {
               <StyledTableCell>No</StyledTableCell>
               <StyledTableCell>Nama</StyledTableCell>
               <StyledTableCell>NIM/NIK/NIDN</StyledTableCell>
-              <StyledTableCell>Nama Barang</StyledTableCell>
-              <StyledTableCell>No Inventaris</StyledTableCell>
-              <StyledTableCell>Jumlah</StyledTableCell>
-              <StyledTableCell>Keperluan</StyledTableCell>
               <StyledTableCell>Tanggal Pinjam</StyledTableCell>
               <StyledTableCell>Tanggal Kembali</StyledTableCell>
               <StyledTableCell>Alasan Penolakan</StyledTableCell>
@@ -600,201 +665,205 @@ export default function LoanApproval() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {displayedRows.map((request, index) => (
-              <StyledTableRow hover key={request.id}>
-                <StyledTableCell>
-                  {index + 1 + page * rowsPerPage}
-                </StyledTableCell>
-                <StyledTableCell>{request.peminjam}</StyledTableCell>
-                <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
-                <StyledTableCell>{request.nama_barang}</StyledTableCell>
-                <StyledTableCell>{request.no_inventaris}</StyledTableCell>
-                <StyledTableCell>{request.jumlah}</StyledTableCell>
-                <StyledTableCell>{request.keterangan}</StyledTableCell>
-                <StyledTableCell>
-                  {formatTanggal(request.tanggal_pinjam)}
-                </StyledTableCell>
-                <StyledTableCell>
-                  {request.tanggal_kembali
-                    ? formatTanggal(request.tanggal_kembali)
-                    : ""}
-                </StyledTableCell>
-                <StyledTableCell>
-                  {request.alasan_penolakan || "-"}
-                </StyledTableCell>
+            {filteredRows
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((request, index) => (
+                <StyledTableRow hover key={request.id}>
+                  <StyledTableCell>
+                    {index + 1 + page * rowsPerPage}
+                  </StyledTableCell>
+                  <StyledTableCell>{request.peminjam}</StyledTableCell>
+                  <StyledTableCell>{request.nim_nik_nidn}</StyledTableCell>
+                  <StyledTableCell>
+                    {formatTanggal(request.tanggal_pinjam)}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    {request.tanggal_kembali
+                      ? formatTanggal(request.tanggal_kembali)
+                      : ""}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    {request.alasan_penolakan || "-"}
+                  </StyledTableCell>
 
-                <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
-                <StyledTableCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column", // Ubah menjadi column
-                      alignItems: "center", // Tambahkan ini
-                      justifyContent: "center", // Tambahkan ini
-                      width: "100%", // Pastikan full width
-                    }}
-                  >
+                  <StyledTableCell>{request.status_peminjaman}</StyledTableCell>
+                  <StyledTableCell>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column", // Ubah menjadi column
+                        alignItems: "center", // Tambahkan ini
+                        justifyContent: "center", // Tambahkan ini
+                        width: "100%", // Pastikan full width
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "100%", // Pastikan full width
+                        }}
+                      >
+                        {(request.status_peminjaman ===
+                          "Menunggu Persetujuan" ||
+                          request.status_peminjaman === "Ditolak") && (
+                          <ApproveButton
+                            startIcon={<CheckOutlinedIcon />}
+                            variant="contained"
+                            sx={{
+                              my: 1,
+                              mx: 1,
+                              borderRadius: "8px",
+                              height: "35px",
+                            }}
+                            onClick={() => handleApprove(request.id)}
+                          >
+                            Setujui
+                          </ApproveButton>
+                        )}
+
+                        {(request.status_peminjaman === "Disetujui" ||
+                          request.status_peminjaman ===
+                            "Menunggu Persetujuan") && (
+                          <RejectButton
+                            variant="contained"
+                            startIcon={<ClearOutlinedIcon />}
+                            sx={{
+                              my: 1,
+                              mx: 1,
+                              padding: "8px 16px",
+                              borderRadius: "8px",
+                              height: "35px",
+                            }}
+                            onClick={() => setShowRejectInput(request.id)}
+                          >
+                            Tolak
+                          </RejectButton>
+                        )}
+                      </div>
+
+                      {showRejectInput === request.id && (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            width: "100%", // Pastikan full width
+                            marginTop: "10px", // Tambahkan margin top
+                          }}
+                        >
+                          <TextField
+                            placeholder="Alasan penolakan"
+                            autoFocus
+                            fullWidth // Gunakan fullWidth untuk TextField
+                            onChange={(e) =>
+                              handleReasonChange(request.id, e.target.value)
+                            }
+                            value={alasanPenolakan[request.id] || ""}
+                            sx={{
+                              width: "100%",
+                              marginBottom: "10px", // Tambahkan margin bottom
+                            }}
+                          />
+                          <div
+                            style={{
+                              display: "table-row",
+                              justifyContent: "left",
+                              gap: "20px",
+                            }}
+                          >
+                            <Button
+                              variant="contained"
+                              sx={{
+                                padding: "2px 4px",
+                                borderRadius: "8px",
+                                height: "30px",
+                                mr: "2px",
+                              }}
+                              onClick={() => handleReject(request.id)}
+                            >
+                              Kirim
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              sx={{
+                                padding: "2px 4px",
+                                borderRadius: "8px",
+                                height: "30px",
+                                ml: "4px",
+                              }}
+                              onClick={() => handleCloseReasonInput(request.id)}
+                            >
+                              Tutup
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </StyledTableCell>
+
+                  <StyledTableCell>
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        width: "100%", // Pastikan full width
                       }}
                     >
-                      {(request.status_peminjaman === "Menunggu Persetujuan" ||
-                        request.status_peminjaman === "Ditolak") && (
-                        <ApproveButton
-                          startIcon={<ThumbUpOffAltOutlinedIcon />}
+                      <Tooltip title="Detail">
+                        <DetailButton
                           variant="contained"
                           sx={{
-                            my: 1,
-                            mx: 1,
-                            borderRadius: "8px",
+                            padding: "0",
+                            borderRadius: "50%",
                             height: "35px",
-                          }}
-                          onClick={() => handleApprove(request.id)}
-                        >
-                          Setujui
-                        </ApproveButton>
-                      )}
-
-                      {(request.status_peminjaman === "Disetujui" ||
-                        request.status_peminjaman ===
-                          "Menunggu Persetujuan") && (
-                        <RejectButton
-                          variant="contained"
-                          startIcon={<ThumbDownAltOutlinedIcon />}
-                          sx={{
-                            my: 1,
-                            mx: 1,
-                            padding: "8px 16px",
-                            borderRadius: "8px",
-                            height: "35px",
-                          }}
-                          onClick={() => setShowRejectInput(request.id)}
-                        >
-                          Tolak
-                        </RejectButton>
-                      )}
-                    </div>
-
-                    {showRejectInput === request.id && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          width: "100%", // Pastikan full width
-                          marginTop: "10px", // Tambahkan margin top
-                        }}
-                      >
-                        <TextField
-                          placeholder="Alasan penolakan"
-                          autoFocus
-                          fullWidth // Gunakan fullWidth untuk TextField
-                          onChange={(e) =>
-                            handleReasonChange(request.id, e.target.value)
-                          }
-                          value={alasanPenolakan[request.id] || ""}
-                          sx={{
-                            width: "100%",
-                            marginBottom: "10px", // Tambahkan margin bottom
-                          }}
-                        />
-                        <div
-                          style={{
+                            width: "35px",
+                            minWidth: "35px",
                             display: "flex",
+                            alignItems: "center",
                             justifyContent: "center",
-                            gap: "10px",
+                          }}
+                          onClick={() => {
+                            console.log("DetailButton clicked!");
+                            handleOpenDetail(request);
                           }}
                         >
-                          <Button
-                            variant="contained"
-                            sx={{
-                              padding: "8px 16px",
-                              borderRadius: "8px",
-                              height: "45px",
-                            }}
-                            onClick={() => handleReject(request.id)}
-                          >
-                            Kirim
-                          </Button>
-                          <Button
-                            variant="outlined"
-                            sx={{
-                              padding: "8px 16px",
-                              borderRadius: "8px",
-                              height: "45px",
-                            }}
-                            onClick={() => handleCloseReasonInput(request.id)}
-                          >
-                            Tutup
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </StyledTableCell>
-
-                <StyledTableCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Tooltip title="Detail">
-                      <DetailButton
-                        variant="contained"
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => {
-                          console.log("DetailButton clicked!");
-                          handleOpenDetail(request);
-                        }}
-                      >
-                        <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
-                      </DetailButton>
-                    </Tooltip>
-                    <Tooltip title="Hapus">
-                      <RemoveButton
-                        variant="contained"
-                        sx={{
-                          my: 1,
-                          mx: 2,
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => handleOpenDeleteDialog(request.id)}
-                      >
-                        <DeleteForeverOutlinedIcon sx={{ fontSize: "20px" }} />
-                      </RemoveButton>
-                    </Tooltip>
-                  </div>
-                </StyledTableCell>
-              </StyledTableRow>
-            ))}
+                          <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
+                        </DetailButton>
+                      </Tooltip>
+                      <Tooltip title="Hapus">
+                        <RemoveButton
+                          variant="contained"
+                          sx={{
+                            my: 1,
+                            mx: 2,
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => handleOpenDeleteDialog(request.id)}
+                        >
+                          <DeleteForeverOutlinedIcon
+                            sx={{ fontSize: "20px" }}
+                          />
+                        </RemoveButton>
+                      </Tooltip>
+                    
+                    </div>
+                  </StyledTableCell>
+                </StyledTableRow>
+              ))}
           </TableBody>
         </Table>
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={loanApproval.length}
+          count={filteredRows.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
@@ -869,6 +938,6 @@ export default function LoanApproval() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </div>
+    </Box>
   );
 }

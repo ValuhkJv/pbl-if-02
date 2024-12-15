@@ -33,6 +33,7 @@ const PeminjamanBarang = () => {
   const [nim_nik_nidn, setNimNikNidn] = useState("");
   const [peminjam, setPeminjam] = useState("");
   const [items, setItems] = useState([]);
+  const [keteranganError, setKeteranganError] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [noTransaksi, setNoTransaksi] = useState([]);
   const [barangList, setBarangList] = useState([]);
@@ -47,6 +48,8 @@ const PeminjamanBarang = () => {
   const handleCloseModal = () => setOpenModal(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+  const [tanggalAmbil, setTanggalAmbil] = useState(null);
+  const [tanggalKembali, setTanggalKembali] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -56,6 +59,13 @@ const PeminjamanBarang = () => {
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
+
+  // Reset keterangan error when modal opens
+  useEffect(() => {
+    if (openModal) {
+      setKeteranganError(false);
+    }
+  }, [openModal]);
 
   useEffect(() => {
     // Fetch barang dengan stok tersedia dari backend
@@ -136,6 +146,22 @@ const PeminjamanBarang = () => {
   };
 
   const handlePinjam = async () => {
+    // Validasi keterangan
+    if (!keterangan.trim()) {
+      setKeteranganError(true);
+      return;
+    }
+
+    // Validasi tanggal ambil
+    if (
+      !tanggalAmbil ||
+      new Date(tanggalAmbil) <
+        new Date(new Date().setDate(new Date().getDate() + 2))
+    ) {
+      alert("Peminjaman berhasil diajukan");
+      return;
+    }
+
     const newTransaction = items.map((item) => ({
       no_inventaris: item.noInventaris, // Sesuaikan dengan properti backend
       nama_barang: item.namaBarang,
@@ -162,6 +188,7 @@ const PeminjamanBarang = () => {
       await refreshTransactions();
       setTransactions([...transactions, ...newTransaction]);
       resetFields();
+      setKeterangan(""); // Reset keterangan
     } catch (error) {
       console.error(error);
       alert("Terjadi kesalahan saat mengajukan peminjaman.");
@@ -390,6 +417,13 @@ const PeminjamanBarang = () => {
       });
     }
   };
+
+    // Hitung tanggal H+2
+    const calculateMinDate = () => {
+      const today = new Date();
+      today.setDate(today.getDate() + 2);
+      return today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+    };
 
   return (
     <Grid>
@@ -628,7 +662,7 @@ const PeminjamanBarang = () => {
                     </TableCell>
 
                     <TableCell>
-                      {["Disetujui", "Ditolak", "Kembali"].includes(
+                      {["Ditolak", "Kembali"].includes(
                         transaction.status_peminjaman
                       ) && (
                         <IconButton
@@ -669,22 +703,69 @@ const PeminjamanBarang = () => {
         onClose={handleCloseModal}
         sx={{
           "& .MuiDialog-paper": {
-            width: "35%",
-            height: "35%",
+            width: "45%",
+            height: "45%",
             maxWidth: "none",
           },
         }}
       >
-        <DialogTitle>Keperluan Peminjaman</DialogTitle>
+        <DialogTitle>Peminjaman</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
             multiline
             rows={3}
-            label="keperluan"
+            label="Keperluan"
             value={keterangan}
-            onChange={(e) => setKeterangan(e.target.value)}
-            sx={{ mt: "10px" }}
+            onChange={(e) => {
+              setKeterangan(e.target.value);
+              setKeteranganError(false);
+            }}
+            error={keteranganError}
+            helperText={
+              keteranganError ? "Keperluan harus diisi minimal 1 kata" : ""
+            }
+            sx={{ mt: "10px", mb: 2 }}
+            required
+          />
+
+          <TextField
+            label="Tanggal Ambil"
+            type="date"
+            value={tanggalAmbil}
+            onChange={(e) => {
+              setTanggalAmbil(e.target.value);
+              // Reset tanggal kembali jika tanggal ambil diubah
+              setTanggalKembali("");
+            }}
+            inputProps={{
+              min: calculateMinDate(), // Setel tanggal minimum
+            }}
+            margin="normal"
+            required
+            sx={{mr: 2}}
+            error={
+              tanggalAmbil &&
+              new Date(tanggalAmbil) <
+                new Date(new Date().setDate(new Date().getDate() + 1))
+            }
+            helperText={
+              tanggalAmbil &&
+              new Date(tanggalAmbil) <
+                new Date(new Date().setDate(new Date().getDate() + 1))
+                ? "Tanggal ambil minimal H+2"
+                : ""
+            }
+          />
+          <TextField
+            label="Tanggal Kembali"
+            type="date"
+            margin="normal"
+            value={tanggalKembali}
+            onChange={(e) => setTanggalKembali(e.target.value)}
+            inputProps={{
+              min: calculateMinDate(), // Setel tanggal minimum
+            }}
             required
           />
         </DialogContent>
@@ -703,8 +784,12 @@ const PeminjamanBarang = () => {
           </Button>
           <Button
             onClick={() => {
-              handlePinjam(); // Simpan transaksi
-              handleCloseModal();
+              if (keterangan.trim()) {
+                handlePinjam();
+                handleCloseModal();
+              } else {
+                setKeteranganError(true);
+              }
             }}
             sx={{
               border: "2px solid #69D2FF",
@@ -714,7 +799,7 @@ const PeminjamanBarang = () => {
               padding: "8px 16px",
             }}
           >
-            Simpan Transaksi
+            Simpan
           </Button>
         </DialogActions>
       </Dialog>
