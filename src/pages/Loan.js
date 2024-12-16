@@ -21,10 +21,14 @@ import {
   DialogTitle,
   Snackbar,
   Alert,
+  Stack,
 } from "@mui/material";
 import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
 import { format } from "date-fns";
 import PengembalianModal from "./PengembalianModal";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
 const PeminjamanBarang = () => {
   const [noInventaris, setNoInventaris] = useState("");
@@ -48,8 +52,9 @@ const PeminjamanBarang = () => {
   const handleCloseModal = () => setOpenModal(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [tanggalAmbil, setTanggalAmbil] = useState(null);
+  const [tanggalPinjam, setTanggalPinjam] = useState(null);
   const [tanggalKembali, setTanggalKembali] = useState(null);
+
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -152,15 +157,22 @@ const PeminjamanBarang = () => {
       return;
     }
 
-    // Validasi tanggal ambil
-    if (
-      !tanggalAmbil ||
-      new Date(tanggalAmbil) <
-        new Date(new Date().setDate(new Date().getDate() + 2))
-    ) {
-      alert("Peminjaman berhasil diajukan");
+    // Validasi tanggal ambil dan tanggal kembali
+    if (!tanggalPinjam || !tanggalKembali) {
+      setSnackbar({
+        open: true,
+        message: "Tanggal ambil dan tanggal kembali harus diisi.",
+        severity: "error",
+      });
       return;
     }
+
+    console.log(
+      "Transaksi disimpan dengan tanggal ambil:",
+      tanggalPinjam,
+      "dan tanggal kembali:",
+      tanggalKembali
+    );
 
     const newTransaction = items.map((item) => ({
       no_inventaris: item.noInventaris, // Sesuaikan dengan properti backend
@@ -171,6 +183,8 @@ const PeminjamanBarang = () => {
       no_transaksi: noTransaksi,
       peminjam,
       nim_nik_nidn,
+      tanggal_pinjam: tanggalPinjam, // Menyimpan tanggal ambil
+      tanggal_kembali: tanggalKembali, // Menyimpan tanggal kembali
     }));
 
     try {
@@ -373,7 +387,23 @@ const PeminjamanBarang = () => {
   };
 
   const handleCancel = async (id) => {
+    console.log("ID yang akan dibatalkan:", id); // Debugging ID di frontend
+    if (!id) {
+      setSnackbar({
+        open: true,
+        message: "ID peminjaman tidak valid",
+        severity: "error",
+      });
+      return;
+    }
     try {
+      // Tampilkan loading state
+      setSnackbar({
+        open: true,
+        message: "Sedang membatalkan peminjaman...",
+        severity: "info",
+      });
+
       const token = localStorage.getItem("token");
       const response = await fetch(
         `http://localhost:5000/peminjaman/cancel/${id}`,
@@ -388,28 +418,21 @@ const PeminjamanBarang = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Gagal membatalkan peminjaman");
+        console.error("Server response:", errorData);
+        throw new Error(errorData.detail || "Gagal membatalkan peminjaman");
       }
 
-      // Try to parse the response as JSON
-      let data;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        throw new Error("Response bukan dalam format JSON");
-      }
-
+      const data = await response.json();
       setSnackbar({
         open: true,
-        message: data.message || "Peminjaman berhasil dibatalkan",
+        message: data.message,
         severity: "success",
       });
 
-      // Refresh transaksi setelah pembatalan
+      // Refresh data transaksi
       await refreshTransactions();
     } catch (error) {
-      console.error(error);
+      console.error("Error in handleCancel:", error);
       setSnackbar({
         open: true,
         message: error.message,
@@ -418,12 +441,92 @@ const PeminjamanBarang = () => {
     }
   };
 
-    // Hitung tanggal H+2
-    const calculateMinDate = () => {
-      const today = new Date();
-      today.setDate(today.getDate() + 2);
-      return today.toISOString().split("T")[0]; // Format YYYY-MM-DD
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://localhost:5000/peminjaman", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data peminjaman");
+        }
+
+        const data = await response.json();
+        setTransactions(data);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+        alert("Gagal memuat data peminjaman");
+      }
     };
+
+    fetchTransactions();
+  }, []);
+
+  // Hitung tanggal H+2
+  const calculateMinDate = () => {
+    const today = new Date();
+    today.setDate(today.getDate() + 2);
+    return today; // Format YYYY-MM-DD
+  };
+
+  const renderDateFilterSection = () => (
+    <Stack
+      direction={{ xs: "column", sm: "row" }}
+      spacing={2}
+      alignItems="flex-start"
+      sx={{ mt: 2 }}
+    >
+      <LocalizationProvider dateAdapter={AdapterDateFns}>
+        <DatePicker
+          label="Tanggal Pinjam"
+          sx={{
+            width: "100%",
+            minWidth: 200,
+            mr: 2,
+          }}
+          value={tanggalPinjam}
+          onChange={(newValue) => {
+            setTanggalPinjam(newValue);
+            // Reset tanggal kembali jika tanggal ambil diubah
+            setTanggalKembali(null);
+          }}
+          minDate={calculateMinDate()} // Setel tanggal minimum
+          margin="normal"
+          required
+          error={
+            tanggalPinjam &&
+            new Date(tanggalPinjam) <
+              new Date(new Date().setDate(new Date().getDate() + 1))
+          }
+          helperText={
+            tanggalPinjam &&
+            new Date(tanggalPinjam) <
+              new Date(new Date().setDate(new Date().getDate() + 1))
+              ? "Tanggal ambil minimal H+2"
+              : ""
+          }
+        />
+        <DatePicker
+          label="Tanggal Kembali"
+          value={tanggalKembali}
+          onChange={(newValue) => setTanggalKembali(newValue)}
+          minDate={tanggalPinjam ? new Date(tanggalPinjam) : calculateMinDate()} // Setel tanggal minimum
+          margin="normal"
+          sx={{
+            width: "100%",
+            minWidth: 200,
+          }}
+          required
+        />
+      </LocalizationProvider>
+    </Stack>
+  );
 
   return (
     <Grid>
@@ -436,15 +539,25 @@ const PeminjamanBarang = () => {
           marginTop: "15px",
           borderRadius: "12px",
           boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-          padding: "20px",
+          padding: "0",
         }}
       >
-        <Box>
-          <Typography variant="h6" gutterBottom>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            backgroundColor: "#0C628B",
+            padding: "10px",
+            borderTopLeftRadius: "12px",
+            borderTopRightRadius: "12px",
+            borderBottom: "1px solid #e0e0e0",
+          }}
+        >
+          <Typography variant="h6" color="white" gutterBottom>
             Input Barang Peminjaman
           </Typography>
           <Divider />
-        </Box>
+        </div>
 
         <Box p={4}>
           <Box display="flex" gap={2} mb={3}>
@@ -480,7 +593,7 @@ const PeminjamanBarang = () => {
               display: "flex",
               alignItems: "center",
               backgroundColor: "#0C628B",
-              padding: "10px",
+              padding: "8px",
               borderTopLeftRadius: "12px",
               borderTopRightRadius: "12px",
               borderBottom: "1px solid #e0e0e0",
@@ -553,7 +666,6 @@ const PeminjamanBarang = () => {
               <Button
                 variant="contained"
                 style={{ backgroundColor: "#0C628B", color: "white" }}
-                color="success"
                 startIcon={<ShoppingCart />}
                 onClick={handleOpenModal}
                 disabled={items.length === 0}
@@ -677,7 +789,7 @@ const PeminjamanBarang = () => {
                         <Button
                           variant="contained"
                           color="error"
-                          onClick={() => handleCancel(transaction.id)}
+                          onClick={() => handleCancel(transaction.id)} // Pastikan ID yang benar
                         >
                           Batalkan
                         </Button>
@@ -725,83 +837,44 @@ const PeminjamanBarang = () => {
             helperText={
               keteranganError ? "Keperluan harus diisi minimal 1 kata" : ""
             }
-            sx={{ mt: "10px", mb: 2 }}
+            sx={{ mt: "10px" }}
             required
           />
-
-          <TextField
-            label="Tanggal Ambil"
-            type="date"
-            value={tanggalAmbil}
-            onChange={(e) => {
-              setTanggalAmbil(e.target.value);
-              // Reset tanggal kembali jika tanggal ambil diubah
-              setTanggalKembali("");
-            }}
-            inputProps={{
-              min: calculateMinDate(), // Setel tanggal minimum
-            }}
-            margin="normal"
-            required
-            sx={{mr: 2}}
-            error={
-              tanggalAmbil &&
-              new Date(tanggalAmbil) <
-                new Date(new Date().setDate(new Date().getDate() + 1))
-            }
-            helperText={
-              tanggalAmbil &&
-              new Date(tanggalAmbil) <
-                new Date(new Date().setDate(new Date().getDate() + 1))
-                ? "Tanggal ambil minimal H+2"
-                : ""
-            }
-          />
-          <TextField
-            label="Tanggal Kembali"
-            type="date"
-            margin="normal"
-            value={tanggalKembali}
-            onChange={(e) => setTanggalKembali(e.target.value)}
-            inputProps={{
-              min: calculateMinDate(), // Setel tanggal minimum
-            }}
-            required
-          />
+          {renderDateFilterSection()}
+          <DialogActions sx={{ mt: 2 }}>
+            <Button
+              onClick={handleCloseModal}
+              sx={{
+                border: "2px solid ",
+                borderColor: "black",
+                color: "black", // Warna teks tombol
+                borderRadius: "8px", // Border radius tombol
+                padding: "8px 16px", // Padding tombol
+              }}
+            >
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                if (keterangan.trim()) {
+                  handlePinjam();
+                  handleCloseModal();
+                } else {
+                  setKeteranganError(true);
+                }
+              }}
+              sx={{
+                border: "2px solid #69D2FF",
+                backgroundColor: "#69D2FF",
+                color: "black",
+                borderRadius: "8px",
+                padding: "8px 16px",
+              }}
+            >
+              Simpan
+            </Button>
+          </DialogActions>
         </DialogContent>
-        <DialogActions sx={{ mb: "20px", mx: 2 }}>
-          <Button
-            onClick={handleCloseModal}
-            sx={{
-              border: "2px solid ",
-              borderColor: "black",
-              color: "black", // Warna teks tombol
-              borderRadius: "8px", // Border radius tombol
-              padding: "8px 16px", // Padding tombol
-            }}
-          >
-            Close
-          </Button>
-          <Button
-            onClick={() => {
-              if (keterangan.trim()) {
-                handlePinjam();
-                handleCloseModal();
-              } else {
-                setKeteranganError(true);
-              }
-            }}
-            sx={{
-              border: "2px solid #69D2FF",
-              backgroundColor: "#69D2FF",
-              color: "black",
-              borderRadius: "8px",
-              padding: "8px 16px",
-            }}
-          >
-            Simpan
-          </Button>
-        </DialogActions>
       </Dialog>
       <Dialog
         open={deleteDialogOpen}

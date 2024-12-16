@@ -345,6 +345,14 @@ export default function LoanHistory() {
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
           label="Bulan"
+          MenuProps={{
+            PaperProps: {
+              style: {
+                maxHeight: 200, // Atur tinggi maksimum dropdown
+                width: 250, // Atur lebar dropdown jika diperlukan
+              },
+            },
+          }}
         >
           {months.map((month) => (
             <MenuItem key={month} value={month}>
@@ -385,25 +393,9 @@ export default function LoanHistory() {
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
           alignItems="center"
-          justifyContent= "center"
+          justifyContent="center"
           sx={{ mt: "4px", px: 2, width: "100%" }}
         >
-          <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filterStatus}
-              onChange={handleFilterChange}
-              label="Status"
-            >
-              <MenuItem value="Semua">Semua</MenuItem>
-              <MenuItem value="Disetujui">Disetujui</MenuItem>
-              <MenuItem value="Menunggu persetujuan">
-                Menunggu persetujuan
-              </MenuItem>
-              <MenuItem value="Ditolak">Ditolak</MenuItem>
-            </Select>
-          </FormControl>
-
           <TextField
             variant="outlined"
             placeholder="Search..."
@@ -421,6 +413,22 @@ export default function LoanHistory() {
               minWidth: 200,
             }}
           />
+          <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filterStatus}
+              onChange={handleFilterChange}
+              label="Status"
+            >
+              <MenuItem value="Semua">Semua</MenuItem>
+              <MenuItem value="Disetujui">Disetujui</MenuItem>
+              <MenuItem value="Menunggu persetujuan">
+                Menunggu persetujuan
+              </MenuItem>
+              <MenuItem value="Ditolak">Ditolak</MenuItem>
+            </Select>
+          </FormControl>
+
           {renderDateFilterSection()}
         </Stack>
       </Stack>
@@ -506,7 +514,7 @@ export default function LoanHistory() {
                         }}
                         onClick={() => {
                           console.log("DetailButton clicked!");
-                          handleOpenDetail(history);
+                          handleOpenDetail(item);
                         }}
                       >
                         <InfoOutlinedIcon sx={{ fontSize: "20px" }} />

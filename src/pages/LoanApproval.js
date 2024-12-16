@@ -400,7 +400,6 @@ export default function LoanApproval() {
     }
   };
 
-
   useEffect(() => {
     const fetchTransactions = async () => {
       try {

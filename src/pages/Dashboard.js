@@ -18,7 +18,7 @@ import {
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  AccountCircle as AccountCircleIcon,
+  LoginOutlined as LoginOutlinedIcon,
   Home as HomeIcon,
   Approval as ApprovalIcon,
   FeaturedPlayList as FeaturedPlayListIcon,
@@ -161,7 +161,7 @@ export default function Dashboard() {
             aria-label="logout"
             onClick={handleLogout}
           >
-            <AccountCircleIcon sx={{ fontSize: 30 }} />
+            <LoginOutlinedIcon sx={{ fontSize: 30 }} />
           </IconButton>
         </Toolbar>
       </AppBar>
