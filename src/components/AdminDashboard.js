@@ -1,37 +1,120 @@
-import React from "react";
-import { Card, CardContent, Typography, Grid, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from "@mui/material";
-import DescriptionIcon from "@mui/icons-material/Description";
+import React, { useState, useEffect } from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Grid,
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Alert,
+  Snackbar,
+  CircularProgress
+} from "@mui/material";
+import { Description as DescriptionIcon, Error as ErrorIcon } from "@mui/icons-material";
 
 function DashboardStaf() {
-  const items = [
-    { id: 1, count: 3, title: "Permintaan Barang" },
-    { id: 2, count: 5, title: "Peminjaman Barang" },
-    { id: 3, count: 54, title: "Daftar Barang" },
-  ];
+  const [dashboardData, setDashboardData] = useState({
+    items: [],
+    overdueItems: [],
+    topRequests: [],
+    topBorrowings: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const permintaanBarang = [
-    { nama: "Degirol", total: 30, terakhir: "12-08-2024" },
-    { nama: "Kotak Tisu", total: 50, terakhir: "22-10-2024" },
-    { nama: "Blood Lancet", total: 27, terakhir: "27-09-2024" },
-    { nama: "The Prendjak 25", total: 64, terakhir: "22-10-2024" },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+    // Refresh data every 5 minutes
+    const interval = setInterval(() => { fetchDashboardData(); }, 300000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const peminjamanBarang = [
-    { nama: "Infocus", total: 26, terakhir: "09-10-2024" },
-    { nama: "Laptop", total: 50, terakhir: "28-09-2024" },
-    { nama: "Bendera Poltek", total: 27, terakhir: "27-09-2024" },
-    { nama: "P3K", total: 15, terakhir: "17-10-2024" },
-  ];
+  const fetchDashboardData = async () => {
+    try {
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      };
+      const [itemsRes, overdueRes, requestsRes, borrowingRes] = await Promise.all([
+        fetch('http://localhost:5000/dashboard/counts', { headers }),
+        fetch('http://localhost:5000/borrowing/overdue', { headers }),
+        fetch('http://localhost:5000/requests/top', { headers }),
+        fetch('http://localhost:5000/borrowing/top', { headers })
+      ]);
+
+      // Check if any response failed
+      if (!itemsRes.ok || !overdueRes.ok || !requestsRes.ok || !borrowingRes.ok) {
+        throw new Error('One or more requests failed');
+      }
+
+      const [counts, overdue, requests, borrowings] = await Promise.all([
+        itemsRes.json(),
+        overdueRes.json(),
+        requestsRes.json(),
+        borrowingRes.json()
+      ]);
+
+      setDashboardData({
+        items: [
+          { id: 1, count: counts?.requests || 0, title: "Permintaan Barang" },
+          { id: 2, count: counts?.borrowings || 0, title: "Peminjaman Barang" },
+          { id: 3, count: counts?.items || 0, title: "Daftar Barang" },
+        ],
+        overdueItems: Array.isArray(overdue) ? overdue : [], // Ensure it's an array
+        topRequests: Array.isArray(requests) ? requests : [],
+        topBorrowings: Array.isArray(borrowings) ? borrowings : [],
+      });
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setError('Failed to fetch dashboard data');
+      setLoading(false);
+    }
+  }
+
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
 
   return (
+
     <div style={{ padding: 20 }}>
-      <Grid container spacing={2} justifyContent="center">
-        {items.map((item) => (
-          <Grid item xs={12} sm={4} key={item.id}>
+      {/* Notifications for overdue items */}
+      {(dashboardData.overdueItems || []).map((item) => (
+        <Alert
+          severity="error"
+          key={item.borrowing_id}
+          icon={<ErrorIcon />}
+          style={{ marginBottom: 10 }}
+        >
+          Peminjaman {item.item_name} oleh {item.borrower}  dengan NIK/NIM/NIDN {item.nik} telah melewati batas waktu pengembalian ({new Date(item.return_date).toLocaleDateString()})
+        </Alert>
+      ))}
+      {/* Summary Cards */}
+      <Grid container spacing={2} justifyContent={"center"}>
+        {dashboardData.items?.map((item) => (
+          <Grid item key={item.borrowing_id} xs={12} sm={6} md={4}>
             <Card style={{ backgroundColor: "#69D2FF" }}>
               <CardContent style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Box textAlign="center" flexGrow={1}>
-                  <Typography variant="h5" style={{ fontWeight: "bold" }}>{item.count}</Typography>
+                  <Typography variant="h5" style={{ fontWeight: "bold" }}>
+                    {item.count}
+                  </Typography>
                   <Typography>{item.title}</Typography>
                 </Box>
                 <DescriptionIcon style={{ fontSize: 70, marginRight: 16 }} />
@@ -41,10 +124,11 @@ function DashboardStaf() {
         ))}
       </Grid>
 
-      {/* Bagian Tabel */}
+      {/* Tables */}
       <Grid container spacing={4} style={{ marginTop: 20 }}>
+        {/* Top Requests Table */}
         <Grid item xs={12} sm={6}>
-          <Card style={{ backgroundColor: "white" }}>
+          <Card>
             <CardContent>
               <Typography variant="h6" style={{ fontWeight: "bold", marginBottom: 10 }}>
                 Permintaan Barang Paling Banyak
@@ -54,12 +138,16 @@ function DashboardStaf() {
                   <TableHead>
                     <TableRow>
                       <TableCell style={{ fontWeight: "bold", color: "#808080" }}>Nama Barang</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>Total Permintaan</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>Terakhir Permintaan</TableCell>
+                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                        Total Permintaan
+                      </TableCell>
+                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                        Terakhir Permintaan
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {permintaanBarang.map((row, index) => (
+                    {dashboardData.topRequests?.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell style={{ fontWeight: "bold" }}>{row.nama}</TableCell>
                         <TableCell align="center" style={{ fontWeight: "bold" }}>{row.total}</TableCell>
@@ -72,9 +160,9 @@ function DashboardStaf() {
             </CardContent>
           </Card>
         </Grid>
-
+        {/* Top Borrowings Table */}
         <Grid item xs={12} sm={6}>
-          <Card style={{ backgroundColor: "white" }}>
+          <Card>
             <CardContent>
               <Typography variant="h6" style={{ fontWeight: "bold", marginBottom: 10 }}>
                 Peminjaman Barang Paling Banyak
@@ -84,12 +172,16 @@ function DashboardStaf() {
                   <TableHead>
                     <TableRow>
                       <TableCell style={{ fontWeight: "bold", color: "#808080" }}>Nama Barang</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>Total Peminjaman</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>Terakhir Peminjaman</TableCell>
+                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                        Total Peminjaman
+                      </TableCell>
+                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                        Terakhir Peminjaman
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {peminjamanBarang.map((row, index) => (
+                    {dashboardData.topBorrowings?.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell style={{ fontWeight: "bold" }}>{row.nama}</TableCell>
                         <TableCell align="center" style={{ fontWeight: "bold" }}>{row.total}</TableCell>
@@ -103,6 +195,17 @@ function DashboardStaf() {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Error Snackbar */}
+      <Snackbar
+        open={error !== null}
+        autoHideDuration={6000}
+        onClose={() => setError(null)}
+      >
+        <Alert onClose={() => setError(null)} severity="error">
+          {error}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }

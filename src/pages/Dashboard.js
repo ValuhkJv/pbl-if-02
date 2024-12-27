@@ -310,7 +310,16 @@ export default function Dashboard() {
             {setRole === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPeminjaman}>
+                  <ListItemButton
+                    onClick={handleClickPeminjaman}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
@@ -341,7 +350,16 @@ export default function Dashboard() {
                 </Collapse>
 
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />
@@ -414,7 +432,14 @@ export default function Dashboard() {
             {setRole === "kepalaunit" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
+                  <ListItemButton onClick={handleClickPermintaan}
+                   sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    whiteSpace: "nowrap",
+                  }}>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />

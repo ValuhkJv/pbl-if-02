@@ -235,12 +235,21 @@ export default function LoanHistory() {
   }, []);
 
   // Modifikasi fungsi handleDelete
-  const handleDelete = async (borrowingId) => {
+  const handleDelete = async (borrowing_id) => {
+    if (!borrowing_id) {
+      setSnackbar({
+        open: true,
+        message: "ID peminjaman tidak valid",
+        severity: "error",
+      });
+      return;
+    }
     try {
       const token = localStorage.getItem("token");
+      const userRole = localStorage.getItem("roles_id");
 
       const response = await fetch(
-        `http://localhost:5000/peminjaman/${borrowingId}`,
+        `http://localhost:5000/peminjaman/${borrowing_id}`,
         {
           method: "DELETE",
           headers: {
@@ -255,15 +264,25 @@ export default function LoanHistory() {
         throw new Error(errorData.error || "Gagal menghapus peminjaman");
       }
 
-      await response.json();
-
-      setHistory((prevHistory) =>
-        prevHistory.filter((item) => item.borrowing_id !== borrowingId)
-      );
+      const data = await response.json();
+      // For non-staff users, just filter out the deleted item from the UI
+      // For staff, remove it completely since it's hard deleted
+      setHistory((prevHistory) => {
+        if (userRole === "1") {
+          return prevHistory.filter((item) => item.borrowing_id !== borrowing_id);
+        } else {
+          return prevHistory.map((item) => {
+            if (item.borrowing_id === borrowing_id) {
+              return { ...item, is_deleted: true };
+            }
+            return item;
+          });
+        }
+      });
 
       setSnackbar({
         open: true,
-        message: "Peminjaman berhasil dihapus",
+        message: data.message,
         severity: "success",
       });
     } catch (error) {
@@ -319,24 +338,28 @@ export default function LoanHistory() {
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={2}
-      alignItems="flex-start"
-      sx={{ mt: 2 }}
+      sx={{ width: { xs: '100%', md: 'auto' } }}
     >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
-          label="Tanggal Mulai"
-          value={startDate}
-          onChange={(newValue) => setStartDate(newValue)}
-          renderInput={(params) => <TextField {...params} />}
-        />
-        <DatePicker
-          label="Tanggal Selesai"
-          value={endDate}
-          onChange={(newValue) => setEndDate(newValue)}
-          renderInput={(params) => <TextField {...params} />}
-        />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+        >
+          <DatePicker
+            label="Tanggal Mulai"
+            value={startDate}
+            onChange={(newValue) => setStartDate(newValue)}
+            renderInput={(params) => <TextField {...params} />}
+          />
+          <DatePicker
+            label="Tanggal Selesai"
+            value={endDate}
+            onChange={(newValue) => setEndDate(newValue)}
+            renderInput={(params) => <TextField {...params} />}
+          />
+        </Stack>
       </LocalizationProvider>
-      <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+      <FormControl variant="outlined" sx={{ minWidth: { sm: '160px' } }}>
         <InputLabel>Bulan</InputLabel>
         <Select
           value={selectedMonth}
@@ -346,7 +369,6 @@ export default function LoanHistory() {
             PaperProps: {
               style: {
                 maxHeight: 200, // Atur tinggi maksimum dropdown
-                width: 250, // Atur lebar dropdown jika diperlukan
               },
             },
           }}
@@ -358,6 +380,9 @@ export default function LoanHistory() {
           ))}
         </Select>
       </FormControl>
+      <Box>
+        <ExportLoanWord loanData={filteredRows} />
+      </Box>
     </Stack>
   );
 
@@ -387,19 +412,27 @@ export default function LoanHistory() {
             component="h2"
             gutterBottom
           >
-            Bukti Pengembalian
+            Detail
           </Typography>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Status Peminjaman: {loan.status}
+            </Typography>
+          </Box>
 
-          {loan.return_proof && (
-            <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Bukti Pengembalian:
+            </Typography>
+            {loan.return_proof && (
               <img
                 src={`http://localhost:5000/uploads/${loan.return_proof}`}
                 alt="Bukti Pengembalian"
                 style={{ maxWidth: "100%", height: "auto" }}
               />
-            </Box>
-          )}
 
+            )}
+          </Box>
           <Button
             onClick={onClose}
             variant="contained"
@@ -462,59 +495,59 @@ export default function LoanHistory() {
           }}
         />
       </Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="center"
-        alignItems="center"
-        spacing={2}
-        sx={{
-          pb: 2,
-        }}
-      >
+      <Box sx={{
+        width: '100%', p: 2, mb: 4,
+        justifyContent: "center",
+        alignItems: "center",
+        display: "flex",
+      }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          spacing={2}
+          justifyContent="space-between"
           alignItems="center"
-          justifyContent="center"
-          sx={{ mt: "4px", px: 2, width: "100%" }}
+          spacing={2}
+          sx={{
+            mb: 2,
+          }}
         >
-          <TextField
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              width: 230,
-              minWidth: 200,
-            }}
-          />
-          <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filterStatus}
-              onChange={handleFilterChange}
-              label="Status"
-            >
-              <MenuItem value="Semua">Semua</MenuItem>
-              <MenuItem value="approved">Disetujui</MenuItem>
-              <MenuItem value="pending">Menunggu persetujuan</MenuItem>
-              <MenuItem value="rejected">Ditolak</MenuItem>
-              <MenuItem value="return">Dikembalikan</MenuItem>
-            </Select>
-          </FormControl>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            sx={{ width: { xs: '100%', md: 'auto' } }}>
+            <TextField
+              variant="outlined"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                minWidth: { sm: '200px' },
+              }}
+            />
+            <FormControl variant="outlined" sx={{ minWidth: { sm: '200px' } }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filterStatus}
+                onChange={handleFilterChange}
+                label="Status"
+              >
+                <MenuItem value="Semua">Semua</MenuItem>
+                <MenuItem value="approved">Disetujui</MenuItem>
+                <MenuItem value="pending">Menunggu persetujuan</MenuItem>
+                <MenuItem value="rejected">Ditolak</MenuItem>
+                <MenuItem value="return">Dikembalikan</MenuItem>
+              </Select>
+            </FormControl>
 
-          {renderDateFilterSection()}
+            {renderDateFilterSection()}
+          </Stack>
         </Stack>
-      </Stack>
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-        <ExportLoanWord loanData={filteredRows} />
       </Box>
 
       <TableContainer
@@ -549,7 +582,7 @@ export default function LoanHistory() {
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
               <StyledTableCell>Nama</StyledTableCell>
-              <StyledTableCell>NIM/NIK</StyledTableCell>
+              <StyledTableCell>NIK/NIM</StyledTableCell>
               <StyledTableCell>Nomor Telepon</StyledTableCell>
               <StyledTableCell>Nama Barang</StyledTableCell>
               <StyledTableCell>No Inventaris</StyledTableCell>
@@ -620,37 +653,37 @@ export default function LoanHistory() {
                     {(item.status === "return" ||
                       item.status === "rejected" ||
                       item.status.startsWith("return: terlambat")) && (
-                      <Tooltip title="Hapus">
-                        <RemoveButton
-                          variant="contained"
-                          sx={{
-                            my: 1,
-                            mx: 2,
-                            padding: "0",
-                            borderRadius: "50%",
-                            height: "35px",
-                            width: "35px",
-                            minWidth: "35px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          onClick={() => {
-                            // Buat struktur data yang benar untuk dihapus
-                            const deleteData = {
-                              items: Array.isArray(item.items)
-                                ? item.items
-                                : [item],
-                            };
-                            handleOpenDeleteDialog(deleteData);
-                          }}
-                        >
-                          <DeleteForeverOutlinedIcon
-                            sx={{ fontSize: "20px" }}
-                          />
-                        </RemoveButton>
-                      </Tooltip>
-                    )}
+                        <Tooltip title="Hapus">
+                          <RemoveButton
+                            variant="contained"
+                            sx={{
+                              my: 1,
+                              mx: 2,
+                              padding: "0",
+                              borderRadius: "50%",
+                              height: "35px",
+                              width: "35px",
+                              minWidth: "35px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => {
+                              // Buat struktur data yang benar untuk dihapus
+                              const deleteData = {
+                                items: Array.isArray(item.items)
+                                  ? item.items
+                                  : [item],
+                              };
+                              handleOpenDeleteDialog(deleteData);
+                            }}
+                          >
+                            <DeleteForeverOutlinedIcon
+                              sx={{ fontSize: "20px" }}
+                            />
+                          </RemoveButton>
+                        </Tooltip>
+                      )}
                   </div>
                 </StyledTableCell>
               </StyledTableRow>
