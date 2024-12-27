@@ -18,57 +18,89 @@ import {
 import axios from "axios";
 
 const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
-  const [kondisiBarangSaatAmbil, setKondisiBarangSaatAmbil] = useState("");
-  const [kondisiBarangSaatKembali, setKondisiBarangSaatKembali] = useState("");
-  const [buktiPengembalian, setBuktiPengembalian] = useState(null);
+  const [initialCondition, setInitialCondition] = useState("");
+  const [returnCondition, setReturnCondition] = useState("");
+  const [returnProof, setReturnProof] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
   const [error, setError] = useState("");
   const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   // Reset form when modal opens
   useEffect(() => {
     if (open && loanData) {
-      setKondisiBarangSaatAmbil(loanData.kondisi_barang || "");
+      console.log("Modal opened with loanData:", loanData);
+      // Periksa struktur data
+      console.log("borrowing_id:", loanData.borrowing_id);
+      setInitialCondition(loanData.initialCondition || "");
       setPreviewImage(null);
-      setBuktiPengembalian(null);
+      setReturnProof(null);
     }
   }, [open, loanData]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
     try {
-      // Validate required fields
-      if (!kondisiBarangSaatAmbil || !kondisiBarangSaatKembali || !buktiPengembalian) {
-        throw new Error('Semua field harus diisi');
+      const token = localStorage.getItem("token");
+
+      // Check if loanData and borrowing_id exist
+      if (!loanData || !loanData.borrowing_id) {
+        throw new Error("Invalid loan data");
       }
-  
+
+      if (!token) {
+        throw new Error("No authentication token found");
+      }
+
+      if (!loanData.borrowing_id) {
+        throw new Error("ID peminjaman tidak valid");
+      }
+
+      if (!initialCondition || !returnCondition || !returnProof) {
+        throw new Error("Semua field harus diisi");
+      }
+
       const formData = new FormData();
-      formData.append('kondisi_saat_ambil', kondisiBarangSaatAmbil);
-      formData.append('kondisi_saat_kembali', kondisiBarangSaatKembali);
-      formData.append('bukti_pengembalian', buktiPengembalian);
-  
-      // Debug log
-      console.log('Sending data:', {
-        kondisi_saat_ambil: kondisiBarangSaatAmbil,
-        kondisi_saat_kembali: kondisiBarangSaatKembali
+      formData.append("initial_condition", initialCondition);
+      formData.append("return_condition", returnCondition);
+      formData.append("return_proof", returnProof);
+
+      console.log("Submitting return with data:", {
+        borrowing_id: loanData.borrowing_id,
+        initialCondition,
+        returnCondition,
+        returnProof: returnProof.name,
       });
-  
-      const response = await axios.post(`http://localhost:5000/pengembalian/${loanData.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+
+      const response = await axios.post(
+        `http://localhost:5000/pengembalian/${loanData.borrowing_id}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
         }
-      });
-  
-      console.log('Response:', response.data);
-  
-      if (response.data.message) {
-        alert(response.data.message);
+      );
+
+      // Handle successful response
+      if (response.status === 200 || response.status === 201) {
         onUpdate();
         onClose();
+        setSnackbar({
+          open: true,
+          message: "Pengembalian berhasil disubmit",
+          severity: "success",
+        });
       }
-  
     } catch (error) {
-      console.error('Error submitting return:', error);
-      setError(error.response?.data?.error || error.message);
+      console.error("Error submitting return:", error);
+      setError(error.response?.data?.message || error.message);
       setOpenSnackbar(true);
     }
   };
@@ -80,7 +112,12 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const allowedTypes = ["image/jpeg", "image/png", "image/jpg",  "image/jfif"];
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/jfif",
+      ];
       const maxSize = 5 * 1024 * 1024; // 5MB
 
       if (!allowedTypes.includes(file.type)) {
@@ -97,7 +134,10 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
         return;
       }
 
-      setBuktiPengembalian(file);
+      setReturnProof(file);
+      // Create preview URL
+      const previewURL = URL.createObjectURL(file);
+      setPreviewImage(previewURL);
     }
   };
 
@@ -112,8 +152,8 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
             </InputLabel>
             <Select
               labelId="kondisi-barang-saat-ambil-label"
-              value={kondisiBarangSaatAmbil}
-              onChange={(e) => setKondisiBarangSaatAmbil(e.target.value)}
+              value={initialCondition}
+              onChange={(e) => setInitialCondition(e.target.value)}
               required
             >
               <MenuItem value="Baik">Baik</MenuItem>
@@ -128,8 +168,8 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
             </InputLabel>
             <Select
               labelId="kondisi-barang-saat-kembali-label"
-              value={kondisiBarangSaatKembali}
-              onChange={(e) => setKondisiBarangSaatKembali(e.target.value)}
+              value={returnCondition}
+              onChange={(e) => setReturnCondition(e.target.value)}
               required
             >
               <MenuItem value="Baik">Baik</MenuItem>
@@ -164,12 +204,31 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} color="secondary">
+        <DialogActions sx={{mr: 2}}>
+          <Button
+            onClick={onClose}
+            sx={{
+              border: "2px solid",
+              borderColor: "black",
+              color: "black",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              
+            }}
+            color="secondary"
+          >
             Batal
           </Button>
-          <Button onClick={handleSubmit} color="primary" variant="contained">
-            Submit
+          <Button
+            onClick={handleSubmit}
+            color="primary"
+            variant="contained"
+            sx={{
+              color: "white",
+              borderRadius: "8px",
+              padding: "8px 16px",
+            }}
+            > Submit
           </Button>
         </DialogActions>
       </Dialog>

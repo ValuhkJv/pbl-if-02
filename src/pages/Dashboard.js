@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { styled, useTheme } from "@mui/material/styles";
 import {
   Box,
   AppBar as MuiAppBar,
@@ -9,16 +10,18 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  styled,
   CssBaseline,
   ListItemButton,
   Typography,
   Divider,
   Collapse,
+  useMediaQuery,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  LoginOutlined as LoginOutlinedIcon,
+  AccountCircle as AccountCircleIcon,
   Home as HomeIcon,
   Approval as ApprovalIcon,
   FeaturedPlayList as FeaturedPlayListIcon,
@@ -28,25 +31,56 @@ import {
   EventAvailable as EventAvailableIcon,
   ExpandLess,
   ExpandMore,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import { Link, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
-import DashboardStaf from "../component/DashboardStaf";
-import DashboardUnit from "../component/DashboardUnit";
-import DashboardUnitHead from "../component/DashboardUnitHead";
-import DashboardMahasiswa from "../component/DashboardMahasiswa";
-import Loan from "./Loan";
-import LoanApproval from "./LoanApproval";
-import LoanHistory from "./LoanHistory";
-import Request from "./Request";
-import RequestApproval from "./RequestApproval";
-import RequestHistory from "./RequestHistory";
+import DashboardStaf from "../components/AdminDashboard";
+import DashboardUnit from "../components/UnitDashboard";
+import DashboardUnitHead from "../components/HeadUnitDashboard";
+import DashboardMahasiswa from "../components/MhsDashboard";
+import Manage from "./items/Manage";
+import Loan from "./Loan/Loan";
+import Pengembalian from "./Loan/Pengembalian";
+import LoanApproval from "./Loan/LoanApproval";
+import LoanApprovalDetail from "./Loan/LoanApprovalDetail";
+import LoanHistory from "./Loan/LoanHistory";
+import Request from "./request/Request";
+import RequestApproval from "./request/RequestApproval";
+import RequestApprovDetail from "./request/RequestApprovDetail";
+import RequestList from "./request/RequestList";
 import Laporan from "./Laporan";
-import Barangkonsumsi from "./Barangkonsumsi";
-import Barangpeminjaman from "./Barangpeminjaman";
-import Barangrt from "./Barangrt";
+import DetailRequest from "./request/RequestDetails";
+import RequestApprovalAdmin from "./request/RequestApprovaladmin";
+import RequestApprovDetailadmin from "./request/RequestApprovDetailadmin";
+import StockIn from "./stockin/StockIn";
 
 const drawerWidth = 280;
+
+const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
+  ({ theme, open }) => ({
+    flexGrow: 1,
+    padding: theme.spacing(3),
+    transition: theme.transitions.create("margin", {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    marginLeft: `-${drawerWidth}px`,
+    ...(open && {
+      marginLeft: 0,
+      transition: theme.transitions.create("margin", {
+        easing: theme.transitions.easing.easeOut,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
+    }),
+    [theme.breakpoints.down("sm")]: {
+      marginLeft: 0,
+      width: "100%",
+    },
+  })
+);
 
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
@@ -64,26 +98,62 @@ const AppBar = styled(MuiAppBar, {
       duration: theme.transitions.duration.enteringScreen,
     }),
   }),
+  backgroundColor: "#3691BE",
+}));
+
+const DrawerHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: theme.spacing(0, 1),
+  ...theme.mixins.toolbar,
+  justifyContent: "space-between",
 }));
 
 export default function Dashboard() {
-  const user = JSON.parse(localStorage.getItem("user"));
-  const role = user ? user.role : null;
+  const theme = useTheme();
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const role = parseInt(localStorage.getItem("role"), 10 || "guest");
+  const [openDrawer, setOpenDrawer] = React.useState(true);
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
   const [openManajemenBarang, setOpenManajemenBarang] = useState(false);
+  const [openPengembalian, setOpenPengembalian] = useState(false);
   const navigate = useNavigate();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
 
-  // Jika tidak ada user, redirect ke halaman login
-  if (!role) {
+  const roleMapping = {
+    1: "staf",
+    2: "kepalaunit",
+    3: "unit",
+    4: "mahasiswa",
+  };
+  const setRole = roleMapping[role];
+
+  if (!role || !user) {
     return <Navigate to="/" />;
   }
 
   const handleLogout = () => {
-    // Hapus data user dari localStorage
     localStorage.removeItem("user");
-    // Redirect ke halaman login
+    localStorage.removeItem("role");
     navigate("/");
+  };
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleOpenDrawer = () => {
+    setOpenDrawer(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setOpenDrawer(false);
   };
 
   const handleClickPeminjaman = () => {
@@ -98,37 +168,27 @@ export default function Dashboard() {
     setOpenManajemenBarang(!openManajemenBarang);
   };
 
+  const handleClickPengembalian = () => {
+    setOpenPengembalian(!openPengembalian);
+  };
+
   const menuItemsByRole = {
-    staf: [{ text: "Laporan", icon: <SummarizeIcon />, link: "/report" }],
-    kepalaUnit: [
+    1: [
+      { text: "Barang Masuk", icon: <SummarizeIcon />, link: "/stock-in" },
+      { text: "Laporan", icon: <SummarizeIcon />, link: "/report" },
+    ],
+    2: [
       {
         text: "Permintaan",
         icon: <RequestQuoteIcon />,
-        link: "/request",
-      },
-      {
-        text: "Peminjaman",
-        icon: <EventAvailableIcon />,
-        link: "/loan",
+        link: "/RequestList",
       },
     ],
-    unit: [
+    3: [
       {
         text: "Permintaan",
         icon: <RequestQuoteIcon />,
-        link: "/request",
-      },
-      {
-        text: "Peminjaman",
-        icon: <EventAvailableIcon />,
-        link: "/loan",
-      },
-    ],
-    mahasiswa: [
-      {
-        text: "Peminjaman",
-        icon: <EventAvailableIcon />,
-        link: "/loan",
+        link: "/RequestList",
       },
     ],
   };
@@ -136,9 +196,9 @@ export default function Dashboard() {
   const menuItems = menuItemsByRole[role] || [];
 
   return (
-    <Box sx={{ display: "flex", bgcolor: "#e0e0e0"}}>
+    <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" open={true} sx={{ bgcolor: "#3691BE" }}>
+      <AppBar position="fixed" open={openDrawer}>
         <Toolbar
           sx={{
             display: "flex",
@@ -150,24 +210,38 @@ export default function Dashboard() {
           <IconButton
             edge="start"
             color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
+            aria-label="open drawer"
+            sx={{ mr: 2, ...(openDrawer && { display: "none" }) }}
+            onClick={handleOpenDrawer}
           >
             <MenuIcon sx={{ fontSize: 30 }} />
           </IconButton>
+          <Box sx={{ flexGrow: 1 }} />
           <IconButton
             size="large"
             color="inherit"
             aria-label="logout"
-            onClick={handleLogout}
+            onClick={handleMenu}
           >
-            <LoginOutlinedIcon sx={{ fontSize: 30 }} />
+            <AccountCircleIcon sx={{ fontSize: 30 }} />
           </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            keepMounted
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            open={Boolean(anchorEl)}
+            onClose={handleClose}
+          >
+            <MenuItem onClick={handleLogout}>
+              <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
+              Logout
+            </MenuItem>
+          </Menu>
         </Toolbar>
       </AppBar>
 
       <Drawer
-        variant="permanent"
         sx={{
           width: drawerWidth,
           flexShrink: 0,
@@ -177,36 +251,55 @@ export default function Dashboard() {
             backgroundColor: "#242D34",
           },
         }}
+        variant={isSmallScreen ? "temporary" : "persistent"}
+        anchor="left"
+        open={openDrawer}
       >
-        <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1 }}>
+        <DrawerHeader>
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              height: "80px",
-              padding: "20px 0",
+              height: { xs: "60px", sm: "80px" }, // Ukuran dinamis untuk tinggi
+              padding: { xs: "10px 0", sm: "20px 0" }, // Padding kecil untuk layar kecil
             }}
           >
             <img
               src={polibatam}
               alt="logo polibatam"
-              style={{ height: "70px" }}
+              style={{
+                height: isSmallScreen ? "50px" : "70px", // Logo lebih kecil di layar kecil
+              }}
             />
-            <Typography variant="body1" sx={{ color: "white" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "white",
+                fontSize: { xs: "10px", sm: "14px" }, // Font lebih kecil di perangkat kecil
+              }}
+            >
               <strong>SBUM</strong> <br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
-          <Divider
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.3)",
-              height: "1px",
-              margin: "8px 0",
-            }}
-          />
-
+          <IconButton onClick={handleCloseDrawer}>
+            {theme.direction === "ltr" ? (
+              <ChevronLeftIcon sx={{ color: "white" }} />
+            ) : (
+              <ChevronRightIcon />
+            )}
+          </IconButton>
+        </DrawerHeader>
+        <Divider
+          sx={{
+            backgroundColor: "rgb(255, 255, 255)",
+            height: "1px",
+            margin: "8px 0",
+          }}
+        />
+        <Box sx={{ overflow: "auto", height: "100%", py: 1, px: 1 }}>
           <List>
             <ListItem disablePadding sx={{ color: "white" }}>
-              <ListItemButton component={Link} to={`/dashboard/${role}`}>
+              <ListItemButton component={Link} to={`/dashboard/${setRole}`}>
                 <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                   <HomeIcon />
                 </ListItemIcon>
@@ -214,19 +307,10 @@ export default function Dashboard() {
               </ListItemButton>
             </ListItem>
 
-            {role === "staf" && (
+            {setRole === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton
-                    onClick={handleClickPeminjaman}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <ListItemButton onClick={handleClickPeminjaman}>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
@@ -240,7 +324,7 @@ export default function Dashboard() {
                 <Collapse in={openPeminjaman} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
                     <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
+                      sx={{ pl: { xs: 2, sm: 8 }, color: "white" }}
                       component={Link}
                       to="/loan/approval"
                     >
@@ -257,16 +341,7 @@ export default function Dashboard() {
                 </Collapse>
 
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton
-                    onClick={handleClickPermintaan}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <ListItemButton onClick={handleClickPermintaan}>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />
@@ -282,14 +357,14 @@ export default function Dashboard() {
                     <ListItemButton
                       sx={{ pl: 8, color: "white" }}
                       component={Link}
-                      to="/request/approval"
+                      to="/request/approvaladmin"
                     >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
                     <ListItemButton
                       sx={{ pl: 8, color: "white" }}
                       component={Link}
-                      to="/request/history"
+                      to="/request/transaction/history"
                     >
                       <ListItemText primary="Riwayat Transaksi" />
                     </ListItemButton>
@@ -336,19 +411,10 @@ export default function Dashboard() {
               </>
             )}
 
-            {role === "kepalaUnit" && (
+            {setRole === "kepalaunit" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton
-                    onClick={handleClickPermintaan}
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      width: "100%",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <ListItemButton onClick={handleClickPermintaan}>
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />
@@ -371,9 +437,46 @@ export default function Dashboard() {
                     <ListItemButton
                       sx={{ pl: 8, color: "white" }}
                       component={Link}
-                      to="/request/history"
+                      to="/request/transaction/history"
                     >
                       <ListItemText primary="Riwayat Transaksi" />
+                    </ListItemButton>
+                  </List>
+                </Collapse>
+              </>
+            )}
+
+            {(setRole === "kepalaunit" ||
+              setRole === "mahasiswa" ||
+              setRole === "unit") && (
+              <>
+                <ListItem disablePadding sx={{ color: "white" }}>
+                  <ListItemButton onClick={handleClickPengembalian}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
+                        <EventAvailableIcon />
+                      </ListItemIcon>
+                      <ListItemText primary="Peminjaman" />
+                    </Box>
+                    {openPengembalian ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+
+                <Collapse in={openPengembalian} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/loan"
+                    >
+                      <ListItemText primary="Peminjaman" />
+                    </ListItemButton>
+                    <ListItemButton
+                      sx={{ pl: 8, color: "white" }}
+                      component={Link}
+                      to="/return"
+                    >
+                      <ListItemText primary="Pengembalian" />
                     </ListItemButton>
                   </List>
                 </Collapse>
@@ -394,44 +497,44 @@ export default function Dashboard() {
         </Box>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-        <Toolbar />
+      <Main open={openDrawer}>
+        <DrawerHeader />
         <Routes>
           <Route path="/dashboard/staf" element={<DashboardStaf />} />
-          <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
+          <Route path="/dashboard/unit" element={<DashboardUnit />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
+          <Route path="/manage/barangkonsumsi" element={<Manage />} />
+          <Route path="/manage/barangrt" element={<Manage />} />
+          <Route path="/manage/barangpeminjaman" element={<Manage />} />
           <Route path="/report" element={<Laporan />} />
           <Route path="/loan" element={<Loan />} />
           <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/loan/transaction/history" element={<LoanHistory />} />
           <Route path="/request" element={<Request />} />
+          <Route path="/RequestList" element={<RequestList />} />
+          <Route path="/DetailPermintaan/:date" element={<DetailRequest />} />
           <Route path="/request/approval" element={<RequestApproval />} />
-          <Route path="/request/history" element={<RequestHistory />} />
-          <Route path="/manage/barangkonsumsi" element={<Barangkonsumsi />} />
-          <Route path="/manage/barangrt" element={<Barangrt />} />
-          <Route path="/manage/barangpeminjaman" element={<Barangpeminjaman />} />
-          {/* Route spesifik untuk setiap role */}
-          {role === "staf" && (
-            <Route path="/dashboard/staf" element={<DashboardStaf />} />
-          )}
-          {role === "unit" && (
-            <Route path="/dashboard/unit" element={<DashboardUnit />} />
-          )}
-          {role === "kepalaUnit" && (
-            <Route
-              path="/dashboard/kepalaUnit"
-              element={<DashboardUnitHead />}
-            />
-          )}
-          {role === "mahasiswa" && (
-            <Route
-              path="/dashboard/mahasiswa"
-              element={<DashboardMahasiswa />}
-            />
-          )}
+          <Route
+            path="/requestsApprovHead/head-approval/details/:created_at"
+            element={<RequestApprovDetail />}
+          />
+          <Route
+            path="/request/approvaladmin"
+            element={<RequestApprovalAdmin />}
+          />
+          <Route
+            path="/requestsApprovalAdmin/details/:created_at"
+            element={<RequestApprovDetailadmin />}
+          />
+          <Route
+            path="/loan-approval/detail/:date"
+            element={<LoanApprovalDetail />}
+          />
+          <Route path="/return" element={<Pengembalian />} />
+          <Route path="/stock-in" element={<StockIn />} />
         </Routes>
-      </Box>
+      </Main>
     </Box>
   );
 }

@@ -1,22 +1,24 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import {CssBaseline } from '@mui/material';
+import React from "react";
+import ReactDOM from "react-dom";
+import App from "./App";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { CssBaseline } from "@mui/material";
 
-const theme = createTheme();
+const theme = createTheme({
+  palette: {
+    background: {
+      default: "#f9fafb",
+    },
+  },
+});
 
 ReactDOM.render(
   <ThemeProvider theme={theme}>
     <CssBaseline />
     <App />
   </ThemeProvider>,
-  document.getElementById('root')
+  document.getElementById("root")
 );
-
-
-
-
 
 // const root = ReactDOM.createRoot(document.getElementById('root'));
 // root.render(

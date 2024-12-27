@@ -3,14 +3,17 @@ const { Pool } = require("pg");
 const cors = require("cors");
 const app = express();
 const multer = require("multer");
+const bodyParser = require("body-parser");
 const fs = require("fs");
 const uploadDir = "uploads/";
 const path = require("path");
+const bcrypt = require("bcryptjs");
 const PORT = 5000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
 const jwt = require("jsonwebtoken");
 const secretKey = "react";
@@ -19,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -84,689 +87,1492 @@ const upload = multer({
 
 // Endpoint login
 app.post("/login", async (req, res) => {
-  const { username, password, role } = req.body;
+  const { username, password, roles_id } = req.body;
 
   try {
-    const query =
-      "SELECT * FROM users WHERE username = $1 AND password = $2 AND role = $3";
-    const result = await db.query(query, [username, password, role]);
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ message: "Invalid username or password" });
+    // Validasi input
+    if (!username || !password || !roles_id) {
+      return res.status(400).json({ message: "Semua field harus diisi" });
     }
 
-    const user = result.rows[0];
+    // Query ke database untuk mencari user berdasarkan username dan role
+    const result = await db.query(
+      `SELECT u.*, d.division_name 
+   FROM users u
+   INNER JOIN divisions d ON u.division_id = d.division_id
+   WHERE u.username = $1 AND u.roles_id = $2`,
+      [username, roles_id]
+    );
 
-    // Generate JWT
+    const users = result.rows[0];
+
+    // Jika user tidak ditemukan
+    if (!users) {
+      return res.status(404).json({ message: "User tidak ditemukan" });
+    }
+
+    // Verifikasi password
+    const isPasswordValid = await bcrypt.compare(password, users.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Password salah" });
+    }
+
+    // Buat token JWT
     const token = jwt.sign(
       {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        nama: user.nama,
-        nim_nik_nidn: user.nim_nik_nidn,
+        user_id: users.user_id,
+        username: users.username,
+        roles_id: users.roles_id,
       },
       secretKey,
       { expiresIn: "1h" }
     );
 
-    res.status(200).json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        nama: user.nama,
-        nim_nik_nidn: user.nim_nik_nidn,
-      },
+    // Kirim respons
+    res.json({
+      message: "Login successfull",
+      token: token,
+      roles_id: users.roles_id, // Mengembalikan role untuk redirect di frontend
+      user_id: users.user_id,
+      full_name: users.full_name,
+      division_name: users.division_name,
     });
   } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error(error);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
   }
 });
 
-// GET all barang konsumsi
-app.get("/barang-konsumsi", async (req, res) => {
-  try {
-    const result = await db.query("SELECT * FROM barang_konsumsi");
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error fetching barang konsumsi" });
-  }
-});
-
-// POST barang konsumsi
-app.post("/barang-konsumsi", async (req, res) => {
-  const { kode_barang, nama_barang, stok, satuan } = req.body;
-
-  try {
-    const result = await db.query(
-      "INSERT INTO barang_konsumsi (kode_barang, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
-      [kode_barang, nama_barang, stok, satuan]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    if (err.code === "23505") {
-      // Unique constraint violation
-      res.status(409).json({ error: "Kode barang already exists" });
-    } else {
-      console.error(err);
-      res.status(500).json({ error: "Failed to insert barang konsumsi" });
-    }
-  }
-});
-
-// PUT barang konsumsi
-app.put("/barang-konsumsi/:id", async (req, res) => {
-  const { id } = req.params;
-  const { kode_barang, nama_barang, stok, satuan } = req.body;
-  try {
-    const result = await db.query(
-      "UPDATE barang_konsumsi SET kode_barang = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
-      [kode_barang, nama_barang, stok, satuan, id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang konsumsi not found" });
-    } else {
-      res.status(200).json(result.rows[0]);
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error updating barang konsumsi" });
-  }
-});
-
-// DELETE barang konsumsi
-app.delete("/barang-konsumsi/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await db.query(
-      "DELETE FROM barang_konsumsi WHERE id = $1 RETURNING *",
-      [id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang konsumsi not found" });
-    } else {
-      res
-        .status(200)
-        .json({ message: "Barang konsumsi deleted", data: result.rows[0] });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error deleting barang konsumsi" });
-  }
-});
-
-// GET all barang rt
-app.get("/barangrt", async (req, res) => {
-  try {
-    const result = await db.query("SELECT * FROM barang_rt");
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error fetching barang rt" });
-  }
-});
-
-// POST barang rt
-app.post("/barangrt", async (req, res) => {
-  const { kode_barang, nama_barang, stok, satuan } = req.body;
-
-  try {
-    const result = await db.query(
-      "INSERT INTO barang_rt (kode_barang, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
-      [kode_barang, nama_barang, stok, satuan]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    if (err.code === "23505") {
-      // Unique constraint violation
-      res.status(409).json({ error: "Kode barang already exists" });
-    } else {
-      console.error(err);
-      res.status(500).json({ error: "Failed to insert barang rt" });
-    }
-  }
-});
-
-// PUT barang rt
-app.put("/barangrt/:id", async (req, res) => {
-  const { id } = req.params;
-  const { kode_barang, nama_barang, stok, satuan } = req.body;
-  try {
-    const result = await db.query(
-      "UPDATE barang_rt SET kode_barang = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
-      [kode_barang, nama_barang, stok, satuan, id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang rt not found" });
-    } else {
-      res.status(200).json(result.rows[0]);
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error updating barang rt" });
-  }
-});
-
-// DELETE barang rt
-app.delete("/barangrt/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await db.query(
-      "DELETE FROM barang_rt WHERE id = $1 RETURNING *",
-      [id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang rt not found" });
-    } else {
-      res
-        .status(200)
-        .json({ message: "Barang rt deleted", data: result.rows[0] });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error deleting barang rt" });
-  }
-});
-
-// GET all barang peminjaman
-app.get("/barang-peminjaman", async (req, res) => {
-  try {
-    const result = await db.query("SELECT * FROM barang_peminjaman");
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error fetching barang peminjaman" });
-  }
-});
-
-// POST barang peminjaman
-app.post("/barang-peminjaman", async (req, res) => {
-  const { no_inventaris, nama_barang, stok, satuan } = req.body;
-
-  try {
-    const result = await db.query(
-      "INSERT INTO barang_peminjaman (no_inventaris, nama_barang, stok, satuan) VALUES ($1, $2, $3, $4) RETURNING *",
-      [no_inventaris, nama_barang, stok, satuan]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    if (err.code === "23505") {
-      // Unique constraint violation
-      res.status(409).json({ error: "No inventaris barang already exists" });
-    } else {
-      console.error(err);
-      res.status(500).json({ error: "Failed to insert barang peminjaman" });
-    }
-  }
-});
-
-// PUT barang peminjaman
-app.put("/barang-peminjaman/:id", async (req, res) => {
-  const { id } = req.params;
-  const { no_inventaris, nama_barang, stok, satuan } = req.body;
-  try {
-    const result = await db.query(
-      "UPDATE barang_peminjaman SET no_inventaris = $1, nama_barang = $2, stok = $3, satuan = $4 WHERE id = $5 RETURNING *",
-      [no_inventaris, nama_barang, stok, satuan, id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang peminjaman not found" });
-    } else {
-      res.status(200).json(result.rows[0]);
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error updating barang peminjaman" });
-  }
-});
-
-// DELETE barang peminjaman
-app.delete("/barang-peminjaman/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const result = await db.query(
-      "DELETE FROM barang_peminjaman WHERE id = $1 RETURNING *",
-      [id]
-    );
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: "Barang peminjaman not found" });
-    } else {
-      res
-        .status(200)
-        .json({ message: "Barang peminjaman deleted", data: result.rows[0] });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error deleting barang peminjaman" });
-  }
-});
-
-// Endpoint requests (autentikasi menggunakan middleware)
-app.get("/requests", authenticateToken, async (req, res) => {
-  try {
-    const result = await db.query(
-      `SELECT r.request_id, u.full_name, d.division_name, r.request_date, r.purpose, 
-              r.requester_status, r.head_unit_status, r.sbum_staff_status
-       FROM requests r
-       JOIN users u ON r.user_id = u.user_id
-       JOIN divisions d ON r.division_id = d.division_id`
-    );
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error fetching requests" });
-  }
-});
-
-app.post("/requests", async (req, res) => {
-  const {
-    user_id,
-    division_id,
-    request_date,
-    purpose,
-    requester_status,
-    head_unit_status,
-    sbum_staff_status,
-  } = req.body;
-
-  try {
-    const result = await db.query(
-      `INSERT INTO requests (user_id, division_id, request_date, purpose, requester_status, head_unit_status, sbum_staff_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [
-        user_id,
-        division_id,
-        request_date,
-        purpose,
-        requester_status,
-        head_unit_status,
-        sbum_staff_status,
-      ]
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json("Error creating request");
-  }
-});
-
-app.put("/requests/:id", async (req, res) => {
-  const { id } = req.params;
-  const { requester_status, head_unit_status, sbum_staff_status } = req.body;
-
-  try {
-    const result = await db.query(
-      `UPDATE requests 
-             SET requester_status = $1, head_unit_status = $2, sbum_staff_status = $3
-             WHERE request_id = $4 RETURNING *`,
-      [requester_status, head_unit_status, sbum_staff_status, id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).send("Request not found");
-    }
-    res.status(200).json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error updating request");
-  }
-});
-
-app.delete("/requests/:id", async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const result = await db.query(
-      `DELETE FROM requests WHERE request_id = $1 RETURNING *`,
-      [id]
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).send("Request not found");
-    }
-    res.status(200).send(`Request with ID ${id} deleted`);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Error deleting request");
-  }
-});
 app.get("/validate-token", authenticateToken, (req, res) => {
   res.status(200).json({ message: "Valid token" });
 });
 
-// Endpoint untuk mengambil semua data peminjaman
-app.get("/peminjaman", authenticateToken, async (req, res) => {
-  const { role, nim_nik_nidn, nama } = req.user;
+app.get("/users/:user_id", async (req, res) => {
+  const userId = parseInt(req.params.user_id, 10); // Konversi ke integer
+
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
 
   try {
-    let query, queryParams;
+    const query = `
+      SELECT 
+        u.full_name,
+        d.division_name 
+      FROM users u
+      INNER JOIN divisions d ON u.division_id = d.division_id
+      WHERE u.user_id = $1
+    `;
 
-    switch (role) {
-      case "mahasiswa":
-      case "kepalaUnit":
-      case "unit":
-        query = `
-          SELECT * FROM peminjaman 
-          WHERE (nim_nik_nidn = $1 OR peminjam = $2) 
-          AND is_deleted = false
-        `;
-        queryParams = [nim_nik_nidn, nama];
-        break;
+    const result = await db.query(query, [userId]);
 
-      case "staf":
-        query = "SELECT * FROM peminjaman";
-        queryParams = [];
-        break;
-
-      default:
-        return res.status(403).json({ error: "Akses tidak diizinkan" });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User tidak ditemukan" });
     }
 
-    const result = await db.query(query, queryParams);
-    res.status(200).json(result.rows);
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ error: "Terjadi kesalahan saat mengambil data peminjaman." });
+    console.error(err.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
   }
 });
 
-
-// Endpoint untuk pengajuan peminjaman
-app.post("/peminjaman", async (req, res) => {
-  const {
-    no_transaksi,
-    no_inventaris,
-    nama_barang,
-    jumlah,
-    keterangan,
-    status_peminjaman,
-    peminjam,
-    nim_nik_nidn,
-    tanggal_pinjam,
-    tanggal_kembali,
-  } = req.body;
-
+// Endpoint untuk mendapatkan data kategori barang
+app.get("/categories", async (req, res) => {
   try {
-    // Validasi ketersediaan barang
-    const barang = await db.query(
-      "SELECT stok FROM barang_peminjaman WHERE no_inventaris = $1",
-      [no_inventaris]
+    const result = await db.query(
+      "SELECT * FROM categories WHERE category_id != 3"
     );
-
-    if (!barang.rows.length) {
-      await db.query("ROLLBACK");
-      return res.status(404).json({ error: "Barang tidak ditemukan" });
-    }
-
-    if (barang.rows[0].stok < jumlah) {
-      await db.query("ROLLBACK");
-      return res.status(400).json({ error: "Jumlah melebihi stok tersedia" });
-    }
-
-    // Simpan data peminjaman
-    await db.query(
-      `INSERT INTO peminjaman ( no_inventaris, nama_barang, jumlah, keterangan, status_peminjaman, no_transaksi, peminjam,  nim_nik_nidn, tanggal_pinjam, tanggal_kembali) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-      [
-        no_inventaris,
-        nama_barang,
-        jumlah,
-        keterangan,
-        status_peminjaman,
-        no_transaksi,
-        peminjam,
-        nim_nik_nidn,
-        tanggal_pinjam,
-        tanggal_kembali,
-      ]
-    );
-
-    await db.query("COMMIT");
-    res
-      .status(201)
-      .json({ message: "Peminjaman berhasil diajukan, menunggu persetujuan." });
+    res.json(result.rows);
   } catch (err) {
-    await db.query("ROLLBACK");
-    console.error(err);
-    res
-      .status(500)
-      .json({ error: "Terjadi kesalahan saat memproses peminjaman." });
+    console.error(err.message);
+    res.status(500).send("Server Error");
   }
 });
 
-// Endpoint Pengembalian Barang
-app.post(
-  "/pengembalian/:id",
-  upload.single("bukti_pengembalian"),
-  async (req, res) => {
-    const { id } = req.params;
-    const { kondisi_saat_ambil, kondisi_saat_kembali } = req.body;
+app.get("/items", async (req, res) => {
+  const { category_id } = req.query;
+  try {
+    const result = await db.query(
+      `SELECT i.item_id, i.item_name, i.stock, c.category_name 
+      FROM items i
+      JOIN
+      categories c ON i.category_id = c.category_id 
+      WHERE 
+      i.category_id = $1`,
+      [category_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server Error");
+  }
+});
 
-    console.log("File uploaded:", req.file);
+//MENAMBAHKAN PERMINTAAN
+app.post("/requests/batch", async (req, res) => {
+  const { user_id, requests } = req.body; // Menerima user_id dan requests dari body
+  if (!user_id || !requests || requests.length === 0) {
+    return res.status(400).json({ message: "Data permintaan tidak valid" });
+  }
 
-    // Validasi file upload
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ error: "Bukti pengembalian wajib diunggah" });
-    }
+  try {
+    await db.query("BEGIN"); // Mulai transaksi
 
-    try {
-      await db.query("BEGIN");
+    const batchDetails = [];
 
-      // Cek status peminjaman
-      const peminjaman = await db.query(
-        "SELECT no_inventaris, jumlah, status_peminjaman FROM peminjaman WHERE id = $1",
-        [id]
+    for (const request of requests) {
+      const { item_id, quantity, reason } = request;
+
+      // Validasi stok barang
+      const itemResult = await db.query(
+        `SELECT i.item_id, i.item_name, i.stock, c.category_name 
+        FROM items i 
+        JOIN categories c ON i.category_id = c.category_id 
+        WHERE i.item_id = $1 `, // Ambil category_id juga
+        [item_id]
       );
-
-      if (!peminjaman.rows.length) {
-        await db.query("ROLLBACK");
-        return res.status(404).json({ error: "Peminjaman tidak ditemukan" });
+      if (itemResult.rows.length === 0) {
+        throw new Error(`Barang dengan ID ${item_id} tidak ditemukan`);
+      }
+      if (!item_id) {
+        throw new Error("Item ID tidak valid atau tidak dikirimkan");
       }
 
-      if (peminjaman.rows[0].status_peminjaman !== "Disetujui") {
-        await db.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({ error: "Status peminjaman tidak valid untuk pengembalian" });
+      const { item_name, stock, category_name } = itemResult.rows[0];
+
+      if (stock < quantity) {
+        throw new Error(
+          `Stok barang dengan ID ${item_id} tidak mencukupi. Stok saat ini: ${stock}`
+        );
       }
 
-      // Update status peminjaman dengan bukti pengembalian
-      await db.query(
-        `UPDATE peminjaman 
-       SET status_peminjaman = 'Kembali',
-           kondisi_saat_ambil = $1,
-           kondisi_saat_kembali = $2,
-           tanggal_kembali = CURRENT_TIMESTAMP,
-           bukti_pengembalian = $3
-       WHERE id = $4`,
-        [kondisi_saat_ambil, kondisi_saat_kembali, req.file.filename, id]
-      );
+      // Kurangi stok barang
+      await db.query("UPDATE items SET stock = stock - $1 WHERE item_id = $2", [
+        quantity,
+        item_id,
+      ]);
 
-      // Kembalikan stok
+      // Simpan permintaan dengan mengambil category_id dari item
       await db.query(
-        "UPDATE barang_peminjaman SET stok = stok + $1 WHERE no_inventaris = $2",
-        [peminjaman.rows[0].jumlah, peminjaman.rows[0].no_inventaris]
+        `
+        INSERT INTO requests (item_id, quantity, reason, requested_by, status)
+        VALUES ($1, $2, $3, $4, 'pending')`,
+        [item_id, quantity, reason, user_id] // Menggunakan requested_by sebagai user_id
       );
-
-      await db.query("COMMIT");
-      res.json({
-        message: "Pengembalian berhasil diproses",
-        bukti_pengembalian: req.file.filename,
+      // Menambahkan item_name ke dalam batchDetails
+      batchDetails.push({
+        item_name, // Menambahkan item_name ke dalam batchDetails
+        category_name,
+        quantity,
+        stock,
+        reason,
       });
-    } catch (err) {
-      await db.query("ROLLBACK");
-      console.error(err);
-      res.status(500).json({ error: "Terjadi kesalahan pada server" });
+      console.log("Item Data:", itemResult.rows);
+      console.log("Batch Details to be sent:", batchDetails);
+    }
+
+    await db.query("COMMIT"); // Selesaikan transaksi
+    res.status(201).json({ message: "Permintaan berhasil diajukan" });
+  } catch (error) {
+    await db.query("ROLLBACK"); // Batalkan transaksi jika terjadi error
+    console.error("Error processing batch requests:", error.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+    console.log("Received batch requests:", req.body);
+  }
+});
+
+// Endpoint untuk mendapatkan daftar permintaan user
+app.get("/requests", async (req, res) => {
+  const { user_id } = req.query;
+  console.log("Received user_id:", user_id); // Debugging
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID diperlukan" });
+  }
+
+  try {
+    const result = await db.query(
+      `
+      SELECT 
+        DATE(created_at) AS date,
+        COUNT(*) AS total_requests
+      FROM 
+        requests 
+      WHERE 
+        requested_by = $1
+      GROUP BY 
+        DATE(created_at)
+      ORDER BY 
+        DATE(created_at) DESC
+      `,
+      [user_id]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching requests:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Endpoint: Menampilkan Detail Permintaan
+app.get("/requests/detail/:date", async (req, res) => {
+  const { date } = req.params;
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID diperlukan" });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT 
+          r.request_id,
+          r.quantity,
+          r.reason,
+          r.rejection_reason,
+          r.status,
+          r.created_at,
+          u.full_name AS requested_by,
+          i.item_name,
+          i.unit
+       FROM 
+          requests r
+          INNER JOIN
+          users u  ON r.requested_by = u.user_id
+          INNER JOIN
+          items i ON r.item_id = i.item_id
+       WHERE 
+          requested_by = $1 AND DATE(created_at) = $2`,
+      [user_id, date]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching request details:", error.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+  }
+});
+
+//menampilkan daftar persetujuan kepala unit
+app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
+  const { division } = req.params; // Divisi kepala unit dari localStorage
+
+  try {
+    const result = await db.query(
+      `SELECT 
+        r.requested_by AS user_id,
+        u.full_name,
+        COUNT(DISTINCT r.request_id) AS total_requests,
+        r.created_at, 
+        d.division_name, 
+        r.status
+      FROM 
+        requests r
+      JOIN 
+        users u ON r.requested_by = u.user_id
+      JOIN 
+        divisions d ON u.division_id = d.division_id
+      WHERE 
+        d.division_name = $1 
+        AND r.status = 'pending'
+      GROUP BY 
+        r.requested_by, u.full_name, d.division_name, r.created_at, r.status
+      ORDER BY 
+        u.full_name, r.created_at DESC;`,
+      [division]
+    );
+    console.log(result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching request details:", error.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+  }
+});
+
+//menampilkan detail persetujuan kepala unit
+app.get(
+  "/requestsApprovHead/head-approval/details/:created_at",
+  authenticateToken,
+  async (req, res) => {
+    const { created_at } = req.params; // Tanggal dari frontend
+    const user_id = req.user.user_id; // Mengambil user_id dari sesi atau token autentikasi
+    console.log("User ID:", user_id);
+    console.log("Created At received by Backend:", created_at);
+    try {
+      // Ambil division_id dari user_id
+      const divisionResult = await db.query(
+        `
+        SELECT division_id
+        FROM users
+        WHERE user_id = $1;
+        `,
+        [user_id]
+      );
+
+      if (divisionResult.rows.length === 0) {
+        return res.status(404).json({
+          message: "User tidak ditemukan.",
+        });
+      }
+
+      const division_id = divisionResult.rows[0].division_id;
+
+      // Ambil semua request_id yang sesuai
+      const requestIdsResult = await db.query(
+        `
+         SELECT r.request_id, r.status
+        FROM requests r
+        JOIN users u ON r.requested_by = u.user_id
+        WHERE u.division_id = $1
+          AND r.status = 'pending'
+          AND r.created_at::date = $2;
+        `,
+        [division_id, created_at]
+      );
+
+      const requestIds = requestIdsResult.rows.map((row) => row.request_id);
+
+      console.log("Request IDs from first query:", requestIds);
+
+      if (requestIds.length === 0) {
+        return res.status(404).json({
+          message: "Tidak ada detail permintaan yang sesuai.",
+        });
+      }
+
+      const detailResult = await db.query(
+        `
+      SELECT 
+        r.request_id, 
+        r.item_id, 
+        r.requested_by AS user_id,
+        u.full_name,
+        i.item_name, 
+        r.quantity, 
+        r.reason, 
+        r.status, 
+        r.rejection_reason,
+        d.division_name AS user_division,
+        r.created_at
+      FROM 
+        requests r
+      JOIN 
+        items i ON r.item_id = i.item_id
+      JOIN 
+        users u ON r.requested_by = u.user_id
+      JOIN
+        divisions d ON u.division_id = d.division_id 
+      WHERE 
+        r.request_id = ANY($1::int[]);
+      `,
+        [requestIds]
+      );
+
+      console.log("Detail Result:", detailResult.rows);
+
+      if (detailResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Detail permintaan tidak ditemukan." });
+      }
+
+      res.status(200).json(detailResult.rows); // Mengirimkan detail permintaan
+    } catch (error) {
+      console.error("Error fetching detail persetujuan:", error.message);
+      res.status(500).json({ message: "Terjadi kesalahan pada server." });
     }
   }
 );
 
-// Approve Endpoint
-app.put("/peminjaman/persetujuan/:id", authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const { status_peminjaman, alasan_penolakan } = req.body;
-  const client = await db.connect();
+//mengupdate status disetujui atau ditolak kepala unit
+app.put("/requestsApprovHead/:request_id/head-approval", async (req, res) => {
+  const { request_id } = req.params;
+  const { status, rejection_reason } = req.body;
 
   try {
-    await client.query("BEGIN");
-
-    // Validasi status
-    if (!["Disetujui", "Ditolak"].includes(status_peminjaman)) {
-      throw new Error("Status tidak valid");
+    // Validasi input status
+    if (!["Approved by Head", "Rejected by Head"].includes(status)) {
+      return res.status(400).json({ message: "Status tidak valid." });
     }
 
-    // Query update dengan prepared statement
-    const query = `
-      UPDATE peminjaman 
-      SET 
-        status_peminjaman = $1, 
-        alasan_penolakan = $2
-      WHERE id = $3
-    `;
-
-    const values = [
-      status_peminjaman,
-      status_peminjaman === "Ditolak" ? alasan_penolakan : null,
-      id,
-    ];
-
-    const result = await client.query(query, values);
-
-    await client.query("COMMIT");
-    res.json({
-      message: "Status peminjaman berhasil diperbarui",
-      rowsAffected: result.rowCount,
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error updating loan status:", error);
-    res.status(500).json({
-      error: "Terjadi kesalahan pada server",
-      details: error.message,
-    });
-  } finally {
-    client.release();
-  }
-});
-
-// Delete Endpoint
-app.delete("/peminjaman/:id", authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const { role, nim_nik_nidn, peminjam } = req.user;
-  const client = await db.connect();
-
-  try {
-    await client.query("BEGIN");
-
-    // Cek akses berdasarkan role
-    let checkQuery, checkParams;
-
-    switch (role) {
-      case "mahasiswa":
-      case "kepalaUnit":
-      case "unit":
-        checkQuery = `
-          SELECT * FROM peminjaman 
-          WHERE id = $1 
-          AND (nim_nik_nidn = $2 OR peminjam = $3)
-          AND is_deleted = false
-        `;
-        checkParams = [id, nim_nik_nidn, peminjam];
-        break;
-
-      case "staf":
-        checkQuery = "SELECT * FROM peminjaman WHERE id = $1";
-        checkParams = [id];
-        break;
-
-      default:
-        throw new Error("Akses tidak diizinkan");
+    // Validasi alasan penolakan
+    if (
+      status === "Rejected by Head" &&
+      (!rejection_reason || rejection_reason.trim() === "")
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Alasan penolakan harus diisi jika ditolak." });
     }
 
-    const checkResult = await client.query(checkQuery, checkParams);
-
-    if (checkResult.rows.length === 0) {
-      throw new Error(
-        "Peminjaman tidak ditemukan atau Anda tidak memiliki akses"
-      );
-    }
-
-    let deleteQuery;
-    if (role === "staf") {
-      deleteQuery = "DELETE FROM peminjaman WHERE id = $1 RETURNING *";
-    } else {
-      deleteQuery =
-        "UPDATE peminjaman SET is_deleted = true WHERE id = $1 RETURNING *";
-    }
-
-    const result = await client.query(deleteQuery, [id]);
-
-    await client.query("COMMIT");
-    res.status(200).json({
-      message: "Peminjaman berhasil dihapus",
-      data: result.rows[0],
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error details:", error);
-    res.status(500).json({
-      error: "Terjadi kesalahan saat menghapus peminjaman",
-      details: error.message,
-    });
-  } finally {
-    client.release();
-  }
-});
-
-// Batalkan peminjaman
-app.delete("/peminjaman/cancel/:id", authenticateToken, async (req, res) => {
-  const { id } = req.params;
-
-  console.log("ID diterima di backend:", id); // Debugging ID di backend
-
-  if (!id) {
-    return res.status(400).json({ error: "ID peminjaman tidak disediakan" });
-  }
-
-  const client = await db.connect();
-  try {
-    await client.query("BEGIN");
-
-    const checkStatus = await client.query(
-      "SELECT * FROM peminjaman WHERE id = $1",
-      [id]
+    // Ambil data permintaan
+    const request = await db.query(
+      `SELECT item_id, quantity,status FROM requests WHERE request_id = $1`,
+      [request_id]
     );
 
-    if (checkStatus.rows.length === 0) {
-      console.log("Peminjaman tidak ditemukan untuk ID:", id);
+    if (request.rows.length === 0) {
+      return res.status(404).json({ message: "Permintaan tidak ditemukan." });
+    }
+
+    const { item_id, quantity, status: currentStatus } = request.rows[0];
+
+    // Cek jika permintaan sudah disetujui/ditolak sebelumnya
+    if (currentStatus !== "pending") {
+      return res
+        .status(400)
+        .json({ message: "Permintaan sudah diproses sebelumnya." });
+    }
+
+    // Update status permintaan
+    await db.query(
+      "UPDATE requests SET status = $1, rejection_reason = $2 WHERE request_id = $3 AND status = 'pending'",
+      [status, rejection_reason || null, request_id]
+    );
+
+    // Jika ditolak, kembalikan stok barang
+    if (status === "Rejected by Head") {
+      await db.query(
+        `UPDATE items 
+       SET stock = stock + $1 
+       WHERE item_id = $2`,
+        [quantity, item_id]
+      );
+    }
+    res.json({ message: "Persetujuan kepala unit berhasil diperbarui." });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Gagal memperbarui persetujuan kepala unit." });
+  }
+});
+
+//menampilkan daftar persetujuan staff
+app.get("/requestsApprovalAdmin/:division", async (req, res) => {
+  const { division } = req.params; // Divisi kepala unit dari localStorage
+
+  try {
+    const result = await db.query(
+      `SELECT 
+      r.requested_by AS user_id,
+      u.full_name,
+      COUNT(DISTINCT r.request_id) AS total_requests,
+      r.created_at, 
+      d.division_name,
+      r.status
+    FROM 
+      requests r
+    JOIN 
+      users u ON r.requested_by = u.user_id
+    JOIN 
+      divisions d ON u.division_id = d.division_id
+    WHERE 
+      d.division_name = $1 
+      AND r.status = 'Approved by Head'
+    GROUP BY 
+      r.requested_by, u.full_name, d.division_name, r.created_at, r.status
+    ORDER BY 
+      u.full_name, r.created_at DESC;`,
+      [division]
+    );
+    console.log(result.rows);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching request details:", error.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+  }
+});
+
+//menampilkan detail persetujuan staff
+app.get(
+  "/requestsApprovalAdmin/details/:created_at",
+  authenticateToken,
+  async (req, res) => {
+    const { created_at } = req.params; // Tanggal dari frontend
+    const user_id = req.user.user_id; // Mengambil user_id dari sesi atau token autentikasi
+    console.log("User ID:", user_id);
+    console.log("Created At received by Backend:", created_at);
+    try {
+      // Ambil division_id dari user_id
+      const divisionResult = await db.query(
+        `
+        SELECT division_id
+        FROM users
+        WHERE user_id = $1;
+        `,
+        [user_id]
+      );
+
+      if (divisionResult.rows.length === 0) {
+        return res.status(404).json({
+          message: "User tidak ditemukan.",
+        });
+      }
+
+      const division_id = divisionResult.rows[0].division_id;
+
+      // Ambil semua request_id yang sesuai
+      const requestIdsResult = await db.query(
+        `
+        SELECT r.request_id, r.status
+        FROM requests r
+        JOIN users u ON r.requested_by = u.user_id
+        WHERE u.division_id = $1
+          AND r.status = 'Approved by Head'
+          AND r.created_at::date = $2;
+        `,
+        [division_id, created_at]
+      );
+
+      const requestIds = requestIdsResult.rows.map((row) => row.request_id);
+
+      console.log("Request IDs from first query:", requestIds);
+
+      if (requestIds.length === 0) {
+        return res.status(404).json({
+          message: "Tidak ada detail permintaan yang sesuai.",
+        });
+      }
+
+      const detailResult = await db.query(
+        `
+      SELECT 
+        r.request_id, 
+        r.item_id, 
+        r.requested_by AS user_id,
+        u.full_name,
+        i.item_name, 
+        r.quantity, 
+        r.reason, 
+        r.status, 
+        r.rejection_reason,
+        d.division_name AS user_division,
+        r.created_at
+      FROM 
+        requests r
+      JOIN 
+        items i ON r.item_id = i.item_id
+      JOIN 
+        users u ON r.requested_by = u.user_id
+      JOIN
+        divisions d ON u.division_id = d.division_id 
+      WHERE 
+        r.request_id = ANY($1::int[]);
+      `,
+        [requestIds]
+      );
+
+      console.log("Detail Result:", detailResult.rows);
+
+      if (detailResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Detail permintaan tidak ditemukan." });
+      }
+
+      res.status(200).json(detailResult.rows); // Mengirimkan detail permintaan
+    } catch (error) {
+      console.error("Error fetching detail persetujuan:", error.message);
+      res.status(500).json({ message: "Terjadi kesalahan pada server." });
+    }
+  }
+);
+
+app.put(
+  "/requestsApprovalAdmin/:request_id/admin-approval",
+  async (req, res) => {
+    const { request_id } = req.params;
+    const { status, rejection_reason } = req.body;
+    try {
+      if (status === "Rejected by Staff SBUM" && !rejection_reason) {
+        return res
+          .status(400)
+          .json({ message: "Alasan penolakan harus diisi jika ditolak." });
+      }
+
+      // Ambil data permintaan untuk mendapatkan jumlah barang dan item_id
+      const request = await db.query(
+        `SELECT item_id, quantity FROM requests WHERE request_id = $1`,
+        [request_id]
+      );
+
+      if (request.rows.length === 0) {
+        return res.status(404).json({ message: "Permintaan tidak ditemukan." });
+      }
+      const req = await db.query(
+        `SELECT status FROM requests WHERE request_id = $1`,
+        [request_id]
+      );
+      console.log("Status saat ini:", req.rows[0]?.status);
+
+      const { item_id, quantity } = request.rows[0];
+
+      // Update status permintaan
+      await db.query(
+        `UPDATE 
+      requests 
+      SET 
+      status = $1, rejection_reason = $2 
+      WHERE 
+      request_id = $3 AND status = 'Approved by Head'`,
+        [status, rejection_reason || null, request_id]
+      );
+
+      // Jika ditolak, kembalikan stok barang
+      if (status === "Rejected by Staff SBUM") {
+        await db.query(
+          `UPDATE items 
+         SET stock = stock + $1 
+         WHERE item_id = $2`,
+          [quantity, item_id]
+        );
+      }
+
+      res.json({ message: "Persetujuan admin berhasil diperbarui." });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "Gagal memperbarui persetujuan oleh Admin." });
+    }
+  }
+);
+
+///CRUD MANAJEMEN BARANG
+// CREATE: Tambah Barang
+app.post("/items", async (req, res) => {
+  const { item_code, item_name, category_id, unit, stock } = req.body;
+  try {
+    const result = await db.query(
+      "INSERT INTO items (item_code, item_name, category_id, unit, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [item_code, item_name, category_id, unit, stock]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+});
+
+// READ: Dapatkan Barang Berdasarkan Kategori
+app.get("/manage/:categoryId", async (req, res) => {
+  const { categoryId } = req.params;
+  const categoryIdInt = parseInt(categoryId, 10);
+  if (isNaN(categoryIdInt)) {
+    return res.status(400).send("Invalid category ID");
+  }
+
+  try {
+    const result = await db.query(
+      "SELECT * FROM items WHERE category_id = $1",
+      [categoryId]
+    );
+    res.json(result.rows); // kirim data ke frontend
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).send("Server Error");
+  }
+});
+
+// Peminjaman
+app.get("/items/category/3", async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT i.*, c.category_name 
+       FROM items i 
+       JOIN categories c ON i.category_id = c.category_id
+       WHERE c.category_id = 3 AND i.stock > 0
+       ORDER BY i.item_name`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Mengupdate data item berdasarkan id
+app.put("/items/:itemId", async (req, res) => {
+  const { itemId } = req.params; // Mengambil item_id dari URL parameter
+  const { item_code, item_name, category_id, unit, stock } = req.body;
+
+  try {
+    // Update data berdasarkan item_id
+    const result = await db.query(
+      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5 WHERE item_id = $6 RETURNING *`,
+      [item_code, item_name, category_id, unit, stock, itemId]
+    );
+
+    // Jika item tidak ditemukan
+    if (result.rowCount === 0) {
+      return res.status(404).send("Item not found");
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Error during PUT request:", error); // Menampilkan error di console
+    res.status(500).send("Server Error");
+  }
+});
+
+// endpoint delete item
+app.delete("/items/:itemId", async (req, res) => {
+  const { itemId } = req.params; // Mengambil item_id dari URL parameter
+
+  try {
+    // Menghapus item berdasarkan item_id
+    const result = await db.query(
+      "DELETE FROM items WHERE item_id = $1 RETURNING *",
+      [itemId]
+    );
+
+    // Jika tidak ada item yang dihapus
+    if (result.rowCount === 0) {
+      return res.status(404).send("Item not found");
+    }
+
+    res.status(200).send("Item deleted successfully");
+  } catch (error) {
+    console.error("Error during DELETE request:", error); // Menampilkan error di console
+    res.status(500).send("Server Error");
+  }
+});
+
+// Endpoint untuk mendapatkan semua peminjaman (dikelompokkan)
+app.get("/peminjaman", authenticateToken, async (req, res) => {
+  let client;
+  try {
+    client = await db.connect();
+    const user = req.user;
+    const { view } = req.query; // Tambahkan parameter view untuk membedakan tampilan
+
+    let query, queryParams;
+
+    if (user.roles_id === 1) {
+      if (view === "history") {
+        // Untuk LoanHistory: tampilkan semua data
+        query = `
+          SELECT 
+            b.borrowing_id,
+            b.borrower_id,
+            b.borrow_date,
+            b.return_date,
+            b.status,
+            u.full_name,
+            u.nik,
+            b.rejection_reason,
+            i.item_name,
+            b.item_code,
+            b.quantity,
+            b.reason,
+            b.initial_condition,
+            b.return_condition,
+            b.return_proof,
+            b.phone_number
+          FROM borrowing b
+          LEFT JOIN users u ON b.borrower_id = u.user_id
+          LEFT JOIN items i ON b.item_code = i.item_code
+          WHERE NOT b.is_deleted
+          ORDER BY b.borrow_date DESC
+        `;
+      } else {
+        // Untuk LoanApproval: kelompokkan berdasarkan peminjam dan tanggal
+        query = `
+          SELECT DISTINCT ON (b.borrower_id, DATE(b.borrow_date))
+            b.borrowing_id,
+            b.borrower_id,
+            b.borrow_date,
+            b.return_date,
+            b.status,
+            u.full_name,
+            u.nik,
+            b.rejection_reason,
+            i.item_name,
+            b.item_code,
+            b.quantity,
+            b.reason,
+            b.initial_condition,
+            b.return_condition,
+            b.return_proof,
+            b.phone_number,
+            ARRAY_AGG(b.borrowing_id) OVER (
+              PARTITION BY b.borrower_id, DATE(b.borrow_date)
+            ) as borrowing_ids
+          FROM borrowing b
+          LEFT JOIN users u ON b.borrower_id = u.user_id
+          LEFT JOIN items i ON b.item_code = i.item_code
+          WHERE NOT b.is_deleted
+          ORDER BY b.borrower_id, DATE(b.borrow_date), b.borrow_date DESC
+        `;
+      }
+    } else {
+      // Untuk user lain: tampilkan data mereka sendiri
+      query = `
+        SELECT 
+          b.borrowing_id,
+          b.borrower_id,
+          b.borrow_date,
+          b.return_date,
+          b.status,
+          u.full_name,
+          u.nik,
+          b.rejection_reason,
+          i.item_name,
+          b.item_code,
+          b.quantity,
+          b.reason,
+          b.initial_condition,
+          b.return_condition,
+          b.return_proof,
+          b.phone_number,
+          ARRAY[b.borrowing_id] as borrowing_ids
+        FROM borrowing b
+        LEFT JOIN users u ON b.borrower_id = u.user_id
+        LEFT JOIN items i ON b.item_code = i.item_code
+        WHERE b.borrower_id = $1 AND NOT b.is_deleted
+        ORDER BY b.borrow_date DESC
+      `;
+      queryParams = [user.user_id];
+    }
+
+    const result = await client.query(query, queryParams);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching borrowing data:", error);
+    res.status(500).json({
+      message: "Gagal mengambil data peminjaman",
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Endpoint untuk mendapatkan detail peminjaman berdasarkan borrower dan tanggal
+app.get("/peminjaman/detail/:date", authenticateToken, async (req, res) => {
+  const { date } = req.params;
+  const { borrower_id } = req.query;
+
+  if (!borrower_id) {
+    return res.status(400).json({ message: "Borrower ID diperlukan" });
+  }
+
+  let client;
+  try {
+    client = await db.connect();
+    const formattedDate = date;
+
+    console.log("Running query with parameters:", {
+      borrower_id,
+      formattedDate,
+      queryString: `
+          SELECT *
+          FROM borrowing b
+          JOIN users u ON b.borrower_id = u.user_id
+          JOIN items i ON b.item_code = i.item_code
+          WHERE b.borrower_id = '${borrower_id}'
+          AND DATE(b.borrow_date)::date = '${formattedDate}'::date
+          AND NOT b.is_deleted
+      `,
+    });
+
+    const result = await client.query(
+      `SELECT 
+        b.borrowing_id,
+        b.item_code,
+        i.item_name,
+        b.quantity,
+        b.reason,
+        b.status,
+        b.rejection_reason,
+        b.initial_condition,
+        b.return_condition,
+        b.return_proof,
+        b.phone_number,
+        u.full_name,
+        u.nik
+      FROM borrowing b
+      JOIN users u ON b.borrower_id = u.user_id
+      JOIN items i ON b.item_code = i.item_code
+      WHERE b.borrower_id = $1 
+        AND DATE(b.borrow_date) = $2
+        AND NOT b.is_deleted
+      ORDER BY b.borrowing_id`,
+      [borrower_id, formattedDate]
+    );
+
+    // Log hasil query
+    console.log("Query executed with results:", {
+      rowCount: result.rows.length,
+      firstRow: result.rows[0],
+      allRows: result.rows,
+    });
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching borrowing details:", error);
+    res.status(500).json({
+      message: "Gagal mengambil detail peminjaman",
+    });
+  } finally {
+    if (client) client.release();
+  }
+});
+
+// Rute untuk membuat peminjaman
+app.post("/peminjaman", authenticateToken, async (req, res) => {
+  const {
+    item_code,
+    quantity,
+    borrow_date,
+    return_date,
+    reason,
+    phone_number,
+  } = req.body;
+  const borrower_id = req.user.user_id;
+
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Parse tanggal dan waktu dengan timezone
+    const parsedBorrowDate = new Date(borrow_date);
+    const parsedReturnDate = new Date(return_date);
+
+    if (
+      isNaN(parsedBorrowDate.getTime()) ||
+      isNaN(parsedReturnDate.getTime())
+    ) {
+      throw new Error("Invalid date format");
+    }
+
+    // Cek stok barang
+    const itemQuery = await client.query(
+      "SELECT stock FROM items WHERE item_code = $1",
+      [item_code]
+    );
+
+    if (itemQuery.rows.length === 0) {
+      throw new Error("Item not found");
+    }
+
+    if (itemQuery.rows[0].stock < quantity) {
+      throw new Error("Insufficient stock");
+    }
+
+    // Buat catatan peminjaman
+    const borrowingQuery = await client.query(
+      `INSERT INTO borrowing 
+       (item_code, borrower_id, quantity, borrow_date, return_date, reason, phone_number )
+       VALUES ($1, $2, $3, $4::timestamp with time zone, $5::timestamp with time zone, $6, $7)
+       RETURNING *`,
+      [
+        item_code,
+        borrower_id,
+        quantity,
+        parsedBorrowDate.toISOString(),
+        parsedReturnDate.toISOString(),
+        reason,
+        phone_number,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.status(201).json(borrowingQuery.rows[0]);
+  } catch (error) {
+    await client.query("ROLLBACK");
+    res.status(400).json({ message: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Rute untuk memproses pengembalian
+app.post(
+  "/pengembalian/:borrowing_id",
+  authenticateToken,
+  upload.single("return_proof"),
+  async (req, res) => {
+    const borrowing_id = parseInt(req.params.borrowing_id);
+    const { initial_condition, return_condition } = req.body;
+
+    // Validate borrowing_id
+    if (!borrowing_id || isNaN(borrowing_id)) {
+      return res.status(400).json({
+        error: "Invalid borrowing ID",
+      });
+    }
+
+    // Validate required fields
+    if (!initial_condition || !return_condition) {
+      return res.status(400).json({
+        error: "Initial condition and return condition are required",
+      });
+    }
+
+    // Validate file upload
+    if (!req.file) {
+      return res.status(400).json({
+        error: "Return proof is required",
+      });
+    }
+
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // Ambil data peminjaman termasuk tanggal seharusnya kembali
+      const loanResult = await client.query(
+        "SELECT item_code, quantity, status, return_date FROM borrowing WHERE borrowing_id = $1",
+        [borrowing_id]
+      );
+
+      if (loanResult.rows.length === 0) {
+        throw new Error("Loan not found");
+      }
+
+      const loan = loanResult.rows[0];
+      if (loan.status !== "approved") {
+        throw new Error("Invalid loan status for return");
+      }
+
+      // Hitung selisih hari
+      const expectedReturn = new Date(loan.return_date);
+      const actualReturn = new Date();
+      const diffTime = Math.abs(actualReturn - expectedReturn);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Buat status message berdasarkan keterlambatan
+      let statusMessage = "return";
+      if (actualReturn > expectedReturn) {
+        statusMessage = `return: terlambat ${diffDays} hari`;
+      }
+
+      // Update loan status dengan pesan keterlambatan
+      await client.query(
+        `UPDATE borrowing 
+       SET status = $1,
+           initial_condition = $2,
+           return_condition = $3,
+           return_proof = $4
+       WHERE borrowing_id = $5`,
+        [
+          statusMessage,
+          initial_condition,
+          return_condition,
+          req.file.filename,
+          borrowing_id,
+        ]
+      );
+      // Update item stock
+      await client.query(
+        "UPDATE items SET stock = stock + $1 WHERE item_code = $2",
+        [loan.quantity, loan.item_code]
+      );
+
+      await client.query("COMMIT");
+      res.json({
+        message: "Return processed successfully",
+        return_proof: req.file.filename,
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("Database error:", error);
+      res.status(500).json({
+        error: "Server error",
+        details: error.message,
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// Rute untuk validasi peminjaman
+app.put(
+  "/peminjaman/:borrowing_id/approval",
+  authenticateToken,
+  async (req, res) => {
+    const { borrowing_id } = req.params;
+    const { status, rejection_reason } = req.body;
+
+    console.log("\n=== Processing Approval/Rejection ===");
+    console.log("Request params:", { borrowing_id });
+    console.log("Request body:", { status, rejection_reason });
+
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // Check current status
+      const checkQuery = "SELECT * FROM borrowing WHERE borrowing_id = $1";
+      const currentState = await client.query(checkQuery, [borrowing_id]);
+
+      console.log("Current borrowing state:", currentState.rows[0]);
+      if (currentState.rows.length === 0) {
+        throw new Error("Peminjaman tidak ditemukan");
+      }
+
+      // Validate input
+      if (!status || !["approved", "rejected"].includes(status)) {
+        throw new Error("Status tidak valid");
+      }
+
+      // Validate rejection reason if status is rejected
+      if (status === "rejected" && !rejection_reason) {
+        throw new Error("Alasan penolakan harus diisi jika ditolak");
+      }
+
+      // Update borrowing status
+      const updateQuery = `
+      UPDATE borrowing 
+      SET status = $1, 
+          rejection_reason = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE borrowing_id = $3 
+      RETURNING *
+    `;
+
+      console.log("Executing update with params:", {
+        status,
+        rejection_reason,
+        borrowing_id,
+      });
+
+      const updateResult = await client.query(updateQuery, [
+        status,
+        rejection_reason,
+        borrowing_id,
+      ]);
+
+      // If approved, update item stock
+      if (status === "approved") {
+        const { item_code, quantity } = updateResult.rows[0];
+        await client.query(
+          `UPDATE items 
+         SET stock = stock - $1 
+         WHERE item_code = $2`,
+          [quantity, item_code]
+        );
+      }
+
+      await client.query("COMMIT");
+
+      // Single response at the end
+      return res.json({
+        message: `Berhasil ${
+          status === "approved" ? "menyetujui" : "menolak"
+        } peminjaman`,
+        updatedItem: updateResult.rows[0],
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      console.error("Error processing approval/rejection:", error);
+      return res.status(500).json({
+        message: "Gagal memproses persetujuan/penolakan",
+        error: error.message,
+      });
+    } finally {
+      client.release();
+    }
+  }
+);
+
+// Rute untuk membatalkan peminjaman
+app.put("/peminjaman/cancel/:id", authenticateToken, async (req, res) => {
+  const borrowingId = parseInt(req.params.id); // Pastikan diubah ke integer
+
+  const client = await db.connect();
+
+  try {
+    // Mulai transaksi
+    await client.query("BEGIN");
+
+    // Hapus item dari tabel borrowing
+    const deleteResult = await client.query(
+      "DELETE FROM borrowing WHERE borrowing_id = $1 RETURNING *",
+      [borrowingId]
+    );
+
+    // Kembalikan stok item yang dipinjam
+    const restoreStockQuery = `
+      UPDATE items i
+      SET stock = stock + b.quantity
+      FROM borrowing b
+      WHERE i.item_code = b.item_code AND b.borrowing_id = $1
+    `;
+    await client.query(restoreStockQuery, [borrowingId]);
+
+    // Commit transaksi
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Peminjaman berhasil dibatalkan",
+      transaction: deleteResult.rows[0],
+    });
+  } catch (error) {
+    // Rollback transaksi jika terjadi kesalahan
+    await client.query("ROLLBACK");
+    console.error("Error membatalkan peminjaman:", error);
+    res.status(500).json({
+      error: "Gagal membatalkan peminjaman",
+      details: error.message,
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// Endpoint untuk menghapus peminjaman
+app.delete("/peminjaman/:borrowing_id", authenticateToken, async (req, res) => {
+  const borrowing_id = parseInt(req.params.borrowing_id);
+
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Check if loan exists and get its status
+    const loanResult = await client.query(
+      "SELECT status, item_code, quantity FROM borrowing WHERE borrowing_id = $1",
+      [borrowing_id]
+    );
+
+    if (loanResult.rows.length === 0) {
       throw new Error("Peminjaman tidak ditemukan");
     }
 
-    // Lanjutkan proses pembatalan...
-    const { status_peminjaman } = checkStatus.rows[0];
-    if (status_peminjaman !== "Menunggu Persetujuan") {
-      throw new Error(
-        "Hanya peminjaman dengan status 'Menunggu Persetujuan' yang dapat dibatalkan"
-      );
+    const loan = loanResult.rows[0];
+
+    // Check if the loan status allows deletion
+    if (
+      !["rejected", "return"].includes(loan.status) &&
+      !loan.status.startsWith("return: terlambat")
+    ) {
+      return res.status(403).json({
+        error:
+          "Peminjaman hanya dapat dihapus jika statusnya ditolak atau sudah dikembalikan",
+      });
     }
 
-    await client.query("DELETE FROM peminjaman WHERE id = $1", [id]);
-    await client.query("COMMIT");
+    // Delete the loan
+    await client.query("DELETE FROM borrowing WHERE borrowing_id = $1", [
+      borrowing_id,
+    ]);
 
-    res.status(200).json({ message: "Peminjaman berhasil dibatalkan" });
-  } catch (err) {
+    await client.query("COMMIT");
+    res.json({ message: "Peminjaman berhasil dihapus" });
+  } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error details:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Database error:", error);
+
+    if (error.message === "Peminjaman tidak ditemukan") {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({
+        error: "Terjadi kesalahan server",
+        details: error.message,
+      });
+    }
   } finally {
     client.release();
   }
 });
 
+// POST /stock-in
+app.post("/stock-in", authenticateToken, async (req, res) => {
+  const { item_id, quantity } = req.body;
+  const received_by = req.user.user_id; // ID admin dari token autentikasi
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Validasi barang yang ada
+    const itemQuery = "SELECT * FROM items WHERE item_id = $1";
+    const itemResult = await client.query(itemQuery, [item_id]);
+
+    if (itemResult.rows.length === 0) {
+      throw new Error("Barang tidak ditemukan.");
+    }
+
+    // Tambahkan ke tabel stock_in
+    const stockInQuery = `
+      INSERT INTO stock_in (item_id, quantity, notes, received_by, created_at)
+      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      RETURNING *;
+    `;
+    const stockInResult = await client.query(stockInQuery, [
+      item_id,
+      quantity,
+      received_by,
+    ]);
+
+    // Update stok barang di tabel items
+    const updateStockQuery = `
+      UPDATE items
+      SET stock = stock + $1
+      WHERE item_id = $2;
+    `;
+    await client.query(updateStockQuery, [quantity, item_id]);
+
+    await client.query("COMMIT");
+
+    res.status(201).json({
+      message: "Barang masuk berhasil ditambahkan.",
+      data: stockInResult.rows[0],
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error saat menambahkan barang masuk:", error);
+    res
+      .status(500)
+      .json({
+        message: "Gagal menambahkan barang masuk.",
+        error: error.message,
+      });
+  } finally {
+    client.release();
+  }
+});
+
+// PUT /stock-in/:stock_in_id
+app.put("/stock-in/:stock_in_id", authenticateToken, async (req, res) => {
+  const { stock_in_id } = req.params;
+  const { quantity } = req.body;
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Ambil data barang masuk sebelumnya
+    const stockInQuery = "SELECT * FROM stock_in WHERE stock_in_id = $1";
+    const stockInResult = await client.query(stockInQuery, [stock_in_id]);
+
+    if (stockInResult.rows.length === 0) {
+      throw new Error("Barang masuk tidak ditemukan.");
+    }
+
+    const oldStockIn = stockInResult.rows[0];
+    const quantityDifference = quantity - oldStockIn.quantity;
+
+    // Update data barang masuk
+    const updateStockInQuery = `
+      UPDATE stock_in
+      SET quantity = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE stock_in_id = $2
+      RETURNING *;
+    `;
+    const updatedStockIn = await client.query(updateStockInQuery, [
+      quantity,
+      stock_in_id,
+    ]);
+
+    // Update stok barang di tabel items
+    const updateStockQuery = `
+      UPDATE items
+      SET stock = stock + $1
+      WHERE item_id = $2;
+    `;
+    await client.query(updateStockQuery, [
+      quantityDifference,
+      oldStockIn.item_id,
+    ]);
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Barang masuk berhasil diperbarui.",
+      data: updatedStockIn.rows[0],
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error saat memperbarui barang masuk:", error);
+    res
+      .status(500)
+      .json({
+        message: "Gagal memperbarui barang masuk.",
+        error: error.message,
+      });
+  } finally {
+    client.release();
+  }
+});
+
+// DELETE /stock-in/:stock_in_id
+app.delete("/stock-in/:stock_in_id", authenticateToken, async (req, res) => {
+  const { stock_in_id } = req.params;
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Ambil data barang masuk
+    const stockInQuery = "SELECT * FROM stock_in WHERE stock_in_id = $1";
+    const stockInResult = await client.query(stockInQuery, [stock_in_id]);
+
+    if (stockInResult.rows.length === 0) {
+      throw new Error("Barang masuk tidak ditemukan.");
+    }
+
+    const stockInData = stockInResult.rows[0];
+
+    // Hapus data barang masuk
+    const deleteStockInQuery = "DELETE FROM stock_in WHERE stock_in_id = $1";
+    await client.query(deleteStockInQuery, [stock_in_id]);
+
+    // Kurangi stok barang
+    const updateStockQuery = `
+      UPDATE items
+      SET stock = stock - $1
+      WHERE item_id = $2;
+    `;
+    await client.query(updateStockQuery, [
+      stockInData.quantity,
+      stockInData.item_id,
+    ]);
+
+    await client.query("COMMIT");
+
+    res.json({ message: "Barang masuk berhasil dihapus." });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error saat menghapus barang masuk:", error);
+    res
+      .status(500)
+      .json({ message: "Gagal menghapus barang masuk.", error: error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /stock-in
+app.get("/stock-in", authenticateToken, async (req, res) => {
+  const client = await db.connect();
+  try {
+    const stockInQuery = `
+      SELECT si.*, i.item_name, u.full_name AS received_by_name
+      FROM stock_in si
+      JOIN items i ON si.item_id = i.item_id
+      JOIN users u ON si.received_by = u.user_id;
+    `;
+    const stockInResult = await client.query(stockInQuery);
+
+    res.json({ data: stockInResult.rows });
+  } catch (error) {
+    console.error("Error saat mengambil data barang masuk:", error);
+    res
+      .status(500)
+      .json({
+        message: "Gagal mengambil data barang masuk.",
+        error: error.message,
+      });
+  } finally {
+    client.release();
+  }
+});

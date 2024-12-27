@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   Button,
   TextField,
@@ -12,6 +12,7 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Alert,
 } from "@mui/material";
 import polibatam from "../assets/polibatam.png";
 import backgroundImage from "../assets/tekno.png";
@@ -20,8 +21,8 @@ const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const navigate = useNavigate();
   const [userRole, setUserRole] = useState("");
+  const navigate = useNavigate();
 
   const handleRoleChange = (e) => {
     setUserRole(e.target.value);
@@ -29,42 +30,50 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (!userRole) {
+      setError("Pilih jenis user terlebih dahulu!");
+      return;
+    }
+
+    const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
     try {
-      const response = await axios.post("http://localhost:5000/login", {
+      const response = await axios.post(`${API_URL}/login`, {
         username,
         password,
-        role: userRole,
+        roles_id: userRole,
       });
 
-      console.log("Response from server:", response.data); // Debugging
-      const { token, user } = response.data;
+      console.log(response.data.token);
 
       // Simpan token ke localStorage
-      localStorage.setItem("token", token);
-      // Simpan data pengguna (opsional, misalnya di localStorage)
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("token", response.data.token);
+      localStorage.setItem("role", response.data.roles_id);
+      localStorage.setItem("user_id", response.data.user_id);
+      localStorage.setItem("full_name", response.data.full_name);
+      localStorage.setItem("division_name", response.data.division_name);
 
       // Arahkan ke dashboard sesuai role
-      switch (user.role) {
-        case "staf":
-          navigate("/dashboard/staf");
-          break;
-        case "kepalaUnit":
-          navigate("/dashboard/kepalaUnit");
-          break;
-        case "unit":
-          navigate("/dashboard/unit");
-          break;
-        case "mahasiswa":
-          navigate("/dashboard/mahasiswa");
-          break;
-        default:
-          setError("Role tidak dikenali");
+      const roleId = response.data.roles_id;
+      const ROLE = {
+        ADMIN: 1,
+        UNIT_HEAD: 2,
+        UNIT: 3,
+        STUDENT: 4,
+      };
+
+      console.log(response.data);
+      if (roleId === ROLE.ADMIN) {
+        navigate("/dashboard/staf"); // Admin
+      } else if (roleId === ROLE.UNIT_HEAD) {
+        navigate("/dashboard/unit"); // Unit
+      } else if (roleId === ROLE.UNIT) {
+        navigate("/dashboard/kepalaunit"); // Kepala Unit
+      } else if (roleId === ROLE.STUDENT) {
+        navigate("/dashboard/mahasiswa"); // Mahasiswa
       }
     } catch (err) {
-      console.error("Login error:", err); // Debugging
-      setError("Invalid username or password");
+      setError(err.response?.data?.message || "Login gagal");
     }
   };
 
@@ -119,6 +128,12 @@ const Login = () => {
         <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
           {/*dropdown jenis user */}
           <Box display="flex" justifyContent="center">
+            {error && (
+              <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
             <FormControl fullWidth margin="normal" required>
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
@@ -137,10 +152,10 @@ const Login = () => {
                   },
                 }}
               >
-                <MenuItem value="staf">Staf</MenuItem>
-                <MenuItem value="kepalaUnit">Kepala Unit</MenuItem>
-                <MenuItem value="unit">Unit</MenuItem>
-                <MenuItem value="mahasiswa">Mahasiswa</MenuItem>
+                <MenuItem value={1}>staf</MenuItem>
+                <MenuItem value={2}>kepala unit</MenuItem>
+                <MenuItem value={3}>unit</MenuItem>
+                <MenuItem value={4}>mahasiswa</MenuItem>
               </Select>
             </FormControl>
           </Box>
