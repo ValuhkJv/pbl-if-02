@@ -7,6 +7,8 @@ import {
   TableBody,
   Typography,
   Button,
+  TableContainer,
+  Paper,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
@@ -36,6 +38,13 @@ const RequestApprovalAdmin = () => {
       <Typography variant="h4" gutterBottom>
         Data Persetujuan Permintaan Barang
       </Typography>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
+        }}
+      >
       <Table>
         <TableHead>
           <TableRow>
@@ -75,6 +84,7 @@ const RequestApprovalAdmin = () => {
           ))}
         </TableBody>
       </Table>
+      </TableContainer>
     </div>
   );
 };

@@ -777,7 +777,7 @@ app.get("/manage/:categoryId", async (req, res) => {
   }
 });
 
-// Peminjaman
+// Mendapatkan kategori $3 barang peminjaman
 app.get("/items/category/3", async (req, res) => {
   try {
     const result = await db.query(
@@ -1627,6 +1627,33 @@ app.get("/borrowing/overdue", authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint untuk mengecek status peminjaman
+app.get("/borrowing/status/:borrowing_id", authenticateToken, async (req, res) => {
+  try {
+    const { borrowing_id } = req.params;
+    const result = await db.query(
+      "SELECT status FROM borrowing WHERE borrowing_id = $1",
+      [borrowing_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Borrowing not found" });
+    }
+    
+    // Check if the status indicates the item has been returned
+    const isReturned = result.rows[0].status.startsWith('return');
+    
+    res.json({ 
+      borrowing_id,
+      isReturned,
+      status: result.rows[0].status 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint untuk mendapatkan data permintaan paling banyak
 app.get("/requests/top", authenticateToken, async (req, res) => {
   try {
@@ -1669,3 +1696,17 @@ app.get("/borrowing/top", authenticateToken, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Endpoint untuk mendapatkan data barang yang stoknya habis
+app.get('/items/zero-stock', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT * FROM items WHERE stock = 0
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+}
+);

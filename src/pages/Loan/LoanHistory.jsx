@@ -347,19 +347,42 @@ export default function LoanHistory() {
         >
           <DatePicker
             label="Tanggal Mulai"
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
             value={startDate}
             onChange={(newValue) => setStartDate(newValue)}
             renderInput={(params) => <TextField {...params} />}
           />
           <DatePicker
             label="Tanggal Selesai"
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
             value={endDate}
             onChange={(newValue) => setEndDate(newValue)}
             renderInput={(params) => <TextField {...params} />}
           />
         </Stack>
       </LocalizationProvider>
-      <FormControl variant="outlined" sx={{ minWidth: { sm: '160px' } }}>
+      <FormControl variant="outlined" sx={{
+        minWidth: { sm: '160px' }, width: "250px",
+        backgroundColor: "white",
+        borderRadius: 1,
+        "& .MuiOutlinedInput-root": {
+          height: "40px",
+        },
+      }}>
         <InputLabel>Bulan</InputLabel>
         <Select
           value={selectedMonth}
@@ -527,10 +550,22 @@ export default function LoanHistory() {
                 ),
               }}
               sx={{
-                minWidth: { sm: '200px' },
+                width: "250px",
+                backgroundColor: "white",
+                borderRadius: 1,
+                "& .MuiOutlinedInput-root": {
+                  height: "40px",
+                },
               }}
             />
-            <FormControl variant="outlined" sx={{ minWidth: { sm: '200px' } }}>
+            <FormControl variant="outlined" sx={{
+              minWidth: { sm: '200px' }, width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}>
               <InputLabel>Status</InputLabel>
               <Select
                 value={filterStatus}

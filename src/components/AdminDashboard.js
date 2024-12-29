@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -14,9 +14,13 @@ import {
   Paper,
   Alert,
   Snackbar,
-  CircularProgress
+  CircularProgress,
 } from "@mui/material";
-import { Description as DescriptionIcon, Error as ErrorIcon } from "@mui/icons-material";
+import {
+  Description as DescriptionIcon,
+  Error as ErrorIcon,
+} from "@mui/icons-material";
+import { use } from "react";
 
 function DashboardStaf() {
   const [dashboardData, setDashboardData] = useState({
@@ -24,40 +28,131 @@ function DashboardStaf() {
     overdueItems: [],
     topRequests: [],
     topBorrowings: [],
+    zeroStockItems: [],
   });
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Menambahkan fungsi untuk memantau status peminjaman
+  const checkBorrowingStatus = async (borrowingIds) => {
+    try {
+      const headers = {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      };
+
+      const statusChecks = borrowingIds.map((id) =>
+        fetch(`http://localhost:5000/borrowing/status/${id}`, { headers }).then(
+          (res) => res.json()
+        )
+      );
+
+      const statuses = await Promise.all(statusChecks);
+
+      // Filter out items that have been returned
+      setDashboardData((prevData) => ({
+        ...prevData,
+        overdueItems: prevData.overdueItems.filter(
+          (item, index) => !statuses[index].isReturned
+        ),
+      }));
+    } catch (error) {
+      console.error("Error checking borrowing status:", error);
+    }
+  };
+
+  // New function to check stock status
+  const checkStockStatus = async () => {
+    try {
+      const headers = {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
+      };
+
+      const response = await fetch("http://localhost:5000/items/zero-stock", {
+        headers,
+      });
+      if (!response.ok) throw new Error("Failed to fetch zero stock items");
+
+      const zeroStockItems = await response.json();
+
+      setDashboardData((prevData) => ({
+        ...prevData,
+        zeroStockItems: Array.isArray(zeroStockItems) ? zeroStockItems : [],
+      }));
+    } catch (error) {
+      console.error("Error checking stock status:", error);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
     // Refresh data every 5 minutes
-    const interval = setInterval(() => { fetchDashboardData(); }, 300000);
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 300000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Menambahkan effect untuk memantau status peminjaman
+  useEffect(() => {
+    if (dashboardData.overdueItems.length > 0) {
+      const borrowingIds = dashboardData.overdueItems.map(
+        (item) => item.borrowing_id
+      );
+      // Check status every minute
+      const statusInterval = setInterval(() => {
+        checkBorrowingStatus(borrowingIds);
+      }, 60000);
+
+      // Initial check
+      checkBorrowingStatus(borrowingIds);
+
+      return () => clearInterval(statusInterval);
+    }
+  }, [dashboardData.overdueItems]);
+
+  useEffect(() => {
+    checkStockStatus();
+    const stockInterval = setInterval(() => {
+      checkStockStatus();
+    }, 60000);
+    return () => clearInterval(stockInterval);
   }, []);
 
   const fetchDashboardData = async () => {
     try {
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "Content-Type": "application/json",
       };
-      const [itemsRes, overdueRes, requestsRes, borrowingRes] = await Promise.all([
-        fetch('http://localhost:5000/dashboard/counts', { headers }),
-        fetch('http://localhost:5000/borrowing/overdue', { headers }),
-        fetch('http://localhost:5000/requests/top', { headers }),
-        fetch('http://localhost:5000/borrowing/top', { headers })
-      ]);
+      const [itemsRes, overdueRes, requestsRes, borrowingRes, zeroStockRes] =
+        await Promise.all([
+          fetch("http://localhost:5000/dashboard/counts", { headers }),
+          fetch("http://localhost:5000/borrowing/overdue", { headers }),
+          fetch("http://localhost:5000/requests/top", { headers }),
+          fetch("http://localhost:5000/borrowing/top", { headers }),
+          fetch("http://localhost:5000/items/zero-stock", { headers }),
+        ]);
 
       // Check if any response failed
-      if (!itemsRes.ok || !overdueRes.ok || !requestsRes.ok || !borrowingRes.ok) {
-        throw new Error('One or more requests failed');
+      if (
+        !itemsRes.ok ||
+        !overdueRes.ok ||
+        !requestsRes.ok ||
+        !borrowingRes.ok ||
+        !zeroStockRes.ok
+      ) {
+        throw new Error("One or more requests failed");
       }
 
       const [counts, overdue, requests, borrowings] = await Promise.all([
         itemsRes.json(),
         overdueRes.json(),
         requestsRes.json(),
-        borrowingRes.json()
+        borrowingRes.json(),
+        zeroStockRes.json(),
       ]);
 
       setDashboardData({
@@ -69,19 +164,24 @@ function DashboardStaf() {
         overdueItems: Array.isArray(overdue) ? overdue : [], // Ensure it's an array
         topRequests: Array.isArray(requests) ? requests : [],
         topBorrowings: Array.isArray(borrowings) ? borrowings : [],
+        zeroStockItems: Array.isArray(zeroStockRes) ? zeroStockRes : [],
       });
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      setError('Failed to fetch dashboard data');
+      console.error("Error fetching dashboard data:", error);
+      setError("Failed to fetch dashboard data");
       setLoading(false);
     }
-  }
-
+  };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
         <CircularProgress />
       </Box>
     );
@@ -92,8 +192,19 @@ function DashboardStaf() {
   }
 
   return (
-
     <div style={{ padding: 20 }}>
+      {/* Zero Stock Notifications */}
+      {(dashboardData.zeroStockItems || []).map((item) => (
+        <Alert
+          severity="warning"
+          key={item.item_id}
+          icon={<ErrorIcon />}
+          style={{ marginBottom: 10 }}
+        >
+          Barang {item.item_name} ({item.item_id}) telah habis. Harap segera restock barang tersebut.
+        </Alert>
+      ))}
+
       {/* Notifications for overdue items */}
       {(dashboardData.overdueItems || []).map((item) => (
         <Alert
@@ -102,7 +213,9 @@ function DashboardStaf() {
           icon={<ErrorIcon />}
           style={{ marginBottom: 10 }}
         >
-          Peminjaman {item.item_name} oleh {item.borrower}  dengan NIK/NIM/NIDN {item.nik} telah melewati batas waktu pengembalian ({new Date(item.return_date).toLocaleDateString()})
+          Peminjaman {item.item_name} oleh {item.borrower} dengan NIK/NIM/NIDN{" "}
+          {item.nik} telah melewati batas waktu pengembalian (
+          {new Date(item.return_date).toLocaleDateString()})
         </Alert>
       ))}
       {/* Summary Cards */}
@@ -110,7 +223,13 @@ function DashboardStaf() {
         {dashboardData.items?.map((item) => (
           <Grid item key={item.borrowing_id} xs={12} sm={6} md={4}>
             <Card style={{ backgroundColor: "#69D2FF" }}>
-              <CardContent style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <CardContent
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
                 <Box textAlign="center" flexGrow={1}>
                   <Typography variant="h5" style={{ fontWeight: "bold" }}>
                     {item.count}
@@ -130,18 +249,31 @@ function DashboardStaf() {
         <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" style={{ fontWeight: "bold", marginBottom: 10 }}>
+              <Typography
+                variant="h6"
+                style={{ fontWeight: "bold", marginBottom: 10 }}
+              >
                 Permintaan Barang Paling Banyak
               </Typography>
               <TableContainer component={Paper} style={{ boxShadow: "none" }}>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell style={{ fontWeight: "bold", color: "#808080" }}>Nama Barang</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                      <TableCell
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
+                        Nama Barang
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
                         Total Permintaan
                       </TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                      <TableCell
+                        align="center"
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
                         Terakhir Permintaan
                       </TableCell>
                     </TableRow>
@@ -149,9 +281,21 @@ function DashboardStaf() {
                   <TableBody>
                     {dashboardData.topRequests?.map((row, index) => (
                       <TableRow key={index}>
-                        <TableCell style={{ fontWeight: "bold" }}>{row.nama}</TableCell>
-                        <TableCell align="center" style={{ fontWeight: "bold" }}>{row.total}</TableCell>
-                        <TableCell align="center" style={{ fontWeight: "bold" }}>{row.terakhir}</TableCell>
+                        <TableCell style={{ fontWeight: "bold" }}>
+                          {row.nama}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          style={{ fontWeight: "bold" }}
+                        >
+                          {row.total}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          style={{ fontWeight: "bold" }}
+                        >
+                          {row.terakhir}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -164,18 +308,31 @@ function DashboardStaf() {
         <Grid item xs={12} sm={6}>
           <Card>
             <CardContent>
-              <Typography variant="h6" style={{ fontWeight: "bold", marginBottom: 10 }}>
+              <Typography
+                variant="h6"
+                style={{ fontWeight: "bold", marginBottom: 10 }}
+              >
                 Peminjaman Barang Paling Banyak
               </Typography>
               <TableContainer component={Paper} style={{ boxShadow: "none" }}>
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell style={{ fontWeight: "bold", color: "#808080" }}>Nama Barang</TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                      <TableCell
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
+                        Nama Barang
+                      </TableCell>
+                      <TableCell
+                        align="center"
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
                         Total Peminjaman
                       </TableCell>
-                      <TableCell align="center" style={{ fontWeight: "bold", color: "#808080" }}>
+                      <TableCell
+                        align="center"
+                        style={{ fontWeight: "bold", color: "#808080" }}
+                      >
                         Terakhir Peminjaman
                       </TableCell>
                     </TableRow>
@@ -183,9 +340,21 @@ function DashboardStaf() {
                   <TableBody>
                     {dashboardData.topBorrowings?.map((row, index) => (
                       <TableRow key={index}>
-                        <TableCell style={{ fontWeight: "bold" }}>{row.nama}</TableCell>
-                        <TableCell align="center" style={{ fontWeight: "bold" }}>{row.total}</TableCell>
-                        <TableCell align="center" style={{ fontWeight: "bold" }}>{row.terakhir}</TableCell>
+                        <TableCell style={{ fontWeight: "bold" }}>
+                          {row.nama}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          style={{ fontWeight: "bold" }}
+                        >
+                          {row.total}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          style={{ fontWeight: "bold" }}
+                        >
+                          {row.terakhir}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

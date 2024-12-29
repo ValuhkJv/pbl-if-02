@@ -325,8 +325,15 @@ const LoanApprovalDetail = () => {
                         </Typography>
                     </CardContent>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 'auto', marginRight: 2 }}>
-                        <FormControl variant="outlined" sx={{ marginRight: 2, minWidth: 120, width: '100%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 'auto', marginRight: 2, marginBottom: 8 }}>
+                        <FormControl variant="outlined" sx={{
+                            marginRight: 2, width: "250px",
+                            backgroundColor: "white",
+                            borderRadius: 1,
+                            "& .MuiOutlinedInput-root": {
+                                height: "40px",
+                            },
+                        }}>
                             <InputLabel>Status</InputLabel>
                             <Select
                                 value={filterStatus}
@@ -343,7 +350,14 @@ const LoanApprovalDetail = () => {
                         <TextField
                             variant="outlined"
                             placeholder="Search..."
-                            sx={{ width: '100%', minWidth: 200 }}
+                            sx={{
+                                width: "250px",
+                                backgroundColor: "white",
+                                borderRadius: 1,
+                                "& .MuiOutlinedInput-root": {
+                                    height: "40px",
+                                },
+                            }}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             InputProps={{
@@ -440,16 +454,16 @@ const LoanApprovalDetail = () => {
                     </TableBody>
                 </Table>
                 <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={filteredRows.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-            />
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={filteredRows.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
             </TableContainer>
-            
+
             <Box className="mt-8 flex justify-end">
                 <Button
                     variant="contained"
@@ -470,7 +484,7 @@ const LoanApprovalDetail = () => {
                     {snackbar.message}
                 </Alert>
             </Snackbar>
-           
+
         </Box>
     );
 };

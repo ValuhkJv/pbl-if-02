@@ -557,7 +557,14 @@ const Pengembalian = () => {
         alignItems="flex-end"
         sx={{ mb: 4, mt: 5 }}
       >
-        <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+        <FormControl variant="outlined" sx={{
+          width: "250px",
+          backgroundColor: "white",
+          borderRadius: 1,
+          "& .MuiOutlinedInput-root": {
+            height: "40px",
+          },
+        }}>
           <InputLabel>Status</InputLabel>
           <Select
             value={filterStatus}
@@ -586,7 +593,12 @@ const Pengembalian = () => {
             ),
           }}
           sx={{
-            width: 250,
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
           }}
         />
       </Stack>
