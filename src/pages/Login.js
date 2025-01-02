@@ -66,9 +66,9 @@ const Login = () => {
       if (roleId === ROLE.ADMIN) {
         navigate("/dashboard/staf"); // Admin
       } else if (roleId === ROLE.UNIT_HEAD) {
-        navigate("/dashboard/unit"); // Unit
+        navigate("/dashboard/kepalaunit"); // Unit
       } else if (roleId === ROLE.UNIT) {
-        navigate("/dashboard/kepalaunit"); // Kepala Unit
+        navigate("/dashboard/unit"); // Kepala Unit
       } else if (roleId === ROLE.STUDENT) {
         navigate("/dashboard/mahasiswa"); // Mahasiswa
       }

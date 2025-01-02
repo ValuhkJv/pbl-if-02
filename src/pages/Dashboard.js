@@ -196,7 +196,21 @@ export default function Dashboard() {
   const menuItems = menuItemsByRole[role] || [];
 
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box
+      sx={{
+        display: "flex",
+        bgcolor: "#e0e0e0",
+        width: "100%",
+        height: "100vh",
+        minHeight: "100vh", // memastikan minimal setinggi viewport
+        position: "fixed", // membuat elemen fixed di viewport
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: "auto", // untuk menghandle konten yang melebihi viewport
+      }}
+    >
       <CssBaseline />
       <AppBar position="fixed" open={openDrawer}>
         <Toolbar
@@ -310,7 +324,16 @@ export default function Dashboard() {
             {setRole === "staf" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPeminjaman}>
+                  <ListItemButton
+                    onClick={handleClickPeminjaman}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <ApprovalIcon />
@@ -341,7 +364,16 @@ export default function Dashboard() {
                 </Collapse>
 
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />
@@ -414,7 +446,16 @@ export default function Dashboard() {
             {setRole === "kepalaunit" && (
               <>
                 <ListItem disablePadding sx={{ color: "white" }}>
-                  <ListItemButton onClick={handleClickPermintaan}>
+                  <ListItemButton
+                    onClick={handleClickPermintaan}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     <Box sx={{ display: "flex", alignItems: "center" }}>
                       <ListItemIcon sx={{ color: "white", minWidth: "36px" }}>
                         <HandshakeIcon />

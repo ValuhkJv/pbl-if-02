@@ -22,8 +22,8 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
-  database: "subbagian",
+  password: "password",
+  database: "sbum",
   port: 5432,
 });
 
@@ -793,7 +793,7 @@ app.get("/manage/:categoryId", async (req, res) => {
   }
 });
 
-// Peminjaman
+// Mendapatkan kategori $3 barang peminjaman
 app.get("/items/category/3", async (req, res) => {
   try {
     const result = await db.query(
@@ -890,7 +890,6 @@ app.get("/peminjaman", authenticateToken, async (req, res) => {
           FROM borrowing b
           LEFT JOIN users u ON b.borrower_id = u.user_id
           LEFT JOIN items i ON b.item_code = i.item_code
-          WHERE NOT b.is_deleted
           ORDER BY b.borrow_date DESC
         `;
       } else {
@@ -1216,10 +1215,6 @@ app.put(
     const { borrowing_id } = req.params;
     const { status, rejection_reason } = req.body;
 
-    console.log("\n=== Processing Approval/Rejection ===");
-    console.log("Request params:", { borrowing_id });
-    console.log("Request body:", { status, rejection_reason });
-
     const client = await db.connect();
 
     try {
@@ -1347,6 +1342,7 @@ app.put("/peminjaman/cancel/:id", authenticateToken, async (req, res) => {
 // Endpoint untuk menghapus peminjaman
 app.delete("/peminjaman/:borrowing_id", authenticateToken, async (req, res) => {
   const borrowing_id = parseInt(req.params.borrowing_id);
+  const user = req.user;
 
   const client = await db.connect();
 
@@ -1376,10 +1372,18 @@ app.delete("/peminjaman/:borrowing_id", authenticateToken, async (req, res) => {
       });
     }
 
-    // Delete the loan
-    await client.query("DELETE FROM borrowing WHERE borrowing_id = $1", [
-      borrowing_id,
-    ]);
+    // If user is staff (roles_id === 1), perform hard delete
+    // Otherwise, perform soft delete
+    if (user.roles_id === 1) {
+      await client.query("DELETE FROM borrowing WHERE borrowing_id = $1", [
+        borrowing_id,
+      ]);
+    } else {
+      await client.query(
+        "UPDATE borrowing SET is_deleted = true WHERE borrowing_id = $1",
+        [borrowing_id]
+      );
+    }
 
     await client.query("COMMIT");
     res.json({ message: "Peminjaman berhasil dihapus" });
@@ -1654,3 +1658,133 @@ app.get("/report", async (req, res) => {
     client.release();
   }
 });
+
+// Dashboard Staf
+// Endpoint untuk mendapatkan jumlah data pada dashboard
+app.get("/dashboard/counts", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+      (SELECT COUNT(*) FROM requests) AS requests,
+      (SELECT COUNT(*) FROM borrowing WHERE is_deleted = false) AS borrowings,
+      (SELECT COUNT(*) FROM items WHERE stock > 0) AS items`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint untuk mendapatkan data peminjaman yang terlambat
+app.get("/borrowing/overdue", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        b.borrowing_id,
+        b.borrow_date,
+        b.return_date,
+        b.status,
+        u.full_name AS borrower,
+        u.nik,
+        i.item_name,
+        b.quantity,
+        b.reason,
+        b.phone_number
+      FROM borrowing b
+      JOIN users u ON b.borrower_id = u.user_id
+      JOIN items i ON b.item_code = i.item_code
+      WHERE b.return_date < CURRENT_DATE
+      AND b.status = 'approved'
+      AND NOT b.is_deleted
+      ORDER BY b.return_date DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint untuk mengecek status peminjaman
+app.get("/borrowing/status/:borrowing_id", authenticateToken, async (req, res) => {
+  try {
+    const { borrowing_id } = req.params;
+    const result = await db.query(
+      "SELECT status FROM borrowing WHERE borrowing_id = $1",
+      [borrowing_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Borrowing not found" });
+    }
+    
+    // Check if the status indicates the item has been returned
+    const isReturned = result.rows[0].status.startsWith('return');
+    
+    res.json({ 
+      borrowing_id,
+      isReturned,
+      status: result.rows[0].status 
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint untuk mendapatkan data permintaan paling banyak
+app.get("/requests/top", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        i.item_name as nama,
+        COUNT(*) as total,
+        TO_CHAR(MAX(r.created_at), 'DD-MM-YYYY') as terakhir
+      FROM requests r
+      JOIN items i ON r.item_id = i.item_id
+      GROUP BY i.item_name
+      ORDER BY total DESC
+      LIMIT 4
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint untuk mendapatkan data peminjaman paling banyak
+app.get("/borrowing/top", authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+     SELECT
+        i.item_name as nama,
+        COUNT(*) as total,
+        TO_CHAR(MAX(b.borrow_date), 'DD-MM-YYYY') as terakhir
+      FROM borrowing b
+      JOIN items i ON b.item_code = i.item_code
+      WHERE b.is_deleted = false
+      GROUP BY i.item_name
+      ORDER BY total DESC
+      LIMIT 4
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint untuk mendapatkan data barang yang stoknya habis
+app.get('/items/zero-stock', authenticateToken, async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT * FROM items WHERE stock = 0
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+}
+);

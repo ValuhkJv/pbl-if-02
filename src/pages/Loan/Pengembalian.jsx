@@ -153,8 +153,8 @@ const Pengembalian = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!id) {
+  const handleDelete = async (borrowing_id) => {
+    if (!borrowing_id) {
       setSnackbar({
         open: true,
         message: "ID peminjaman tidak valid",
@@ -165,7 +165,9 @@ const Pengembalian = () => {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/peminjaman/${id}`, {
+      const userRole = localStorage.getItem("roles_id");
+
+      const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -179,28 +181,37 @@ const Pengembalian = () => {
       }
 
       const data = await response.json();
+      // For staff (roles_id === 1): remove from state
+      // For regular users: mark as deleted but keep in state
+      setTransactions(prevTransactions => {
+        if (userRole === "1") {
+          return prevTransactions.filter(t => t.borrowing_id !== borrowing_id);
+        } else {
+          return prevTransactions.map(t => {
+            if (t.borrowing_id === borrowing_id) {
+              return { ...t, is_deleted: true };
+            }
+            return t;
+          });
+        }
+      });
 
-      // Refresh data setelah delete berhasil
-      await refreshTransactions();
-
-      console.log("Before delete:", transactions);
-      setTransactions((prevTransactions) =>
-        prevTransactions.filter((t) => t.id !== id)
+      // Update local storage
+      const updatedTransactions = transactions.filter(t =>
+        userRole === "1"
+          ? t.borrowing_id !== borrowing_id
+          : t.borrowing_id === borrowing_id
+            ? { ...t, is_deleted: true }
+            : t
       );
-      console.log("After delete:", transactions);
+      localStorage.setItem("transactions", JSON.stringify(updatedTransactions));
 
       setSnackbar({
         open: true,
         message: data.message,
-        severity: "success",
+        severity: "success"
       });
 
-      // Update local storage
-      const updatedTransactions = transactions.filter((t) => t.id !== id);
-      localStorage.setItem("transactions", JSON.stringify(updatedTransactions));
-
-      // Refresh the transactions list to ensure sync with server
-      await refreshTransactions();
     } catch (error) {
       console.error(error);
       setSnackbar({
@@ -254,7 +265,6 @@ const Pengembalian = () => {
     const fetchTransactions = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log("Fetching Transactions - Token:", token);
         const userRole = localStorage.getItem("roles_id"); // Simpan role saat login
         const userId = localStorage.getItem("user_id");
 
@@ -269,8 +279,6 @@ const Pengembalian = () => {
           },
         });
 
-        console.log("Response Status:", response.status);
-
         if (!response.ok) {
           const errorText = await response.text();
           console.error("Error Response Text:", errorText);
@@ -280,18 +288,24 @@ const Pengembalian = () => {
         }
 
         const data = await response.json();
-        console.log("Fetched Transactions Data:", data);
-        // Filter based on role and status
-        const filteredData = data.filter((transaction) => {
+
+        // Filter data based on role and deletion status
+        const filteredData = data.filter(transaction => {
           const isStaff = userRole === "1";
           const isOwner = transaction.borrower_id === parseInt(userId);
-          return !transaction.is_deleted && (isStaff || isOwner);
+
+          // Staff can see all non-deleted items
+          // Regular users see their own items, including soft-deleted ones
+          return isStaff
+            ? !transaction.is_deleted
+            : isOwner;
         });
 
         setTransactions(filteredData);
         localStorage.setItem("transactions", JSON.stringify(filteredData));
+
       } catch (error) {
-        console.error("DETAILED Fetch Transactions Error:", {
+        console.error("Fetch Transactions Error:", {
           name: error.name,
           message: error.message,
           stack: error.stack,
@@ -543,7 +557,14 @@ const Pengembalian = () => {
         alignItems="flex-end"
         sx={{ mb: 4, mt: 5 }}
       >
-        <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+        <FormControl variant="outlined" sx={{
+          width: "250px",
+          backgroundColor: "white",
+          borderRadius: 1,
+          "& .MuiOutlinedInput-root": {
+            height: "40px",
+          },
+        }}>
           <InputLabel>Status</InputLabel>
           <Select
             value={filterStatus}
@@ -572,7 +593,12 @@ const Pengembalian = () => {
             ),
           }}
           sx={{
-            width: 250,
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
           }}
         />
       </Stack>

@@ -365,7 +365,14 @@ export default function LoanApproval() {
           spacing={2}
           alignItems="center"
         >
-          <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+          <FormControl variant="outlined" sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -395,7 +402,12 @@ export default function LoanApproval() {
             ),
           }}
           sx={{
-            width: 250,
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
           }}
         />
       </Stack>
@@ -469,7 +481,7 @@ export default function LoanApproval() {
                       justifyContent: "center",
                     }}
                   >
-                    <Tooltip title="Detail">
+                    <Tooltip title="Detail" placement="top">
                       <DetailButton
                         variant="contained"
                         sx={{
@@ -495,35 +507,33 @@ export default function LoanApproval() {
                           );
                         }}
                       >
-                        <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
+                        <InfoOutlinedIcon />
                       </DetailButton>
                     </Tooltip>
                     {/* Only show delete button for return/rejected status */}
                     {(loan.status === "return" ||
                       loan.status === "rejected") && (
-                      <Tooltip title="Hapus">
-                        <RemoveButton
-                          variant="contained"
-                          sx={{
-                            my: 1,
-                            mx: 2,
-                            padding: "0",
-                            borderRadius: "50%",
-                            height: "35px",
-                            width: "35px",
-                            minWidth: "35px",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          onClick={() => handleOpenDeleteDialog(loan)}
-                        >
-                          <DeleteForeverOutlinedIcon
-                            sx={{ fontSize: "20px" }}
-                          />
-                        </RemoveButton>
-                      </Tooltip>
-                    )}
+                        <Tooltip title="Hapus" placement="top">
+                          <RemoveButton
+                            variant="contained"
+                            sx={{
+                              my: 1,
+                              mx: 2,
+                              padding: "0",
+                              borderRadius: "50%",
+                              height: "35px",
+                              width: "35px",
+                              minWidth: "35px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                            onClick={() => handleOpenDeleteDialog(loan)}
+                          >
+                            <DeleteForeverOutlinedIcon />
+                          </RemoveButton>
+                        </Tooltip>
+                      )}
                   </div>
                 </StyledTableCell>
               </StyledTableRow>

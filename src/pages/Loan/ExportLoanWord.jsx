@@ -70,7 +70,7 @@ const ExportLoanWord = ({ loanData }) => {
         createHeaderCell('Jam'),
         createHeaderCell('Ambil'),
         createHeaderCell('Kembali'),
-    
+
       ],
     });
 
@@ -161,10 +161,14 @@ const ExportLoanWord = ({ loanData }) => {
         },
         borderRadius: '8px',
         textTransform: 'none',
-        ml: 2
+        ml: 2, 
+        width: "150px",
+        "& .MuiOutlinedInput-root": {
+          height: "40px",
+        },
       }}
     >
-      Export Word
+      Export
     </Button>
   );
 };
