@@ -108,26 +108,24 @@ export default function RequestHistory() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {RequestHistory
-              .filter(
-                (request) =>
-                  filterStatus === "Semua" || request.status === filterStatus
-              )
-              .map((request, index) => (
-                <StyledTableRow key={request.id}>
-                  <StyledTableCell>{index + 1}</StyledTableCell>
-                  <StyledTableCell>{request.name}</StyledTableCell>
-                  <StyledTableCell>{request.unit}</StyledTableCell>
-                  <StyledTableCell>{request.jenisbarang}</StyledTableCell>
-                  <StyledTableCell>{request.quantity}</StyledTableCell>
-                  <StyledTableCell>{request.purpose}</StyledTableCell>
-                  <StyledTableCell>{request.date}</StyledTableCell>
-                  <StyledTableCell>{request.statusPengaju}</StyledTableCell>
-                  <StyledTableCell>{request.statusKepalaUnit}</StyledTableCell>
-                  <StyledTableCell>{request.statusStafSBUM}</StyledTableCell>
-                  <StyledTableCell></StyledTableCell>
-                </StyledTableRow>
-              ))}
+            {RequestHistory.filter(
+              (request) =>
+                filterStatus === "Semua" || request.status === filterStatus
+            ).map((request, index) => (
+              <StyledTableRow key={request.id}>
+                <StyledTableCell>{index + 1}</StyledTableCell>
+                <StyledTableCell>{request.name}</StyledTableCell>
+                <StyledTableCell>{request.unit}</StyledTableCell>
+                <StyledTableCell>{request.jenisbarang}</StyledTableCell>
+                <StyledTableCell>{request.quantity}</StyledTableCell>
+                <StyledTableCell>{request.purpose}</StyledTableCell>
+                <StyledTableCell>{request.date}</StyledTableCell>
+                <StyledTableCell>{request.statusPengaju}</StyledTableCell>
+                <StyledTableCell>{request.statusKepalaUnit}</StyledTableCell>
+                <StyledTableCell>{request.statusStafSBUM}</StyledTableCell>
+                <StyledTableCell></StyledTableCell>
+              </StyledTableRow>
+            ))}
           </TableBody>
         </Table>
       </TableContainer>

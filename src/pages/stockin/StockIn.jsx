@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@mui/material";
 import axios from "axios";
+import Alert from "../../components/alert";
 
 const StockInPage = () => {
   const [formData, setFormData] = useState({
@@ -88,7 +89,7 @@ const StockInPage = () => {
     e.preventDefault();
     try {
       await axios.post("http://localhost:5000/stock-in", formData);
-      alert("Stok barang berhasil ditambahkan!");
+      Alert.success("Berhasil!", "Stok barang berhasil ditambahkan.");
       setFormData({ category_id: "", item_id: "", quantity: "" });
       fetchStockInData(); // Refresh table after adding stock
       handleClose(); // Tutup modal setelah submit
@@ -98,21 +99,17 @@ const StockInPage = () => {
     }
   };
 
-  const handleDelete = async (stock_in_id) => {
-    if (
-      !window.confirm("Apakah Anda yakin ingin menghapus log barang masuk ini?")
-    ) {
-      return;
-    }
-
-    try {
-      await axios.delete(`http://localhost:5000/stock-in/${stock_in_id}`);
-      alert("Data barang masuk berhasil dihapus!");
-      fetchStockInData(); // Refresh table after deletion
-    } catch (error) {
-      console.error("Error deleting stock-in data:", error);
-      alert("Gagal menghapus data barang masuk.");
-    }
+  const handleDelete = (stock_in_id) => {
+    Alert.confirmDelete(async () => {
+      try {
+        await axios.delete(`http://localhost:5000/stock-in/${stock_in_id}`);
+        Alert.success("Berhasil!", "Data barang masuk berhasil dihapus!");
+        fetchStockInData(); // Refresh tabel setelah penghapusan
+      } catch (error) {
+        console.error("Error deleting stock-in data:", error);
+        Alert.error("Gagal!", "Data barang masuk gagal dihapus.");
+      }
+    });
   };
 
   const handleOpen = () => setOpen(true);

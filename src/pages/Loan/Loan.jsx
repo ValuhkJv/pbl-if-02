@@ -43,8 +43,8 @@ const Borrowing = () => {
   // State untuk data user dan transaksi
   const [peminjam, setPeminjam] = useState("");
   const [nim_nik_nidn, setNimNikNidn] = useState("");
-  const [userId, setUserId] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const userId = localStorage.getItem("user_id");
 
   // State untuk daftar barang dan transaksi
   const [barangList, setBarangList] = useState([]);
@@ -100,7 +100,6 @@ const Borrowing = () => {
     const fetchTransactions = async () => {
       try {
         const token = localStorage.getItem("token");
-        console.log("Fetching Transactions - Token:", token);
         const userRole = localStorage.getItem("roles_id"); // Simpan role saat login
         const userId = localStorage.getItem("user_id");
 
@@ -115,8 +114,6 @@ const Borrowing = () => {
           },
         });
 
-        console.log("Response Status:", response.status);
-
         if (!response.ok) {
           const errorText = await response.text();
           console.error("Error Response Text:", errorText);
@@ -126,16 +123,21 @@ const Borrowing = () => {
         }
 
         const data = await response.json();
-        console.log("Fetched Transactions Data:", data);
-        // Filter based on role and status
-        const filteredData = data.filter((transaction) => {
+        // Filter data based on role and deletion status
+        const filteredData = data.filter(transaction => {
           const isStaff = userRole === "1";
           const isOwner = transaction.borrower_id === parseInt(userId);
-          return !transaction.is_deleted && (isStaff || isOwner);
+
+          // Staff can see all non-deleted items
+          // Regular users see their own items, including soft-deleted ones
+          return isStaff
+            ? !transaction.is_deleted
+            : isOwner;
         });
 
         setTransactions(filteredData);
         localStorage.setItem("transactions", JSON.stringify(filteredData));
+
       } catch (error) {
         console.error("DETAILED Fetch Transactions Error:", {
           name: error.name,
@@ -171,24 +173,23 @@ const Borrowing = () => {
     if (fullName && nik) {
       setPeminjam(fullName);
       setNimNikNidn(nik);
-      setUserId(localStorage.getItem("user_id"));
     } else {
       console.warn("User data incomplete in localStorage");
     }
   }, []);
 
-  // Mengambil data dari localStorage saat komponen dimuat
+  // Mengambil data dari localStorage dengan user-specific key
   useEffect(() => {
-    const storedItems = localStorage.getItem("items");
+    const storedItems = localStorage.getItem(`cart_items_${userId}`);
     if (storedItems) {
       setItems(JSON.parse(storedItems));
     }
-  }, []);
+  }, [userId]);
 
-  // Menyimpan data ke localStorage setiap kali items diperbarui
+  // Menyimpan data ke localStorage dengan user-specific key
   useEffect(() => {
-    localStorage.setItem("items", JSON.stringify(items));
-  }, [items]);
+    localStorage.setItem(`cart_items_${userId}`, JSON.stringify(items));
+  }, [items, userId]);
 
   // Fungsi untuk menambah item ke daftar pinjaman
   const handleAddItem = () => {
@@ -197,11 +198,12 @@ const Borrowing = () => {
         item_code: selectedBarang.item_code,
         item_name: selectedBarang.item_name,
         quantity: jumlah,
+        userId: userId,
       };
 
       // Cek apakah item sudah ada di daftar
       const existingItemIndex = items.findIndex(
-        (item) => item.item_code === newItem.item_code
+        item => item.item_code === newItem.item_code && item.userId === userId
       );
 
       if (existingItemIndex > -1) {
@@ -224,6 +226,13 @@ const Borrowing = () => {
         severity: "error",
       });
     }
+  };
+
+  // Fungsi untuk menghapus item dari keranjang
+  const removeItemCart = (itemCode) => {
+    setItems(items.filter(item =>
+      !(item.item_code === itemCode && item.userId === userId)
+    ));
   };
 
   // Fungsi untuk submit peminjaman
@@ -264,46 +273,36 @@ const Borrowing = () => {
       0
     );
 
-    // Buat transaksi untuk setiap item
-    const newTransactions = items.map((item) => ({
-      item_code: item.item_code,
-      quantity: item.quantity,
-      borrow_date: borrowDateTime.toISOString(),
-      return_date: returnDateTime.toISOString(),
-      reason: keterangan,
-      phone_number: phoneNumber,
-    }));
 
     try {
       const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("user_id");
 
-      // Kirim transaksi ke backend
-      const promises = newTransactions.map((transaction) => {
-        console.log("Sending transaction:", transaction);
+      // Create borrowing transactions
+      const promises = items.map(item => {
+        const borrowingData = {
+          item_code: item.item_code,
+          borrower_id: parseInt(userId),
+          quantity: item.quantity,
+          borrow_date: borrowDateTime.toISOString(),
+          return_date: returnDateTime.toISOString(),
+          status: "pending",
+          reason: keterangan,
+          phone_number: phoneNumber,
+          initial_condition: "baik", // Default initial condition
+        };
+
         return fetch("http://localhost:5000/peminjaman", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(transaction),
+          body: JSON.stringify(borrowingData),
         });
       });
 
-      const responses = await Promise.all(promises);
-
-      // Tambahkan logging untuk setiap response
-      for (let response of responses) {
-        const data = await response.text();
-        console.log("Server response status:", response.status);
-        console.log("Server response body:", data);
-
-        if (!response.ok) {
-          throw new Error(
-            `Request failed with status ${response.status}: ${data}`
-          );
-        }
-      }
+      await Promise.all(promises);
 
       // Reset form dan state
       setSnackbar({
@@ -312,14 +311,8 @@ const Borrowing = () => {
         severity: "success",
       });
 
-      setItems([]);
-      setKeterangan("");
-      setTanggalPinjam(null);
-      setTanggalKembali(null);
-      setJamPinjam("");
-      setJamKembali("");
-      setPhoneNumber("");
-      setOpenModal(false);
+      // Reset form
+      resetFields();
     } catch (error) {
       console.error("Error in handleBorrowing:", error);
       setSnackbar({
@@ -331,11 +324,17 @@ const Borrowing = () => {
   };
 
   const resetFields = () => {
+    setItems([]);
+    setKeterangan("");
+    setTanggalPinjam(null);
+    setTanggalKembali(null);
+    setJamPinjam(null);
+    setJamKembali(null);
+    setPhoneNumber("");
+    setSelectedBarang(null);
     setNoInventaris("");
     setNamaBarang("");
     setJumlah(1);
-    setItems([]);
-    setSelectedBarang(null);
   };
 
   const refreshTransactions = async () => {
@@ -362,11 +361,6 @@ const Borrowing = () => {
         severity: "error",
       });
     }
-  };
-
-  // Fungsi untuk menghapus item dari daftar pinjaman
-  const removeItem = (itemCode) => {
-    setItems(items.filter((item) => item.item_code !== itemCode));
   };
 
   const handleDelete = async (id) => {
@@ -667,7 +661,7 @@ const Borrowing = () => {
                 variant="contained"
                 color="primary"
                 disabled={items.length >= 3}
-                startIcon={<Add />}
+                startIcon={<ShoppingCart />}
                 onClick={handleAddItem}
               >
                 Tambah
@@ -683,7 +677,7 @@ const Borrowing = () => {
               <Button
                 variant="contained"
                 style={{ backgroundColor: "#0C628B", color: "white" }}
-                startIcon={<ShoppingCart />}
+                startIcon={<Add />}
                 onClick={() => setOpenModal(true)}
                 disabled={items.length === 0}
               >
@@ -703,21 +697,23 @@ const Borrowing = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.borrowing_id}>
-                    <TableCell>{item.item_code}</TableCell>
-                    <TableCell>{item.item_name}</TableCell>
-                    <TableCell>{item.quantity}</TableCell>
-                    <TableCell>
-                      <IconButton
-                        color="error"
-                        onClick={() => removeItem(item.item_code)}
-                      >
-                        <Close />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {items
+                  .filter(item => item.userId === userId)
+                  .map((item) => (
+                    <TableRow key={item.borrowing_id}>
+                      <TableCell>{item.item_code}</TableCell>
+                      <TableCell>{item.item_name}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color="error"
+                          onClick={() => removeItemCart(item.item_code)}
+                        >
+                          <Close />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </TableContainer>

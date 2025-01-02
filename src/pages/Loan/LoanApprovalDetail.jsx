@@ -33,7 +33,7 @@ import { styled } from "@mui/system";
 const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
-    textAlign: "left",
+    textAlign: "center",
 });
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -304,180 +304,194 @@ const LoanApprovalDetail = () => {
 
     return (
         <Box className="p-6">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Card sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                    <CardContent>
-                        <Typography variant="h5" className="mb-6">
-                            Detail Peminjaman
-                        </Typography>
+            <Box
+                sx={{
+                    width: "100%",
+                    margin: "0 auto", // Pusatkan di layar
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                    borderRadius: 2,
+                    px: 2,
+                    py: 4,
+                    bgcolor: "background.paper",
+                }}
+            >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, boxShadow: "inherit" }}>
+                    <Card sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                        <CardContent>
+                            <Typography variant="h5" className="mb-6">
+                                Detail Peminjaman
+                            </Typography>
 
-                        <Typography className="mb-2">
-                            <strong>Peminjaman:</strong> {loanDetails.full_name}
-                        </Typography>
-                        <Typography className="mb-2">
-                            <strong>NIK/NIM:</strong> {loanDetails.nik}
-                        </Typography>
-                        <Typography className="mb-2">
-                            <strong>Tanggal Pinjam:</strong> {new Date(loanDetails.borrow_date).toLocaleDateString()}
-                        </Typography>
-                        <Typography className="mb-2">
-                            <strong>Tanggal Kembali:</strong> {loanDetails.return_date ? new Date(loanDetails.return_date).toLocaleDateString() : '-'}
-                        </Typography>
-                    </CardContent>
+                            <Typography className="mb-2">
+                                <strong>Peminjaman:</strong> {loanDetails.full_name}
+                            </Typography>
+                            <Typography className="mb-2">
+                                <strong>NIK/NIM:</strong> {loanDetails.nik}
+                            </Typography>
+                            <Typography className="mb-2">
+                                <strong>Tanggal Pengambilan:</strong> {new Date(loanDetails.borrow_date).toLocaleDateString()}
+                            </Typography>
+                            <Typography className="mb-2">
+                                <strong>Tanggal Pengembalian:</strong> {loanDetails.return_date ? new Date(loanDetails.return_date).toLocaleDateString() : '-'}
+                            </Typography>
+                        </CardContent>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 'auto', marginRight: 2, marginBottom: 8 }}>
-                        <FormControl variant="outlined" sx={{
-                            marginRight: 2, width: "250px",
-                            backgroundColor: "white",
-                            borderRadius: 1,
-                            "& .MuiOutlinedInput-root": {
-                                height: "40px",
-                            },
-                        }}>
-                            <InputLabel>Status</InputLabel>
-                            <Select
-                                value={filterStatus}
-                                onChange={handleFilterChange}
-                                label="Status"
-                            >
-                                <MenuItem value="Semua">Semua</MenuItem>
-                                <MenuItem value="approved">Disetujui</MenuItem>
-                                <MenuItem value="pending">Menunggu persetujuan</MenuItem>
-                                <MenuItem value="rejected">Ditolak</MenuItem>
-                            </Select>
-                        </FormControl>
-
-                        <TextField
-                            variant="outlined"
-                            placeholder="Search..."
-                            sx={{
-                                width: "250px",
+                        <Box sx={{ display: 'flex', alignItems: 'center', marginLeft: 'auto', marginRight: 2, marginBottom: 8 }}>
+                            <FormControl variant="outlined" sx={{
+                                marginRight: 2, width: "250px",
                                 backgroundColor: "white",
                                 borderRadius: 1,
                                 "& .MuiOutlinedInput-root": {
                                     height: "40px",
                                 },
-                            }}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            InputProps={{
-                                startAdornment: (
-                                    <InputAdornment position="start">
-                                        <SearchIcon color="action" />
-                                    </InputAdornment>
-                                ),
-                            }}
+                            }}>
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={filterStatus}
+                                    onChange={handleFilterChange}
+                                    label="Status"
+                                >
+                                    <MenuItem value="Semua">Semua</MenuItem>
+                                    <MenuItem value="approved">Disetujui</MenuItem>
+                                    <MenuItem value="pending">Menunggu persetujuan</MenuItem>
+                                    <MenuItem value="rejected">Ditolak</MenuItem>
+                                </Select>
+                            </FormControl>
 
-                        />
-                    </Box>
-                </Card>
-            </Box>
-            <TableContainer
-                component={Paper}
-                sx={{
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                }}
-            />
-            <div
-                style={{
-                    marginTop: "10px",
-                    display: "flex",
-                    justifyContent: "flex-start",
-                    alignItems: "center",
-                    backgroundColor: "#0C628B",
-                    padding: "25px",
-                    borderTopLeftRadius: "12px",
-                    borderTopRightRadius: "12px",
-                    borderBottom: "1px solid #e0e0e0",
-                }}
-            />
-            <TableContainer component={Paper} sx={{
-                borderRadius: "12px", // Border-radius untuk tabel
-                overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
-            }}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <StyledTableCell>No</StyledTableCell>
-                            <StyledTableCell>Nama Barang</StyledTableCell>
-                            <StyledTableCell>Jumlah</StyledTableCell>
-                            <StyledTableCell>No Inventaris</StyledTableCell>
-                            <StyledTableCell>Keperluan</StyledTableCell>
-                            <StyledTableCell>Status</StyledTableCell>
-                            <StyledTableCell>Approve</StyledTableCell>
-                            <StyledTableCell>Alasan Penolakan</StyledTableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {displayedRows.map((item, index) => (
-                            <StyledTableRow key={item.item_code}>
-                                <StyledTableCell>
-                                    {index + 1 + page * rowsPerPage}
-                                </StyledTableCell>
-                                <StyledTableCell>{item.item_name}</StyledTableCell>
-                                <StyledTableCell>{item.quantity}</StyledTableCell>
-                                <StyledTableCell>{item.item_code}</StyledTableCell>
-                                <StyledTableCell>{item.reason}</StyledTableCell>
-                                <StyledTableCell> {item.status.startsWith('return: terlambat') ? (
-                                    <Typography color="error">
-                                        {item.status}
-                                    </Typography>
-                                ) : (
-                                    item.status
-                                )}</StyledTableCell>
-                                <StyledTableCell>
-                                    {isItemPending(item.status) ? (
-                                        <Checkbox
-                                            checked={itemApprovals[item.borrowing_id] || false}
-                                            onChange={(e) => handleApprovalChange(item.borrowing_id, e.target.checked)}
-                                        />
-                                    ) : (
-                                        item.status === 'approved' ? '✓' : '-'
-                                    )}
-                                </StyledTableCell>
-                                <StyledTableCell>
-                                    {isItemPending(item.status) && !itemApprovals[item.borrowing_id] ? (
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            value={rejectionReasons[item.borrowing_id] || ''}
-                                            onChange={(e) => handleRejectionReasonChange(item.borrowing_id, e.target.value)}
-                                            placeholder="Enter reason for rejection"
-                                        />
-                                    ) : (
-                                        item.rejection_reason || '-'
-                                    )}
-                                </StyledTableCell>
-                            </StyledTableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={filteredRows.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
+                            <TextField
+                                variant="outlined"
+                                placeholder="Search..."
+                                sx={{
+                                    width: "250px",
+                                    backgroundColor: "white",
+                                    borderRadius: 1,
+                                    "& .MuiOutlinedInput-root": {
+                                        height: "40px",
+                                    },
+                                }}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                InputProps={{
+                                    startAdornment: (
+                                        <InputAdornment position="start">
+                                            <SearchIcon color="action" />
+                                        </InputAdornment>
+                                    ),
+                                }}
+
+                            />
+                        </Box>
+                    </Card>
+                </Box>
+                <TableContainer
+                    component={Paper}
+                    sx={{
+                        borderRadius: "12px",
+                        overflow: "hidden",
+                    }}
                 />
-            </TableContainer>
+                <div
+                    style={{
+                        marginTop: "10px",
+                        display: "flex",
+                        justifyContent: "flex-start",
+                        alignItems: "center",
+                        backgroundColor: "#0C628B",
+                        padding: "25px",
+                        borderTopLeftRadius: "12px",
+                        borderTopRightRadius: "12px",
+                        borderBottom: "1px solid #e0e0e0",
+                    }}
+                />
+                <TableContainer component={Paper} sx={{
+                    borderRadius: "12px", // Border-radius untuk tabel
+                    borderTopLeftRadius: 0, // Menghilangkan border-radius di sudut kiri atas
+                    borderTopRightRadius: 0, // Menghilangkan border-radius di sudut kanan atas
+                    overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
+                }}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <StyledTableCell>No</StyledTableCell>
+                                <StyledTableCell>Nama Barang</StyledTableCell>
+                                <StyledTableCell>Jumlah</StyledTableCell>
+                                <StyledTableCell>No Inventaris</StyledTableCell>
+                                <StyledTableCell>Keperluan</StyledTableCell>
+                                <StyledTableCell>Status</StyledTableCell>
+                                <StyledTableCell>Approve</StyledTableCell>
+                                <StyledTableCell>Alasan Penolakan</StyledTableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {displayedRows.map((item, index) => (
+                                <StyledTableRow key={item.item_code}>
+                                    <StyledTableCell>
+                                        {index + 1 + page * rowsPerPage}
+                                    </StyledTableCell>
+                                    <StyledTableCell>{item.item_name}</StyledTableCell>
+                                    <StyledTableCell>{item.quantity}</StyledTableCell>
+                                    <StyledTableCell>{item.item_code}</StyledTableCell>
+                                    <StyledTableCell>{item.reason}</StyledTableCell>
+                                    <StyledTableCell> {item.status.startsWith('return: terlambat') ? (
+                                        <Typography color="error">
+                                            {item.status}
+                                        </Typography>
+                                    ) : (
+                                        item.status
+                                    )}</StyledTableCell>
+                                    <StyledTableCell>
+                                        {isItemPending(item.status) ? (
+                                            <Checkbox
+                                                checked={itemApprovals[item.borrowing_id] || false}
+                                                onChange={(e) => handleApprovalChange(item.borrowing_id, e.target.checked)}
+                                            />
+                                        ) : (
+                                            item.status === 'approved' ? '✓' : '-'
+                                        )}
+                                    </StyledTableCell>
+                                    <StyledTableCell>
+                                        {isItemPending(item.status) && !itemApprovals[item.borrowing_id] ? (
+                                            <TextField
+                                                fullWidth
+                                                size="small"
+                                                value={rejectionReasons[item.borrowing_id] || ''}
+                                                onChange={(e) => handleRejectionReasonChange(item.borrowing_id, e.target.value)}
+                                                placeholder="Enter reason for rejection"
+                                            />
+                                        ) : (
+                                            item.rejection_reason || '-'
+                                        )}
+                                    </StyledTableCell>
+                                </StyledTableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25]}
+                        component="div"
+                        count={filteredRows.length}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                </TableContainer>
 
-            <Box className="mt-8 flex justify-end">
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleSubmit}
-                    sx={{ mt: 2 }}
-                >
-                    Submit
-                </Button>
+                <Box className="mt-8 flex justify-end">
+                    <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        sx={{
+                            mt: 2, backgroundColor: "#0C628B",
+                            color: "white",}}
+                    >
+                        Submit
+                    </Button>
+                </Box>
             </Box>
-
             <Snackbar
                 open={snackbar.open}
-                autoHideDuration={6000}
+                autoHideDuration={3000}
                 onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
             >
                 <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>

@@ -68,6 +68,7 @@ export default function LoanHistory() {
     border: "1px solid #ddd",
     padding: theme.spacing(1.5),
     borderBottom: `1px solid ${theme.palette.divider}`,
+    textAlign: "center",
   }));
 
   const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -789,7 +790,7 @@ export default function LoanHistory() {
       {/* Add Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { styled, useTheme } from "@mui/material/styles";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 import {
   Box,
   AppBar as MuiAppBar,
@@ -55,6 +56,7 @@ import Laporan from "./Laporan";
 import DetailRequest from "./request/RequestDetails";
 import RequestApprovalAdmin from "./request/RequestApprovaladmin";
 import RequestApprovDetailadmin from "./request/RequestApprovDetailadmin";
+import RequestHistory from "./request/RequestHistory";
 import StockIn from "./stockin/StockIn";
 
 const drawerWidth = 280;
@@ -292,7 +294,7 @@ export default function Dashboard() {
                 fontSize: { xs: "10px", sm: "14px" }, // Font lebih kecil di perangkat kecil
               }}
             >
-              <strong>SBUM</strong> <br /> SUB-BAGIAN UMUM POLIBATAM
+              <strong>SBUM</strong><br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
           <IconButton onClick={handleCloseDrawer}>
@@ -475,13 +477,6 @@ export default function Dashboard() {
                     >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/request/transaction/history"
-                    >
-                      <ListItemText primary="Riwayat Transaksi" />
-                    </ListItemButton>
                   </List>
                 </Collapse>
               </>
@@ -541,6 +536,7 @@ export default function Dashboard() {
       <Main open={openDrawer}>
         <DrawerHeader />
         <Routes>
+<<<<<<< HEAD:src/pages/Dashboard.jsx
           <Route path="/dashboard/staf" element={<DashboardStaf />} />
           <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
           <Route path="/dashboard/unit" element={<DashboardUnit />} />
@@ -552,28 +548,175 @@ export default function Dashboard() {
           <Route path="/loan" element={<Loan />} />
           <Route path="/loan/approval" element={<LoanApproval />} />
           <Route path="/loan/transaction/history" element={<LoanHistory />} />
+          <Route
+            path="/request/transaction/history"
+            element={<RequestHistory />}
+          />
           <Route path="/request" element={<Request />} />
           <Route path="/RequestList" element={<RequestList />} />
           <Route path="/DetailPermintaan/:date" element={<DetailRequest />} />
           <Route path="/request/approval" element={<RequestApproval />} />
+=======
+          {/* Staf Routes */}
+>>>>>>> 991b5876edf4b9c1bc1b1b478e5a2a2198515f12:src/pages/Dashboard.js
           <Route
-            path="/requestsApprovHead/head-approval/details/:created_at"
-            element={<RequestApprovDetail />}
+            path="/dashboard/staf"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <DashboardStaf />
+              </ProtectedRoute>
+            }
+          />{" "}
+          <Route
+            path="/manage/*"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <Manage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/loan/approval"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <LoanApproval />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/loan/transaction/history"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <LoanHistory />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/request/approvaladmin"
-            element={<RequestApprovalAdmin />}
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <RequestApprovalAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/report"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <Laporan />
+              </ProtectedRoute>
+            }
+          />
+          {/* Kepala Unit Routes */}
+          <Route
+            path="/dashboard/kepalaunit"
+            element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <DashboardUnitHead />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/request/approval"
+            element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <RequestApproval />
+              </ProtectedRoute>
+            }
+          />
+          {/* Unit Routes */}
+          <Route
+            path="/dashboard/unit"
+            element={
+              <ProtectedRoute allowedRoles={[3]}>
+                <DashboardUnit />
+              </ProtectedRoute>
+            }
+          />{" "}
+          {/* Mahasiswa Routes */}
+          <Route
+            path="/dashboard/mahasiswa"
+            element={
+              <ProtectedRoute allowedRoles={[4]}>
+                <DashboardMahasiswa />
+              </ProtectedRoute>
+            }
+          />{" "}
+          {/* Shared Routes (Multiple Roles) */}
+          <Route
+            path="/loan"
+            element={
+              <ProtectedRoute allowedRoles={[2, 3, 4]}>
+                <Loan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/return"
+            element={
+              <ProtectedRoute allowedRoles={[2, 3, 4]}>
+                <Pengembalian />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/RequestList"
+            element={
+              <ProtectedRoute allowedRoles={[2, 3]}>
+                <RequestList />
+              </ProtectedRoute>
+            }
+          />{" "}
+          <Route
+            path="/request"
+            element={
+              <ProtectedRoute allowedRoles={[2, 3]}>
+                <Request />
+              </ProtectedRoute>
+            }
+          />
+          {/* Detail Routes */}
+          <Route
+            path="/DetailPermintaan/:date"
+            element={
+              <ProtectedRoute allowedRoles={[1, 2, 3]}>
+                <DetailRequest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/requestsApprovHead/head-approval/details/:created_at"
+            element={
+              <ProtectedRoute allowedRoles={[2]}>
+                <RequestApprovDetail />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/requestsApprovalAdmin/details/:created_at"
-            element={<RequestApprovDetailadmin />}
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <RequestApprovDetailadmin />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/loan-approval/detail/:date"
-            element={<LoanApprovalDetail />}
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <LoanApprovalDetail />
+              </ProtectedRoute>
+            }
           />
-          <Route path="/return" element={<Pengembalian />} />
-          <Route path="/stock-in" element={<StockIn />} />
+          <Route
+            path="/stock-in"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                {" "}
+                <StockIn />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </Main>
     </Box>

@@ -14,8 +14,11 @@ import {
   Grid,
   Box,
   Paper,
+  IconButton,
 } from "@mui/material";
 import axios from "axios";
+import ClearIcon from "@mui/icons-material/Clear";
+import Alert from "../../components/alert";
 
 const RequestForm = () => {
   const [categories, setCategories] = useState([]);
@@ -128,6 +131,11 @@ const RequestForm = () => {
     }
   };
 
+  // Fungsi untuk menghapus item dari daftar pinjaman
+  const removeItem = (itemId) => {
+    setRequests(requests.filter((request) => request.item_id !== itemId));
+  };
+
   const handleSubmit = () => {
     const userId = localStorage.getItem("user_id");
     const payload = {
@@ -144,7 +152,7 @@ const RequestForm = () => {
     axios
       .post("http://localhost:5000/requests/batch", payload)
       .then(() => {
-        alert("Permintaan berhasil diajukan!");
+        Alert.success("Berhasil!", "Data telah disimpan dengan sukses.");
         setRequests([]);
       })
       .catch((err) => console.error(err));
@@ -295,6 +303,7 @@ const RequestForm = () => {
                 <TableCell>Jumlah</TableCell>
                 <TableCell>Stok</TableCell>
                 <TableCell>Alasan</TableCell>
+                <TableCell>Aksi</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -305,6 +314,14 @@ const RequestForm = () => {
                   <TableCell>{request.quantity}</TableCell>
                   <TableCell>{request.stock}</TableCell>
                   <TableCell>{request.reason}</TableCell>
+                  <TableCell>
+                    <IconButton
+                      color="error"
+                      onClick={() => removeItem(request.item_id)}
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

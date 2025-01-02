@@ -22,8 +22,12 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
+<<<<<<< HEAD
+  password: "12345678",
+=======
   password: "password",
-  database: "sbum",
+>>>>>>> 991b5876edf4b9c1bc1b1b478e5a2a2198515f12
+  database: "subbagian",
   port: 5432,
 });
 
@@ -125,7 +129,7 @@ app.post("/login", async (req, res) => {
         roles_id: users.roles_id,
       },
       secretKey,
-      { expiresIn: "1h" }
+      { expiresIn: "1h" } // Token akan kadaluarsa dalam 1 jam
     );
 
     // Kirim respons
@@ -1623,7 +1627,7 @@ app.get("/report", async (req, res) => {
           items.category_id,
           categories.category_name,
           items.initial_stock AS stock_awal,
-          COALESCE(SUM(stock_in.quantity), 0) AS barang_masuk,
+          COALESCE(SUM(DISTINCT stock_in.quantity), 0) AS barang_masuk,
           COALESCE(SUM(requests.quantity), 0) AS barang_keluar,
           items.stock AS stock_akhir
       FROM 
@@ -1706,31 +1710,35 @@ app.get("/borrowing/overdue", authenticateToken, async (req, res) => {
 });
 
 // Endpoint untuk mengecek status peminjaman
-app.get("/borrowing/status/:borrowing_id", authenticateToken, async (req, res) => {
-  try {
-    const { borrowing_id } = req.params;
-    const result = await db.query(
-      "SELECT status FROM borrowing WHERE borrowing_id = $1",
-      [borrowing_id]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Borrowing not found" });
+app.get(
+  "/borrowing/status/:borrowing_id",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { borrowing_id } = req.params;
+      const result = await db.query(
+        "SELECT status FROM borrowing WHERE borrowing_id = $1",
+        [borrowing_id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Borrowing not found" });
+      }
+
+      // Check if the status indicates the item has been returned
+      const isReturned = result.rows[0].status.startsWith("return");
+
+      res.json({
+        borrowing_id,
+        isReturned,
+        status: result.rows[0].status,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
     }
-    
-    // Check if the status indicates the item has been returned
-    const isReturned = result.rows[0].status.startsWith('return');
-    
-    res.json({ 
-      borrowing_id,
-      isReturned,
-      status: result.rows[0].status 
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 // Endpoint untuk mendapatkan data permintaan paling banyak
 app.get("/requests/top", authenticateToken, async (req, res) => {
@@ -1776,7 +1784,7 @@ app.get("/borrowing/top", authenticateToken, async (req, res) => {
 });
 
 // Endpoint untuk mendapatkan data barang yang stoknya habis
-app.get('/items/zero-stock', authenticateToken, async (req, res) => {
+app.get("/items/zero-stock", authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT * FROM items WHERE stock = 0
@@ -1786,5 +1794,4 @@ app.get('/items/zero-stock', authenticateToken, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
-}
-);
+});

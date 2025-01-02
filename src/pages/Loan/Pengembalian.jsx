@@ -61,7 +61,7 @@ const Pengembalian = () => {
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
-    textAlign: "left",
+    textAlign: "center",
     wordWrap: "break-word",
   });
 
@@ -104,7 +104,6 @@ const Pengembalian = () => {
   }));
 
   const handleOpenPengembalianModal = (transaction) => {
-    console.log("Opening modal with transaction:", transaction);
 
     // Check if we have borrowing_ids array and use the first ID
     const borrowing_id =
@@ -454,13 +453,13 @@ const Pengembalian = () => {
               Tanggal Transaksi:
             </Typography>
             <Typography>
-              Tanggal Pinjam:{" "}
+              Tanggal Pengambilan:{" "}
               {loan.borrow_date
                 ? new Date(loan.borrow_date).toLocaleString()
                 : "-"}
             </Typography>
             <Typography>
-              Tanggal Kembali:
+              Tanggal Pengembalian:
               {loan.return_date
                 ? new Date(loan.return_date).toLocaleString()
                 : "-"}
@@ -831,7 +830,7 @@ const Pengembalian = () => {
       {/* Add Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >

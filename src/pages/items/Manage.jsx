@@ -13,12 +13,6 @@ import {
   Box,
   TextField,
   IconButton,
-  useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
   Grid,
   Divider,
   InputAdornment,
@@ -34,8 +28,8 @@ import {
   AddCircle as AddCircleIcon,
 } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
-import { useTheme } from "@mui/material/styles";
 import { styled } from "@mui/system";
+import Alert from "../../components/alert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -90,7 +84,6 @@ function ManageInventory() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [itemIdToDelete, setItemIdToDelete] = useState(null);
   const [isEditing, setEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -108,9 +101,7 @@ function ManageInventory() {
     setPage(0); // Reset to the first page whenever the search term changes
   }, [searchTerm]);
 
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
-
+  // Map category ID to URL
   const categoryMap = {
     1: "/manage/barangkonsumsi",
     2: "/manage/barangrt",
@@ -175,11 +166,14 @@ function ManageInventory() {
           setItems((prevItems) =>
             prevItems.filter((item) => item.item_id !== itemIdToDelete)
           );
+          Alert.success("Deleted!", "Item has been successfully deleted.");
+        } else {
+          Alert.error("Error", "Failed to delete the item.");
         }
-        setOpenDeleteDialog(false);
       })
       .catch((error) => {
         console.error("Error:", error);
+        Alert.error("Error", "Something went wrong.");
       });
   };
 
@@ -215,7 +209,13 @@ function ManageInventory() {
       },
       body: JSON.stringify(formData),
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          // If the response is not OK, throw an error
+          throw new Error("Data gagal disimpan. Periksa kembali input.");
+        }
+        return response.json();
+      })
       .then((data) => {
         if (isEditing) {
           setItems(
@@ -229,8 +229,11 @@ function ManageInventory() {
           setItems([...items, data]);
         }
         handleCloseModal();
+        Alert.success("Berhasil!", "Data barang berhasil disimpan.", "success");
       })
       .catch((error) => console.error("Error:", error));
+    handleCloseModal(); // Tutup modal setelah submit
+    Alert.error("Gagal!", "Kode barang atau Barang Sudah ada.", "error");
   };
 
   const categoryNames = {
@@ -409,78 +412,46 @@ function ManageInventory() {
                       }}
                     >
                       <Tooltip title="Edit" placement="top">
-                      <DetailButton
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => handleEditData(item)}
-                        color="primary"
-                      >
-                        <EditIcon />
-                      </DetailButton>
+                        <DetailButton
+                          sx={{
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => handleEditData(item)}
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </DetailButton>
                       </Tooltip>
-                      <Tooltip title="Hapus" placement="top">
-                      <RemoveButton
-                        sx={{
-                          my: 1,
-                          mx: 2,
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => {
-                          setItemIdToDelete(item.item_id);
-                          setOpenDeleteDialog(true);
-                        }}
-                        color="error"
-                      >
-                        <DeleteForeverOutlinedIcon />
-                      </RemoveButton>
+                      <Tooltip title="Hapus" placement="top" key={item.item_id}>
+                        <RemoveButton
+                          sx={{
+                            my: 1,
+                            mx: 2,
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => {
+                            setItemIdToDelete(item.item_id);
+                            Alert.confirmDelete(() => handleDeleteData());
+                          }}
+                        >
+                          <DeleteForeverOutlinedIcon />
+                        </RemoveButton>
                       </Tooltip>
                     </div>
-                    <Dialog
-                      fullScreen={fullScreen}
-                      open={openDeleteDialog}
-                      onClose={() => setOpenDeleteDialog(false)}
-                      aria-labelledby="responsive-dialog-title"
-                    >
-                      <DialogTitle id="responsive-dialog-title">
-                        Konfirmasi Penghapusan
-                      </DialogTitle>
-                      <DialogContent>
-                        <DialogContentText>
-                          Apakah Anda yakin ingin menghapus barang ini? Tindakan
-                          ini tidak dapat dibatalkan.
-                        </DialogContentText>
-                      </DialogContent>
-                      <DialogActions>
-                        <Button
-                          variant="outlined"
-                          color="black"
-                          onClick={() => setOpenDeleteDialog(false)}
-                        >
-                          Batal
-                        </Button>
-                        <Button
-                          variant="contained"
-                          onClick={() => handleDeleteData(itemIdToDelete)}
-                        >
-                          Hapus
-                        </Button>
-                      </DialogActions>
-                    </Dialog>
                   </StyledTableCell>
                 </StyledTableRow>
               ))}

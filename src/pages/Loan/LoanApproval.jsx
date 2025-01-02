@@ -57,7 +57,7 @@ export default function LoanApproval() {
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
-    textAlign: "left",
+    textAlign: "center",
     wordWrap: "break-word",
   });
 
@@ -600,7 +600,7 @@ export default function LoanApproval() {
       {/* Add Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
