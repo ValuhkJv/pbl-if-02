@@ -1,4 +1,5 @@
-import * as React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Button,
   Paper,
@@ -80,12 +81,26 @@ const initialRows = [
   createData("'1010301001000058", "ID Card B2", 0, 0, 0, 0),
 ];
 
-export default function StickyHeadTable() {
+export default function StockReport() {
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [rows] = React.useState(initialRows);
   const [selectedDate, setSelectedDate] = React.useState(null);
   const [selectedMonth, setSelectedMonth] = React.useState("");
+  const [report, setReport] = useState([]);
+
+  useEffect(() => {
+    fetchReport();
+  }, []);
+
+  const fetchReport = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/report/stock");
+      setReport(response.data.data);
+    } catch (error) {
+      console.error("Error fetching stock report:", error.message);
+    }
+  };
 
   const filteredRows = rows.filter((row) => {
     const rowDate = new Date(); // Anda bisa menambahkan logika untuk mendapatkan tanggal dari data Anda
@@ -227,7 +242,7 @@ export default function StickyHeadTable() {
     // Data tabel
     rows.forEach((row) => {
       worksheet.addRow([
-        row.kode,
+        row.item_kode,
         row.nama,
         row.awal,
         row.masuk,

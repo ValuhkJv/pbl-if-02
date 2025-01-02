@@ -137,11 +137,14 @@ const DetailPermintaan = () => {
           <TableHead>
             <TableRow>
               <TableCell>No</TableCell>
-              <TableCell>Nama Peminta</TableCell>
+              <TableCell>Hari</TableCell>
+              <TableCell>Tanggal</TableCell>
+              <TableCell>Unit</TableCell>
+              <TableCell>Alasan Permintaan</TableCell>
               <TableCell>Nama Barang</TableCell>
               <TableCell>Satuan</TableCell>
               <TableCell>Jumlah</TableCell>
-              <TableCell>Alasan Permintaan</TableCell>
+              <TableCell>Nama Peminta</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Alasan Penolakan</TableCell>
             </TableRow>
@@ -150,11 +153,16 @@ const DetailPermintaan = () => {
             {details.map((detail, index) => (
               <TableRow key={detail.request_id}>
                 <TableCell>{index + 1}</TableCell>
-                <TableCell>{detail.requested_by}</TableCell>
+                <TableCell>{detail.day_of_week}</TableCell>
+                <TableCell>
+                  {new Date(detail.date).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{detail.division_name}</TableCell>
+                <TableCell>{detail.reason}</TableCell>
                 <TableCell>{detail.item_name}</TableCell>
                 <TableCell>{detail.unit}</TableCell>
                 <TableCell>{detail.quantity}</TableCell>
-                <TableCell>{detail.reason}</TableCell>
+                <TableCell>{detail.requested_by}</TableCell>
                 <TableCell>{detail.status}</TableCell>
                 <TableCell>{detail.rejection_reason || "-"}</TableCell>
               </TableRow>
