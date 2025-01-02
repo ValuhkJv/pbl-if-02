@@ -199,7 +199,7 @@ app.get("/items", async (req, res) => {
       JOIN
       categories c ON i.category_id = c.category_id 
       WHERE 
-      i.category_id = $1`,
+      i.category_id = $1 AND i.stock > 0`,
       [category_id]
     );
     res.json(result.rows);
@@ -229,7 +229,7 @@ app.post("/requests/batch", async (req, res) => {
         `SELECT i.item_id, i.item_name, i.stock, c.category_name 
         FROM items i 
         JOIN categories c ON i.category_id = c.category_id 
-        WHERE i.item_id = $1 `, // Ambil category_id juga
+        WHERE i.item_id = $1 AND stock > 0 `, // Ambil category_id juga
         [item_id]
       );
       if (itemResult.rows.length === 0) {
@@ -243,23 +243,19 @@ app.post("/requests/batch", async (req, res) => {
 
       if (stock < quantity) {
         throw new Error(
-          `Stok barang dengan ID ${item_id} tidak mencukupi. Stok saat ini: ${stock}`
+          `Jumlah permintaan untuk barang "${item_name}" melebihi stok yang tersedia (${stock}).`
         );
       }
-
-      // Kurangi stok barang
-      await db.query("UPDATE items SET stock = stock - $1 WHERE item_id = $2", [
-        quantity,
-        item_id,
-      ]);
 
       // Simpan permintaan dengan mengambil category_id dari item
       await db.query(
         `
         INSERT INTO requests (item_id, quantity, reason, requested_by, status)
-        VALUES ($1, $2, $3, $4, 'pending')`,
+        VALUES ($1, $2, $3, $4, 'pending')
+        RETURNING request_id`,
         [item_id, quantity, reason, user_id] // Menggunakan requested_by sebagai user_id
       );
+
       // Menambahkan item_name ke dalam batchDetails
       batchDetails.push({
         item_name, // Menambahkan item_name ke dalam batchDetails
@@ -333,16 +329,22 @@ app.get("/requests/detail/:date", async (req, res) => {
           r.reason,
           r.rejection_reason,
           r.status,
-          r.created_at,
+          DATE(r.created_at) AS date,
+          r.approved_by_head,
+          r.approved_by_admin,
           u.full_name AS requested_by,
           i.item_name,
-          i.unit
+          i.unit,
+          TO_CHAR(r.created_at, 'Day') AS day_of_week,
+          d.division_name
        FROM 
           requests r
           INNER JOIN
           users u  ON r.requested_by = u.user_id
           INNER JOIN
           items i ON r.item_id = i.item_id
+          INNER JOIN
+          divisions d ON u.division_id = d.division_id
        WHERE 
           requested_by = $1 AND DATE(created_at) = $2`,
       [user_id, date]
@@ -445,7 +447,7 @@ app.get(
       const detailResult = await db.query(
         `
       SELECT 
-        r.request_id, 
+        r.request_id,
         r.item_id, 
         r.requested_by AS user_id,
         u.full_name,
@@ -487,68 +489,79 @@ app.get(
 );
 
 //mengupdate status disetujui atau ditolak kepala unit
-app.put("/requestsApprovHead/:request_id/head-approval", async (req, res) => {
-  const { request_id } = req.params;
-  const { status, rejection_reason } = req.body;
+app.put(
+  "/requestsApprovHead/:request_id/head-approval",
+  authenticateToken,
+  async (req, res) => {
+    const { request_id } = req.params;
+    const { status, rejection_reason } = req.body;
+    const approved_by_head = req.user.user_id;
 
-  try {
-    // Validasi input status
-    if (!["Approved by Head", "Rejected by Head"].includes(status)) {
-      return res.status(400).json({ message: "Status tidak valid." });
-    }
+    try {
+      // Validasi input status
+      if (!["Approved by Head", "Rejected by Head"].includes(status)) {
+        return res.status(400).json({ message: "Status tidak valid." });
+      }
 
-    // Validasi alasan penolakan
-    if (
-      status === "Rejected by Head" &&
-      (!rejection_reason || rejection_reason.trim() === "")
-    ) {
-      return res
-        .status(400)
-        .json({ message: "Alasan penolakan harus diisi jika ditolak." });
-    }
+      // Validasi alasan penolakan
+      if (
+        status === "Rejected by Head" &&
+        (!rejection_reason || rejection_reason.trim() === "")
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Alasan penolakan harus diisi jika ditolak." });
+      }
 
-    // Ambil data permintaan
-    const request = await db.query(
-      `SELECT item_id, quantity,status FROM requests WHERE request_id = $1`,
-      [request_id]
-    );
-
-    if (request.rows.length === 0) {
-      return res.status(404).json({ message: "Permintaan tidak ditemukan." });
-    }
-
-    const { item_id, quantity, status: currentStatus } = request.rows[0];
-
-    // Cek jika permintaan sudah disetujui/ditolak sebelumnya
-    if (currentStatus !== "pending") {
-      return res
-        .status(400)
-        .json({ message: "Permintaan sudah diproses sebelumnya." });
-    }
-
-    // Update status permintaan
-    await db.query(
-      "UPDATE requests SET status = $1, rejection_reason = $2 WHERE request_id = $3 AND status = 'pending'",
-      [status, rejection_reason || null, request_id]
-    );
-
-    // Jika ditolak, kembalikan stok barang
-    if (status === "Rejected by Head") {
-      await db.query(
-        `UPDATE items 
-       SET stock = stock + $1 
-       WHERE item_id = $2`,
-        [quantity, item_id]
+      // Ambil data permintaan
+      const request = await db.query(
+        `SELECT item_id, quantity,status FROM requests WHERE request_id = $1`,
+        [request_id]
       );
+
+      if (request.rows.length === 0) {
+        return res.status(404).json({ message: "Permintaan tidak ditemukan." });
+      }
+
+      const { status: currentStatus } = request.rows[0];
+
+      // Cek jika permintaan sudah disetujui/ditolak sebelumnya
+      if (currentStatus !== "pending") {
+        return res
+          .status(400)
+          .json({ message: "Permintaan sudah diproses sebelumnya." });
+      }
+
+      // Update status permintaan
+      await db.query(
+        `UPDATE 
+        requests SET 
+        status = $1, 
+        rejection_reason = $2,
+        approved_by_head = $3
+         WHERE 
+        request_id = $4 AND status = 'pending'`,
+        [status, rejection_reason || null, approved_by_head, request_id]
+      );
+
+      // Ambil request_number setelah update
+      const updatedRequest = await db.query(
+        `SELECT request_number FROM requests WHERE request_id = $1`,
+        [request_id]
+      );
+
+      res.json({
+        message: "Persetujuan kepala unit berhasil diperbarui.",
+        request_number: updatedRequest.rows[0].request_number, // Sertakan request_number di respons
+      });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .json({ message: "Gagal memperbarui persetujuan kepala unit." });
     }
-    res.json({ message: "Persetujuan kepala unit berhasil diperbarui." });
-  } catch (error) {
-    console.error(error);
-    res
-      .status(500)
-      .json({ message: "Gagal memperbarui persetujuan kepala unit." });
   }
-});
+);
 
 //menampilkan daftar persetujuan staff
 app.get("/requestsApprovalAdmin/:division", async (req, res) => {
@@ -683,9 +696,12 @@ app.get(
 
 app.put(
   "/requestsApprovalAdmin/:request_id/admin-approval",
+  authenticateToken,
   async (req, res) => {
     const { request_id } = req.params;
     const { status, rejection_reason } = req.body;
+    const approved_by_admin = req.user.user_id;
+
     try {
       if (status === "Rejected by Staff SBUM" && !rejection_reason) {
         return res
@@ -715,17 +731,17 @@ app.put(
         `UPDATE 
       requests 
       SET 
-      status = $1, rejection_reason = $2 
+      status = $1, rejection_reason = $2, approved_by_admin = $3 
       WHERE 
-      request_id = $3 AND status = 'Approved by Head'`,
-        [status, rejection_reason || null, request_id]
+      request_id = $4 AND status = 'Approved by Head'`,
+        [status, rejection_reason || null, approved_by_admin, request_id]
       );
 
-      // Jika ditolak, kembalikan stok barang
-      if (status === "Rejected by Staff SBUM") {
+      // Kurangi stok barang jika disetujui oleh admin
+      if (status === "Approved by Staff SBUM") {
         await db.query(
           `UPDATE items 
-         SET stock = stock + $1 
+         SET stock = stock - $1 
          WHERE item_id = $2`,
           [quantity, item_id]
         );
@@ -1384,194 +1400,256 @@ app.delete("/peminjaman/:borrowing_id", authenticateToken, async (req, res) => {
   }
 });
 
-// POST /stock-in
-app.post("/stock-in", authenticateToken, async (req, res) => {
-  const { item_id, quantity } = req.body;
-  const received_by = req.user.user_id; // ID admin dari token autentikasi
-
-  const client = await db.connect();
+//Endpoint Menampilkan Category Di Stock In
+app.get("/categories/stockin", async (req, res) => {
   try {
-    await client.query("BEGIN");
-
-    // Validasi barang yang ada
-    const itemQuery = "SELECT * FROM items WHERE item_id = $1";
-    const itemResult = await client.query(itemQuery, [item_id]);
-
-    if (itemResult.rows.length === 0) {
-      throw new Error("Barang tidak ditemukan.");
-    }
-
-    // Tambahkan ke tabel stock_in
-    const stockInQuery = `
-      INSERT INTO stock_in (item_id, quantity, notes, received_by, created_at)
-      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-      RETURNING *;
-    `;
-    const stockInResult = await client.query(stockInQuery, [
-      item_id,
-      quantity,
-      received_by,
-    ]);
-
-    // Update stok barang di tabel items
-    const updateStockQuery = `
-      UPDATE items
-      SET stock = stock + $1
-      WHERE item_id = $2;
-    `;
-    await client.query(updateStockQuery, [quantity, item_id]);
-
-    await client.query("COMMIT");
-
-    res.status(201).json({
-      message: "Barang masuk berhasil ditambahkan.",
-      data: stockInResult.rows[0],
-    });
+    const result = await db.query(
+      "SELECT category_id, category_name FROM categories WHERE category_id !=3"
+    );
+    res.json({ data: result.rows });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error saat menambahkan barang masuk:", error);
-    res
-      .status(500)
-      .json({
-        message: "Gagal menambahkan barang masuk.",
-        error: error.message,
-      });
-  } finally {
-    client.release();
+    res.status(500).json({
+      message: "Gagal mendapatkan kategori barang",
+      error: error.message,
+    });
   }
 });
 
-// PUT /stock-in/:stock_in_id
-app.put("/stock-in/:stock_in_id", authenticateToken, async (req, res) => {
-  const { stock_in_id } = req.params;
-  const { quantity } = req.body;
+//Endpoint Menampilkan Item Di Stock In
+app.get("/items/stockin", async (req, res) => {
+  const { category_id } = req.query;
+
+  try {
+    const query = `
+      SELECT item_id, item_name 
+      FROM items 
+      WHERE category_id = $1
+    `;
+    const result = await db.query(query, [category_id]);
+    res.json({ data: result.rows });
+  } catch (error) {
+    res.status(500).json({
+      message: "Gagal mendapatkan daftar barang",
+      error: error.message,
+    });
+  }
+});
+
+// POST /stock-in
+app.post("/stock-in", async (req, res) => {
+  const { category_id, item_id, quantity } = req.body;
+
+  console.log("Request body received:", req.body);
+
+  if (
+    !category_id ||
+    !item_id ||
+    !quantity ||
+    isNaN(quantity) ||
+    quantity <= 0
+  ) {
+    return res.status(400).json({
+      message:
+        "Data tidak valid. Pastikan category_id, item_id, dan quantity sudah diisi dengan benar.",
+    });
+  }
 
   const client = await db.connect();
+
   try {
     await client.query("BEGIN");
 
-    // Ambil data barang masuk sebelumnya
-    const stockInQuery = "SELECT * FROM stock_in WHERE stock_in_id = $1";
-    const stockInResult = await client.query(stockInQuery, [stock_in_id]);
-
-    if (stockInResult.rows.length === 0) {
-      throw new Error("Barang masuk tidak ditemukan.");
+    // Validasi apakah item_id ada di database
+    const checkItemQuery = `SELECT * FROM items WHERE item_id = $1`;
+    const itemExists = await client.query(checkItemQuery, [item_id]);
+    if (itemExists.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Barang dengan ID tersebut tidak ditemukan." });
     }
 
-    const oldStockIn = stockInResult.rows[0];
-    const quantityDifference = quantity - oldStockIn.quantity;
-
-    // Update data barang masuk
-    const updateStockInQuery = `
-      UPDATE stock_in
-      SET quantity = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE stock_in_id = $2
-      RETURNING *;
-    `;
-    const updatedStockIn = await client.query(updateStockInQuery, [
-      quantity,
-      stock_in_id,
-    ]);
-
-    // Update stok barang di tabel items
+    // Update stok di tabel items
     const updateStockQuery = `
-      UPDATE items
+      UPDATE items 
       SET stock = stock + $1
-      WHERE item_id = $2;
+      WHERE item_id = $2
+      RETURNING item_id, item_name, stock, initial_stock;
     `;
-    await client.query(updateStockQuery, [
-      quantityDifference,
-      oldStockIn.item_id,
+    const updatedItem = await client.query(updateStockQuery, [
+      quantity,
+      item_id,
     ]);
+    console.log("Stock updated:", updatedItem.rows[0]);
+
+    // Perbarui initial_stock jika nilainya masih null
+    if (updatedItem.rows[0].initial_stock === null) {
+      const setInitialStockQuery = `
+        UPDATE items
+        SET initial_stock = $1
+        WHERE item_id = $2;
+      `;
+      await client.query(setInitialStockQuery, [
+        updatedItem.rows[0].stock,
+        item_id,
+      ]);
+      console.log("Initial stock updated for item_id:", item_id);
+    }
+
+    // Tambahkan log ke tabel stock_in
+    const insertStockInQuery = `
+      INSERT INTO stock_in (category_id, item_id, quantity, created_at)
+      VALUES ($1, $2, $3, NOW())
+      RETURNING stock_in_id;
+    `;
+    const stockInLog = await client.query(insertStockInQuery, [
+      category_id,
+      item_id,
+      quantity,
+    ]);
+    console.log("Stock-in log added:", stockInLog.rows[0]);
 
     await client.query("COMMIT");
 
     res.json({
-      message: "Barang masuk berhasil diperbarui.",
-      data: updatedStockIn.rows[0],
+      message: "Berhasil menambahkan stok barang",
+      updatedItem: updatedItem.rows[0],
     });
   } catch (error) {
+    console.error("Error in /stock-in endpoint:", error);
     await client.query("ROLLBACK");
-    console.error("Error saat memperbarui barang masuk:", error);
     res
       .status(500)
-      .json({
-        message: "Gagal memperbarui barang masuk.",
-        error: error.message,
-      });
+      .json({ message: "Gagal menambahkan stok barang", error: error.message });
   } finally {
     client.release();
   }
 });
 
+// Get all stock-in data
+app.get("/stock-in", async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        si.stock_in_id,
+        si.quantity,
+        si.created_at,
+        c.category_name,
+        i.item_name
+      FROM stock_in si
+      JOIN items i ON si.item_id = i.item_id
+      JOIN categories c ON si.category_id = c.category_id
+      ORDER BY si.created_at DESC;
+    `;
+
+    const result = await db.query(query);
+    res.json({
+      success: true,
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching stock-in data:", error);
+    res.status(500).json({
+      success: false,
+      message: "Gagal mengambil data barang masuk.",
+    });
+  }
+});
+
 // DELETE /stock-in/:stock_in_id
-app.delete("/stock-in/:stock_in_id", authenticateToken, async (req, res) => {
+app.delete("/stock-in/:stock_in_id", async (req, res) => {
   const { stock_in_id } = req.params;
 
   const client = await db.connect();
   try {
     await client.query("BEGIN");
 
-    // Ambil data barang masuk
-    const stockInQuery = "SELECT * FROM stock_in WHERE stock_in_id = $1";
-    const stockInResult = await client.query(stockInQuery, [stock_in_id]);
+    // Ambil data stok masuk yang akan dihapus
+    const selectQuery = `
+      SELECT item_id, quantity 
+      FROM stock_in 
+      WHERE stock_in_id = $1
+    `;
+    const result = await client.query(selectQuery, [stock_in_id]);
 
-    if (stockInResult.rows.length === 0) {
-      throw new Error("Barang masuk tidak ditemukan.");
+    if (result.rows.length === 0) {
+      throw new Error("Data tidak ditemukan");
     }
 
-    const stockInData = stockInResult.rows[0];
+    const { item_id, quantity } = result.rows[0];
 
-    // Hapus data barang masuk
-    const deleteStockInQuery = "DELETE FROM stock_in WHERE stock_in_id = $1";
-    await client.query(deleteStockInQuery, [stock_in_id]);
-
-    // Kurangi stok barang
+    // Kurangi stok di tabel items
     const updateStockQuery = `
       UPDATE items
       SET stock = stock - $1
-      WHERE item_id = $2;
+      WHERE item_id = $2
     `;
-    await client.query(updateStockQuery, [
-      stockInData.quantity,
-      stockInData.item_id,
-    ]);
+    await client.query(updateStockQuery, [quantity, item_id]);
+
+    // Hapus data dari tabel stock_in
+    const deleteQuery = `
+      DELETE FROM stock_in 
+      WHERE stock_in_id = $1
+    `;
+    await client.query(deleteQuery, [stock_in_id]);
 
     await client.query("COMMIT");
 
-    res.json({ message: "Barang masuk berhasil dihapus." });
+    res.json({ message: "Data barang masuk berhasil dihapus" });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error saat menghapus barang masuk:", error);
-    res
-      .status(500)
-      .json({ message: "Gagal menghapus barang masuk.", error: error.message });
+    res.status(500).json({
+      message: "Gagal menghapus data barang masuk",
+      error: error.message,
+    });
   } finally {
     client.release();
   }
 });
 
-// GET /stock-in
-app.get("/stock-in", authenticateToken, async (req, res) => {
+// **2. Endpoint untuk membuat laporan stok barang**
+app.get("/report", async (req, res) => {
   const client = await db.connect();
-  try {
-    const stockInQuery = `
-      SELECT si.*, i.item_name, u.full_name AS received_by_name
-      FROM stock_in si
-      JOIN items i ON si.item_id = i.item_id
-      JOIN users u ON si.received_by = u.user_id;
-    `;
-    const stockInResult = await client.query(stockInQuery);
 
-    res.json({ data: stockInResult.rows });
+  try {
+    const reportQuery = `
+      SELECT 
+          items.item_id,
+          items.item_code,
+          items.item_name,
+          items.category_id,
+          categories.category_name,
+          items.initial_stock AS stock_awal,
+          COALESCE(SUM(stock_in.quantity), 0) AS barang_masuk,
+          COALESCE(SUM(requests.quantity), 0) AS barang_keluar,
+          items.stock AS stock_akhir
+      FROM 
+          items
+      LEFT JOIN 
+          stock_in ON items.item_id = stock_in.item_id
+      LEFT JOIN
+          categories ON items.category_id = categories.category_id
+      LEFT JOIN 
+          requests ON items.item_id = requests.item_id AND requests.status = 'Approved by Staff SBUM'
+      WHERE
+          items.category_id != 3
+      GROUP BY 
+          items.item_id, items.item_name, items.initial_stock, items.stock, categories.category_name
+      ORDER BY 
+          items.item_name;
+    `;
+
+    const result = await client.query(reportQuery);
+
+    res.json({
+      message: "Laporan stok barang berhasil diambil",
+      data: result.rows,
+    });
   } catch (error) {
-    console.error("Error saat mengambil data barang masuk:", error);
-    res
-      .status(500)
-      .json({
-        message: "Gagal mengambil data barang masuk.",
-        error: error.message,
-      });
+    console.error("Error generating stock report:", error.message);
+    res.status(500).json({
+      message: "Gagal mengambil laporan stok barang",
+      error: error.message,
+    });
   } finally {
     client.release();
   }

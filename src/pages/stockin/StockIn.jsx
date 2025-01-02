@@ -1,23 +1,35 @@
 import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Container,
-  Typography,
+  TextField,
   Button,
+  Grid,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   Dialog,
-  DialogTitle,
+  DialogActions,
   DialogContent,
+  DialogTitle,
 } from "@mui/material";
-import StockInTable from "../../components/StockInTable.jsx";
-import StockInForm from "../../components/StockInForm";
 import axios from "axios";
 
-const App = () => {
+const StockInPage = () => {
+  const [formData, setFormData] = useState({
+    category_id: "",
+    item_id: "",
+    quantity: "",
+  });
+  const [categories, setCategories] = useState([]);
+  const [items, setItems] = useState([]);
   const [stockInData, setStockInData] = useState([]);
-  const [openForm, setOpenForm] = useState(false);
-  const [editData, setEditData] = useState(null);
+  const [open, setOpen] = useState(false); // State untuk mengontrol modal
 
-  // Fetch data dari API
+  // Fetch stock-in data as a reusable function
   const fetchStockInData = async () => {
     try {
       const response = await axios.get("http://localhost:5000/stock-in");
@@ -28,80 +40,200 @@ const App = () => {
   };
 
   useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:5000/categories/stockin"
+        );
+        setCategories(response.data.data);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    if (formData.category_id) {
+      const fetchItems = async () => {
+        try {
+          const response = await axios.get(
+            `http://localhost:5000/items/stockin?category_id=${formData.category_id}`
+          );
+          setItems(response.data.data);
+        } catch (error) {
+          console.error("Error fetching items:", error);
+        }
+      };
+      fetchItems();
+    } else {
+      setItems([]);
+    }
+  }, [formData.category_id]);
+
+  // Fetch stock-in data initially
+  useEffect(() => {
     fetchStockInData();
   }, []);
 
-  const handleOpenForm = (data = null) => {
-    setEditData(data);
-    setOpenForm(true);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: name === "quantity" ? Number(value) : value,
+    });
   };
 
-  const handleCloseForm = () => {
-    setEditData(null);
-    setOpenForm(false);
-  };
-
-  const handleSave = async (formData) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      if (editData) {
-        // Update data
-        await axios.put(
-          `http://localhost:5000/stock-in/${editData.stock_in_id}`,
-          formData
-        );
-      } else {
-        // Tambah data baru
-        await axios.post("http://localhost:5000/stock-in", formData);
-      }
-      fetchStockInData();
-      handleCloseForm();
+      await axios.post("http://localhost:5000/stock-in", formData);
+      alert("Stok barang berhasil ditambahkan!");
+      setFormData({ category_id: "", item_id: "", quantity: "" });
+      fetchStockInData(); // Refresh table after adding stock
+      handleClose(); // Tutup modal setelah submit
     } catch (error) {
-      console.error("Error saving stock-in data:", error);
+      console.error("Error adding stock-in:", error);
+      alert("Gagal menambahkan stok barang.");
     }
   };
 
-  const handleDelete = async (stockInId) => {
+  const handleDelete = async (stock_in_id) => {
+    if (
+      !window.confirm("Apakah Anda yakin ingin menghapus log barang masuk ini?")
+    ) {
+      return;
+    }
+
     try {
-      await axios.delete(`http://localhost:5000/stock-in/${stockInId}`);
-      fetchStockInData();
+      await axios.delete(`http://localhost:5000/stock-in/${stock_in_id}`);
+      alert("Data barang masuk berhasil dihapus!");
+      fetchStockInData(); // Refresh table after deletion
     } catch (error) {
       console.error("Error deleting stock-in data:", error);
+      alert("Gagal menghapus data barang masuk.");
     }
   };
 
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
   return (
-    <Container>
-      <Typography variant="h4" align="center" marginY={4}>
-        Manajemen Barang Masuk
-      </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => handleOpenForm()}
-      >
-        Tambah Barang Masuk
+    <div style={{ padding: "20px" }}>
+      <h2>Manajemen Barang Masuk</h2>
+
+      {/* Tombol untuk membuka modal */}
+      <Button variant="contained" color="primary" onClick={handleOpen}>
+        Tambah Stok
       </Button>
-      <Box marginTop={4}>
-        <StockInTable
-          data={stockInData}
-          onEdit={handleOpenForm}
-          onDelete={handleDelete}
-        />
-      </Box>
-      <Dialog open={openForm} onClose={handleCloseForm} fullWidth maxWidth="sm">
-        <DialogTitle>
-          {editData ? "Edit Barang Masuk" : "Tambah Barang Masuk"}
-        </DialogTitle>
+
+      {/* Modal Form */}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+        <DialogTitle>Tambah Barang Masuk</DialogTitle>
         <DialogContent>
-          <StockInForm
-            data={editData}
-            onSave={handleSave}
-            onCancel={handleCloseForm}
-          />
+          <form onSubmit={handleSubmit}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Kategori Barang"
+                  name="category_id"
+                  value={formData.category_id}
+                  onChange={handleChange}
+                  required
+                >
+                  {categories.map((category) => (
+                    <MenuItem
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.category_name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Nama Barang"
+                  name="item_id"
+                  value={formData.item_id}
+                  onChange={handleChange}
+                  required
+                >
+                  {items.map((item) => (
+                    <MenuItem key={item.item_id} value={item.item_id}>
+                      {item.item_name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Jumlah Barang"
+                  name="quantity"
+                  type="number"
+                  value={formData.quantity}
+                  onChange={handleChange}
+                  required
+                />
+              </Grid>
+            </Grid>
+          </form>
         </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="secondary">
+            Batal
+          </Button>
+          <Button onClick={handleSubmit} color="primary">
+            Tambah Stok
+          </Button>
+        </DialogActions>
       </Dialog>
-    </Container>
+
+      {/* Tabel */}
+      <TableContainer component={Paper} style={{ marginTop: "20px" }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Kategori Barang</TableCell>
+              <TableCell>Nama Barang</TableCell>
+              <TableCell>Jumlah</TableCell>
+              <TableCell>Tanggal Masuk</TableCell>
+              <TableCell>Aksi</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {stockInData.map((row) => (
+              <TableRow key={row.stock_in_id}>
+                <TableCell>{row.category_name}</TableCell>
+                <TableCell>{row.item_name}</TableCell>
+                <TableCell>{row.quantity}</TableCell>
+                <TableCell>
+                  {new Date(row.created_at).toLocaleString()}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    size="small"
+                    onClick={() => handleDelete(row.stock_in_id)}
+                  >
+                    Delete
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
   );
 };
 
-export default App;
+export default StockInPage;
