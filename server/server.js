@@ -125,7 +125,7 @@ app.post("/login", async (req, res) => {
         roles_id: users.roles_id,
       },
       secretKey,
-      { expiresIn: "1h" }
+      { expiresIn: "1h" } // Token akan kadaluarsa dalam 1 jam
     );
 
     // Kirim respons
@@ -1434,12 +1434,10 @@ app.post("/stock-in", authenticateToken, async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error saat menambahkan barang masuk:", error);
-    res
-      .status(500)
-      .json({
-        message: "Gagal menambahkan barang masuk.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Gagal menambahkan barang masuk.",
+      error: error.message,
+    });
   } finally {
     client.release();
   }
@@ -1497,12 +1495,10 @@ app.put("/stock-in/:stock_in_id", authenticateToken, async (req, res) => {
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error saat memperbarui barang masuk:", error);
-    res
-      .status(500)
-      .json({
-        message: "Gagal memperbarui barang masuk.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Gagal memperbarui barang masuk.",
+      error: error.message,
+    });
   } finally {
     client.release();
   }
@@ -1570,12 +1566,10 @@ app.get("/stock-in", authenticateToken, async (req, res) => {
     res.json({ data: stockInResult.rows });
   } catch (error) {
     console.error("Error saat mengambil data barang masuk:", error);
-    res
-      .status(500)
-      .json({
-        message: "Gagal mengambil data barang masuk.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Gagal mengambil data barang masuk.",
+      error: error.message,
+    });
   } finally {
     client.release();
   }
@@ -1628,31 +1622,35 @@ app.get("/borrowing/overdue", authenticateToken, async (req, res) => {
 });
 
 // Endpoint untuk mengecek status peminjaman
-app.get("/borrowing/status/:borrowing_id", authenticateToken, async (req, res) => {
-  try {
-    const { borrowing_id } = req.params;
-    const result = await db.query(
-      "SELECT status FROM borrowing WHERE borrowing_id = $1",
-      [borrowing_id]
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Borrowing not found" });
+app.get(
+  "/borrowing/status/:borrowing_id",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { borrowing_id } = req.params;
+      const result = await db.query(
+        "SELECT status FROM borrowing WHERE borrowing_id = $1",
+        [borrowing_id]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "Borrowing not found" });
+      }
+
+      // Check if the status indicates the item has been returned
+      const isReturned = result.rows[0].status.startsWith("return");
+
+      res.json({
+        borrowing_id,
+        isReturned,
+        status: result.rows[0].status,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.message });
     }
-    
-    // Check if the status indicates the item has been returned
-    const isReturned = result.rows[0].status.startsWith('return');
-    
-    res.json({ 
-      borrowing_id,
-      isReturned,
-      status: result.rows[0].status 
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 // Endpoint untuk mendapatkan data permintaan paling banyak
 app.get("/requests/top", authenticateToken, async (req, res) => {
@@ -1698,7 +1696,7 @@ app.get("/borrowing/top", authenticateToken, async (req, res) => {
 });
 
 // Endpoint untuk mendapatkan data barang yang stoknya habis
-app.get('/items/zero-stock', authenticateToken, async (req, res) => {
+app.get("/items/zero-stock", authenticateToken, async (req, res) => {
   try {
     const result = await db.query(`
       SELECT * FROM items WHERE stock = 0
@@ -1708,5 +1706,4 @@ app.get('/items/zero-stock', authenticateToken, async (req, res) => {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
-}
-);
+});
