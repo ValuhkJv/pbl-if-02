@@ -9,31 +9,33 @@ const YouTubeEmbed = ({ videoId, aspectRatio = "16:9" }) => {
     return `${(height / width) * 100}%`;
   };
   return (
-    <div
-      style={{
-        position: "relative",
-        paddingBottom: calculatePaddingBottom(aspectRatio),
-        height: 0,
-        overflow: "hidden",
-        marginTop: "10px",
-        maxWidth: "100%", // Memastikan video tidak melebihi lebar container
-      }}
-    >
-      <iframe
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
+    <Box sx={{ marginBottom: 10 }}>
+      {" "}
+      {/* Add margin bottom for spacing */}
+      <Box
+        sx={{
+          position: "relative",
           width: "100%",
-          height: "100%",
-          border: 0,
+          paddingBottom: calculatePaddingBottom(aspectRatio),
+          overflow: "hidden",
         }}
-        src={`https://www.youtube.com/embed/${videoId}`}
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        title="YouTube video"
-      />
-    </div>
+      >
+        <iframe
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            border: 0,
+          }}
+          src={`https://www.youtube.com/embed/${videoId}`}
+          title="YouTube video player"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </Box>
+    </Box>
   );
 };
 
@@ -73,7 +75,7 @@ function Dashboard() {
       </Box>
 
       {/* Panduan 1 */}
-      <Box marginBottom={3}>
+      <Box marginBottom={20}>
         <Typography
           variant="subtitle1"
           gutterBottom

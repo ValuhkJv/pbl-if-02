@@ -23,7 +23,7 @@ const db = new Pool({
   host: "localhost",
   user: "postgres",
   password: "password",
-  database: "sbum",
+  database: "subbagian",
   port: 5432,
 });
 
