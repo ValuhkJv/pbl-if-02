@@ -17,6 +17,7 @@ import polibatam from "../assets/polibatam.png";
 import backgroundImage from "../assets/tekno.png";
 import Alert from "../components/alert";
 
+
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -50,13 +51,7 @@ const Login = () => {
       const userData = {
         id: response.data.user_id,
         fullName: response.data.full_name,
-        divisionName: response.data.division_name
-      };
-
-      // Store user data as an object
-      const userData = {
-        id: response.data.user_id,
-        fullName: response.data.full_name,
+        nik: response.data.nik,
         divisionName: response.data.division_name
       };
 
@@ -65,6 +60,7 @@ const Login = () => {
       localStorage.setItem("role", response.data.roles_id);
       localStorage.setItem("user_id", response.data.user_id);
       localStorage.setItem("full_name", response.data.full_name);
+      localStorage.setItem("nik", response.data.nik);
       localStorage.setItem("division_name", response.data.division_name);
       localStorage.setItem("user", JSON.stringify(userData));  // Store user data as JSON string
 
@@ -87,9 +83,7 @@ const Login = () => {
         navigate("/dashboard/staf"); // Admin
       } else if (roleId === ROLE.UNIT_HEAD) {
         navigate("/dashboard/kepalaunit"); //  Kepala Unit
-        navigate("/dashboard/kepalaunit"); //  Kepala Unit
       } else if (roleId === ROLE.UNIT) {
-        navigate("/dashboard/unit"); // Unit
         navigate("/dashboard/unit"); // Unit
       } else if (roleId === ROLE.STUDENT) {
         navigate("/dashboard/mahasiswa"); // Mahasiswa
@@ -112,7 +106,7 @@ const Login = () => {
         width: "100vw",
         minHeight: "100vh",
         minWidth: "100vw",
-        backgroundImage: `url(${backgroundImage})`,
+        backgroundImage: url(${backgroundImage}),
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -138,7 +132,7 @@ const Login = () => {
             alt="polibatam"
             style={{ width: "320px", height: "103px" }}
           />
-        </Box>
+         </Box>
         <Typography
           display="flex"
           justifyContent="center"
@@ -152,15 +146,11 @@ const Login = () => {
         <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
         {error && (
               <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
-        {error && (
-              <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
                 {error}
               </Alert>
             )}
-          {/*dropdown jenis user */}
-          <Box display="flex" justifyContent="center">
-          {/*dropdown jenis user */}
-          <Box display="flex" justifyContent="center">
+           {/*dropdown jenis user */}
+           <Box display="flex" justifyContent="center">
             <FormControl fullWidth margin="normal" required>
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
@@ -187,9 +177,8 @@ const Login = () => {
             </FormControl>
           </Box>
           
-          
-          {/*field username & passwowrd */}
-          <TextField
+           {/*field username & passwowrd */}
+           <TextField
             variant="outlined"
             margin="normal"
             required
