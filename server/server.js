@@ -22,11 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-<<<<<<< HEAD
   password: "12345678",
-=======
-  password: "password",
->>>>>>> 991b5876edf4b9c1bc1b1b478e5a2a2198515f12
   database: "subbagian",
   port: 5432,
 });
@@ -90,6 +86,7 @@ const upload = multer({
 });
 
 // Endpoint login
+// Endpoint login
 app.post("/login", async (req, res) => {
   const { username, password, roles_id } = req.body;
 
@@ -139,6 +136,7 @@ app.post("/login", async (req, res) => {
       roles_id: users.roles_id, // Mengembalikan role untuk redirect di frontend
       user_id: users.user_id,
       full_name: users.full_name,
+      nik: users.nik,
       division_name: users.division_name,
     });
   } catch (error) {

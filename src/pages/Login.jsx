@@ -53,6 +53,13 @@ const Login = () => {
         divisionName: response.data.division_name
       };
 
+      // Store user data as an object
+      const userData = {
+        id: response.data.user_id,
+        fullName: response.data.full_name,
+        divisionName: response.data.division_name
+      };
+
       // Simpan token ke localStorage
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("role", response.data.roles_id);
@@ -80,7 +87,9 @@ const Login = () => {
         navigate("/dashboard/staf"); // Admin
       } else if (roleId === ROLE.UNIT_HEAD) {
         navigate("/dashboard/kepalaunit"); //  Kepala Unit
+        navigate("/dashboard/kepalaunit"); //  Kepala Unit
       } else if (roleId === ROLE.UNIT) {
+        navigate("/dashboard/unit"); // Unit
         navigate("/dashboard/unit"); // Unit
       } else if (roleId === ROLE.STUDENT) {
         navigate("/dashboard/mahasiswa"); // Mahasiswa
@@ -143,9 +152,13 @@ const Login = () => {
         <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
         {error && (
               <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
+        {error && (
+              <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
                 {error}
               </Alert>
             )}
+          {/*dropdown jenis user */}
+          <Box display="flex" justifyContent="center">
           {/*dropdown jenis user */}
           <Box display="flex" justifyContent="center">
             <FormControl fullWidth margin="normal" required>
@@ -173,6 +186,7 @@ const Login = () => {
               </Select>
             </FormControl>
           </Box>
+          
           
           {/*field username & passwowrd */}
           <TextField

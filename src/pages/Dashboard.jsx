@@ -294,7 +294,8 @@ export default function Dashboard() {
                 fontSize: { xs: "10px", sm: "14px" }, // Font lebih kecil di perangkat kecil
               }}
             >
-              <strong>SBUM</strong><br /> SUB-BAGIAN UMUM POLIBATAM
+              <strong>SBUM</strong>
+              <br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
           <IconButton onClick={handleCloseDrawer}>
@@ -536,29 +537,7 @@ export default function Dashboard() {
       <Main open={openDrawer}>
         <DrawerHeader />
         <Routes>
-<<<<<<< HEAD:src/pages/Dashboard.jsx
-          <Route path="/dashboard/staf" element={<DashboardStaf />} />
-          <Route path="/dashboard/kepalaUnit" element={<DashboardUnitHead />} />
-          <Route path="/dashboard/unit" element={<DashboardUnit />} />
-          <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
-          <Route path="/manage/barangkonsumsi" element={<Manage />} />
-          <Route path="/manage/barangrt" element={<Manage />} />
-          <Route path="/manage/barangpeminjaman" element={<Manage />} />
-          <Route path="/report" element={<Laporan />} />
-          <Route path="/loan" element={<Loan />} />
-          <Route path="/loan/approval" element={<LoanApproval />} />
-          <Route path="/loan/transaction/history" element={<LoanHistory />} />
-          <Route
-            path="/request/transaction/history"
-            element={<RequestHistory />}
-          />
-          <Route path="/request" element={<Request />} />
-          <Route path="/RequestList" element={<RequestList />} />
-          <Route path="/DetailPermintaan/:date" element={<DetailRequest />} />
-          <Route path="/request/approval" element={<RequestApproval />} />
-=======
           {/* Staf Routes */}
->>>>>>> 991b5876edf4b9c1bc1b1b478e5a2a2198515f12:src/pages/Dashboard.js
           <Route
             path="/dashboard/staf"
             element={
