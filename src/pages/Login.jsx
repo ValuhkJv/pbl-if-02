@@ -17,7 +17,6 @@ import polibatam from "../assets/polibatam.png";
 import backgroundImage from "../assets/tekno.png";
 import Alert from "../components/alert";
 
-
 const Login = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +51,7 @@ const Login = () => {
         id: response.data.user_id,
         fullName: response.data.full_name,
         nik: response.data.nik,
-        divisionName: response.data.division_name
+        divisionName: response.data.division_name,
       };
 
       // Simpan token ke localStorage
@@ -62,7 +61,7 @@ const Login = () => {
       localStorage.setItem("full_name", response.data.full_name);
       localStorage.setItem("nik", response.data.nik);
       localStorage.setItem("division_name", response.data.division_name);
-      localStorage.setItem("user", JSON.stringify(userData));  // Store user data as JSON string
+      localStorage.setItem("user", JSON.stringify(userData)); // Store user data as JSON string
 
       // Tampilkan Toast sukses
       Alert.successToast(
@@ -106,7 +105,7 @@ const Login = () => {
         width: "100vw",
         minHeight: "100vh",
         minWidth: "100vw",
-        backgroundImage: url(${backgroundImage}),
+        backgroundImage: `url(${backgroundImage})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -132,7 +131,7 @@ const Login = () => {
             alt="polibatam"
             style={{ width: "320px", height: "103px" }}
           />
-         </Box>
+        </Box>
         <Typography
           display="flex"
           justifyContent="center"
@@ -144,13 +143,13 @@ const Login = () => {
           Sub Bagian Umum Polibatam
         </Typography>
         <Box component="form" sx={{ mt: 1 }} onSubmit={handleLogin}>
-        {error && (
-              <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
-                {error}
-              </Alert>
-            )}
-           {/*dropdown jenis user */}
-           <Box display="flex" justifyContent="center">
+          {error && (
+            <Alert severity="error" sx={{ width: "100%", mb: 2, mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+          {/*dropdown jenis user */}
+          <Box display="flex" justifyContent="center">
             <FormControl fullWidth margin="normal" required>
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
@@ -176,9 +175,9 @@ const Login = () => {
               </Select>
             </FormControl>
           </Box>
-          
-           {/*field username & passwowrd */}
-           <TextField
+
+          {/*field username & passwowrd */}
+          <TextField
             variant="outlined"
             margin="normal"
             required

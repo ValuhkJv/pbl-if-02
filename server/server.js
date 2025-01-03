@@ -762,11 +762,11 @@ app.put(
 ///CRUD MANAJEMEN BARANG
 // CREATE: Tambah Barang
 app.post("/items", async (req, res) => {
-  const { item_code, item_name, category_id, unit, stock } = req.body;
+  const { item_code, item_name, category_id, unit, initial_stock } = req.body;
   try {
     const result = await db.query(
-      "INSERT INTO items (item_code, item_name, category_id, unit, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [item_code, item_name, category_id, unit, stock]
+      "INSERT INTO items (item_code, item_name, category_id, unit, stock, initial_stock) VALUES ($1, $2, $3, $4, $5, $5) RETURNING *",
+      [item_code, item_name, category_id, unit, initial_stock]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -799,7 +799,7 @@ app.get("/manage/:categoryId", async (req, res) => {
 app.get("/items/category/3", async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT i.*, c.category_name 
+      `SELECT i.*, c.category_name, i.initial_stock 
        FROM items i 
        JOIN categories c ON i.category_id = c.category_id
        WHERE c.category_id = 3 AND i.stock > 0
@@ -814,13 +814,13 @@ app.get("/items/category/3", async (req, res) => {
 // Mengupdate data item berdasarkan id
 app.put("/items/:itemId", async (req, res) => {
   const { itemId } = req.params; // Mengambil item_id dari URL parameter
-  const { item_code, item_name, category_id, unit, stock } = req.body;
+  const { item_code, item_name, category_id, unit, initial_stock } = req.body;
 
   try {
     // Update data berdasarkan item_id
     const result = await db.query(
-      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5 WHERE item_id = $6 RETURNING *`,
-      [item_code, item_name, category_id, unit, stock, itemId]
+      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5, initial_stock = $5 WHERE item_id = $6 RETURNING *`,
+      [item_code, item_name, category_id, unit, initial_stock, itemId]
     );
 
     // Jika item tidak ditemukan
