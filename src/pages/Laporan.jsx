@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
   Button,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -15,11 +14,37 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Box,
+  Divider,
+  Stack,
+  Paper,
+  TextField,
+  InputAdornment,
+
 } from "@mui/material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import ExcelJS from "exceljs";
+import { styled } from "@mui/system";
+import { Search as SearchIcon } from "@mui/icons-material";
+
+
+const StyledTableCell = styled(TableCell)({
+  padding: "12px",
+  border: "1px solid #ddd",
+  textAlign: "center",
+  wordWrap: "break-word",
+});
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
 
 const columns = [
   { id: "kode", label: "Kode Barang", minWidth: 100, align: "center" },
@@ -36,6 +61,8 @@ export default function StockReport() {
   const [report, setReport] = useState([]);
   const [categories, setCategories] = useState([]); // Semua kategori barang
   const [selectedCategory, setSelectedCategory] = useState(""); // Kategori terpilih
+  const [searchTerm, setSearchTerm] = useState("");
+
 
   useEffect(() => {
     fetchReport();
@@ -117,9 +144,8 @@ export default function StockReport() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Laporan_Stok_Barang${
-      selectedCategory ? `_${selectedCategory}` : ""
-    }.xlsx`;
+    a.download = `Laporan_Stok_Barang${selectedCategory ? `_${selectedCategory}` : ""
+      }.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -129,63 +155,203 @@ export default function StockReport() {
   );
 
   return (
-    <Paper>
-      <Typography variant="h4">Stock Barang</Typography>
-      <Button onClick={exportToPDF} startIcon={<FileDownloadIcon />}>
-        Export to PDF
-      </Button>
-      <Button onClick={exportToExcel} startIcon={<FileDownloadIcon />}>
-        Export to Excel
-      </Button>
-      <FormControl style={{ marginBottom: 16, minWidth: 200 }}>
-        <InputLabel>Kategori</InputLabel>
-        <Select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
+    <Box
+      sx={{
+        width: "100%",
+        margin: "0 auto", // Pusatkan di layar
+        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        borderRadius: 2,
+        px: 2,
+        py: 4,
+        bgcolor: "background.paper",
+        justifyContent: "space-between",
+      }}
+    >
+      <Box
+        sx={{
+          mb: 4,
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+        }}
+      >
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+        <Typography
+          style={{
+            margin: "0 10px",
+            fontFamily: "Sansita",
+            fontSize: "26px",
+          }}
         >
-          <MenuItem value="">Semua Kategori</MenuItem>
-          {categories.map((category) => (
-            <MenuItem key={category} value={category}>
-              {category}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell key={column.id} align={column.align}>
-                  {column.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredReport
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row) => (
-                <TableRow key={row.kode}>
+          Stock Barang
+        </Typography>
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+      </Box>
+      <Box sx={{
+        width: '100%', p: 2, mb: 2,
+        justifyContent: "center",
+        alignItems: "center",
+        display: "flex",
+      }}>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems="center"
+          spacing={2}
+          sx={{
+            pb: 2,
+          }}
+        >
+          {/* Filter di kiri */}
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems="center"
+          >
+            <Button onClick={exportToPDF} startIcon={<FileDownloadIcon />}
+              sx={{
+                padding: "8px",
+                color: "#fff",
+                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                backgroundColor: "#0C628B",
+                borderRadius: "8px",
+                "&:hover": {
+                  backgroundColor: "#242D34",
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                  color: "#fff",
+                },
+                textTransform: "none",
+              }}>
+              Export to PDF
+            </Button>
+            <Button onClick={exportToExcel} startIcon={<FileDownloadIcon />}
+              sx={{
+                padding: "8px",
+                color: "#fff",
+                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                backgroundColor: "#3691BE",
+                borderRadius: "8px",
+                "&:hover": {
+                  backgroundColor: "#242D34",
+                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                  color: "#fff",
+                },
+                textTransform: "none",
+              }}>
+              Export to Excel
+            </Button>
+            <FormControl sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}>
+              <InputLabel>Kategori</InputLabel>
+              <Select
+                value={selectedCategory}
+
+                onChange={(e) => setSelectedCategory(e.target.value)}
+              >
+                <MenuItem value="">Semua Kategori</MenuItem>
+                {categories.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              variant="outlined"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                width: "250px",
+                backgroundColor: "white",
+                borderRadius: 1,
+                "& .MuiOutlinedInput-root": {
+                  height: "40px",
+                },
+              }}
+            />
+          </Stack>
+        </Stack>
+        </Box>
+          <div
+            style={{
+              marginTop: "10px",
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
+              backgroundColor: "#0C628B",
+              padding: "25px",
+              borderTopLeftRadius: "12px",
+              borderTopRightRadius: "12px",
+              borderBottom: "1px solid #e0e0e0",
+            }}
+          />
+
+          <TableContainer component={Paper}
+            sx={{
+              borderRadius: "12px",
+              overflow: "hidden",
+            }}>
+            <Table>
+              <TableHead>
+                <TableRow>
                   {columns.map((column) => (
-                    <TableCell key={column.id} align={column.align}>
-                      {row[column.id]}
-                    </TableCell>
+                    <StyledTableCell key={column.id} align={column.align}>
+                      {column.label}
+                    </StyledTableCell>
                   ))}
                 </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 20]}
-        component="div"
-        count={report.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </Paper>
-  );
+              </TableHead>
+              <TableBody>
+                {filteredReport
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((row) => (
+                    <StyledTableRow key={row.kode}>
+                      {columns.map((column) => (
+                        <StyledTableCell key={column.id} align={column.align}>
+                          {row[column.id]}
+                        </StyledTableCell>
+                      ))}
+                    </StyledTableRow>
+                  ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 20]}
+              component="div"
+              count={report.length}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+            />
+          </TableContainer>
+
+        </Box>
+        );
 }

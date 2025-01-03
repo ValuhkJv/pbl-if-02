@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import axios from "axios";
 import {
   Button,
   Table,
@@ -18,12 +21,12 @@ import {
   Tooltip
 } from "@mui/material";
 import { styled } from "@mui/system";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
   InfoOutlined as InfoOutlinedIcon,
   Search as SearchIcon,
   Add as AddIcon,
+  FileDownload as FileDownloadIcon,
 } from "@mui/icons-material";
 
 const RequestList = ({ userId }) => {
@@ -32,6 +35,8 @@ const RequestList = ({ userId }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
@@ -77,7 +82,7 @@ const RequestList = ({ userId }) => {
   // Filter rows based on search term
   const filteredRows = requests.filter(
     (item) =>
-      !searchTerm || 
+      !searchTerm ||
       new Date(item.date).toLocaleDateString().toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.total_requests.toString().includes(searchTerm)
   );
@@ -104,6 +109,140 @@ const RequestList = ({ userId }) => {
       .then((response) => setRequests(response.data))
       .catch((error) => console.error("Error fetching requests:", error));
   }, [userId]);
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    setError(null);
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+      setError("User ID tidak ditemukan. Silakan login kembali.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`http://localhost:5000/requests?user_id=${userId}`);
+      setRequests(response.data);
+    } catch (err) {
+      setError("Gagal memuat data permintaan. " + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportDetailExcel = async (date) => {
+
+    try {
+      // Format date to match PostgreSQL date format (YYYY-MM-DD)
+      const formattedDate = new Date(date).toISOString().split('T')[0];
+      const userId = localStorage.getItem("user_id");
+
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
+        params: { user_id: userId },
+      });
+
+      const details = response.data;
+
+      if (details.length === 0) {
+        alert("Tidak ada detail permintaan untuk tanggal ini.");
+        return;
+      }
+      // Get the first detail for header information
+      const firstDetail = details[0];
+
+      const ws_data = [
+        ["No.BO.16.2.2-V0 Borang Permintaan dan Serah Terima Persediaan"],
+        ["27 Agustus 2024"],
+        ["No", ":", firstDetail.request_number || "", ""],
+        ["Hari", ":", firstDetail.day_of_week || "", ""],
+        ["Tanggal", `: Batam, ${firstDetail.formatted_date}`, "", ""],
+        ["Unit/Bagian", ":", firstDetail.division_name || "", ""],
+        ["Uraian", ":", firstDetail.reason || "", ""],
+        [],
+        ["No", "Jenis Barang", "Satuan", "Jumlah"]
+      ];
+
+      // Add the details
+      details.forEach((detail, index) => {
+        ws_data.push([
+          index + 1,
+          detail.item_name,
+          detail.unit,
+          detail.quantity
+        ]);
+      });
+
+      // Add signature section with actual names and employee IDs
+      ws_data.push(
+        [],
+        [],
+        ["Peminta / Penerima", "Menyetujui, Kepala Unit *)", "Menyerahkan, Petugas Umum", ""],
+        ["", "", "", ""],
+        ["", "", "", ""],
+        ["", "", "", ""],
+        [`Nama    : ${firstDetail.requester_name || ""}`,
+        `Nama    : ${firstDetail.approved_by_head || ""}`,
+        `Nama    : ${firstDetail.approved_by_admin || ""}`, ""],
+        [`NIK/NIP : ${firstDetail.request_by_id || ""}`,
+          `NIK/NIP : `,
+          `NIK/NIP : `, ""],
+        ["*)Kajur/KPS/Ka.Bag/Ka.Subbag/Ka.Unit/Ka.Pokja/Ka.Pusat", "", "", ""]
+      );
+
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+
+      // Set column widths
+      ws['!cols'] = [
+        { width: 5 },   // A
+        { width: 30 },  // B
+        { width: 15 },  // C
+        { width: 15 }   // D
+      ];
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+      // Define merges
+      ws['!merges'] = [
+        // Title
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+        // Date
+        { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+        // Signature section merges
+        { s: { r: ws_data.length - 7, c: 0 }, e: { r: ws_data.length - 7, c: 0 } },
+        { s: { r: ws_data.length - 7, c: 1 }, e: { r: ws_data.length - 7, c: 1 } },
+        { s: { r: ws_data.length - 7, c: 2 }, e: { r: ws_data.length - 7, c: 2 } },
+        // Footer note merge
+        { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 3 } }
+      ];
+
+      // Generate buffer and save file
+      const wbout = XLSX.write(wb, {
+        bookType: 'xlsx',
+        type: 'array'
+      });
+
+      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
+    } catch (error) {
+      console.error("Error exporting details:", error);
+      if (error.response) {
+        alert(`Export failed: ${error.response.data.message || 'Server error occurred'}`);
+      } else if (error.message === "User ID not found") {
+        alert("Please login again to export data");
+      } else {
+        alert("An error occurred while trying to export. Please try again.");
+        console.error(error); // Log the full error for debugging
+      }
+    }
+  };
 
   return (
     <Box
@@ -187,7 +326,7 @@ const RequestList = ({ userId }) => {
           spacing={2}
           alignItems="center"
         >
-          
+
           <TextField
             variant="outlined"
             placeholder="Search..."
@@ -256,33 +395,58 @@ const RequestList = ({ userId }) => {
                 </StyledTableCell>
                 <StyledTableCell>{request.total_requests}</StyledTableCell>
                 <StyledTableCell>
-                <div
+                  <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                  <Tooltip title="Detail">
-                    <DetailButton
-                      variant="contained"
-                      sx={{
-                        padding: "0",
-                        borderRadius: "50%",
-                        height: "35px",
-                        width: "35px",
-                        minWidth: "35px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                      onClick={() =>
-                        navigate(`/DetailPermintaan/${request.date}`)
-                      }
-                    >
-                      <InfoOutlinedIcon />
-                    </DetailButton>
-                  </Tooltip>
+                    <Tooltip title="Detail" placement="top">
+                      <DetailButton
+                        variant="contained"
+                        sx={{
+                          padding: "0",
+                          borderRadius: "50%",
+                          height: "35px",
+                          width: "35px",
+                          minWidth: "35px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() =>
+                          navigate(`/DetailPermintaan/${request.date}`)
+                        }
+                      >
+                        <InfoOutlinedIcon />
+                      </DetailButton>
+                    </Tooltip>
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ mx: 1 }}
+                    />
+                    <Tooltip title="Export" placement="top">
+                      <Button
+                        variant="contained"
+                        color="secondary"
+                        sx={{
+                          padding: "0",
+                          borderRadius: "50%",
+                          height: "35px",
+                          width: "35px",
+                          minWidth: "35px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                        onClick={() => handleExportDetailExcel(request.date)}
+                      >
+                        <FileDownloadIcon />
+                      </Button>
+                    </Tooltip>
+
                   </div>
                 </StyledTableCell>
               </StyledTableRow>

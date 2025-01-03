@@ -30,7 +30,7 @@ import {
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
   border: "1px solid #ddd",
-  textAlign: "left",
+  textAlign: "center",
   wordWrap: "break-word",
 });
 

@@ -25,8 +25,10 @@ import ExportToExcel from './ExportToExcel';
 
 
 const StyledTableCell = styled(TableCell)({
+  padding: "12px",
   border: "1px solid #ddd",
-  padding: "8px",
+  textAlign: "center",
+  wordWrap: "break-word",
 });
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({

@@ -34,7 +34,7 @@ import Alert from "../../components/alert";
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
   border: "1px solid #ddd",
-  textAlign: "left",
+  textAlign: "center",
   wordWrap: "break-word",
 });
 
@@ -213,9 +213,9 @@ function ManageInventory() {
     const payload = isEditing
       ? formData // Saat mengedit barang
       : {
-          ...formData,
-          stock: formData.initial_stock, // Saat menambah, backend otomatis gunakan initial_stock untuk stock
-        };
+        ...formData,
+        stock: formData.initial_stock, // Saat menambah, backend otomatis gunakan initial_stock untuk stock
+      };
 
     fetch(url, {
       method: method,
@@ -446,11 +446,14 @@ function ManageInventory() {
                           <EditIcon />
                         </DetailButton>
                       </Tooltip>
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ mx: 1 }}
+                      />
                       <Tooltip title="Hapus" placement="top" key={item.item_id}>
                         <RemoveButton
                           sx={{
-                            my: 1,
-                            mx: 2,
                             padding: "0",
                             borderRadius: "50%",
                             height: "35px",

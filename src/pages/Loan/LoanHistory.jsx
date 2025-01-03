@@ -537,7 +537,7 @@ export default function LoanHistory() {
         />
       </Box>
       <Box sx={{
-        width: '100%', p: 2, mb: 4,
+        width: '100%', p: 2, mb: 2,
         justifyContent: "center",
         alignItems: "center",
         display: "flex",

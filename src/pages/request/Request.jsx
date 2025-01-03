@@ -325,7 +325,7 @@ const RequestForm = () => {
             </TableHead>
             <TableBody>
               {requests.map((request, index) => (
-                <TableRow key={index}>
+                <StyledTableRow key={index}>
                   <TableCell>{request.item_name}</TableCell>
                   <TableCell>{request.category_name}</TableCell>
                   <TableCell>{request.quantity}</TableCell>
@@ -339,7 +339,7 @@ const RequestForm = () => {
                       <ClearIcon />
                     </IconButton>
                   </TableCell>
-                </TableRow>
+                </StyledTableRow>
               ))}
             </TableBody>
           </Table>

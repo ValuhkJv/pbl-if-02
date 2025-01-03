@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
@@ -759,7 +759,6 @@ app.put(
   }
 );
 
-
 app.get("/requests/history", async (req, res) => {
   try {
     const result = await db.query(`
@@ -783,6 +782,56 @@ app.get("/requests/history", async (req, res) => {
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get("/requests/export/:date", async (req, res) => {
+  const { date } = req.params;
+  const { user_id } = req.query;
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID diperlukan" });
+  }
+
+  try {
+    const result = await db.query(
+      `SELECT 
+          r.request_id,
+          r.request_number,
+          r.quantity,
+          r.reason,
+          r.status,
+          TO_CHAR(r.created_at, 'Day') AS day_of_week,
+          TO_CHAR(r.created_at, 'DD Month YYYY') AS formatted_date,
+          i.item_name,
+          i.unit,
+          -- Requester details
+          req.full_name AS requester_name,
+          req.employee_id AS requester_employee_id,
+          d.division_name,
+          -- Head details
+          head.full_name AS head_name,
+          head.employee_id AS head_employee_id,
+          -- Admin details
+          admin.full_name AS admin_name,
+          admin.employee_id AS admin_employee_id
+       FROM 
+          requests r
+          INNER JOIN items i ON r.item_id = i.item_id
+          INNER JOIN users req ON r.requested_by = req.user_id
+          INNER JOIN divisions d ON req.division_id = d.division_id
+          LEFT JOIN users head ON r.approved_by_head = head.user_id
+          LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
+       WHERE 
+          r.requested_by = $1 
+          AND DATE(r.created_at) = $2`,
+      [user_id, date]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching request details:", error.message);
+    res.status(500).json({ message: "Terjadi kesalahan pada server" });
   }
 });
 
