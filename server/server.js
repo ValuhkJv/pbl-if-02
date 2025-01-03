@@ -787,35 +787,6 @@ app.get("/requests/history", async (req, res) => {
 });
 
 
-app.get("/requests/history/:division", async (req, res) => {
-  const { division } = req.params;
-  
-  try {
-    const result = await db.query(`
-      SELECT 
-        r.request_id,
-        u.full_name,
-        d.division_name,
-        i.item_name,
-        r.quantity,
-        r.reason,
-        r.status,
-        r.created_at
-      FROM requests r
-      JOIN users u ON r.requested_by = u.user_id 
-      JOIN divisions d ON u.division_id = d.division_id
-      JOIN items i ON r.item_id = i.item_id
-      WHERE d.division_name = $1
-      ORDER BY r.created_at DESC
-    `, [division]);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
 ///CRUD MANAJEMEN BARANG
 // CREATE: Tambah Barang
 app.post("/items", async (req, res) => {
