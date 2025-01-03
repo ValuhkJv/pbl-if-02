@@ -142,44 +142,6 @@ export default function LoanHistory() {
     "Desember",
   ];
 
-  // Filter rows berdasarkan tanggal, bulan dan tahun
-  const filteredRows = history.filter((item) => {
-    const tanggalPinjam = new Date(item.borrow_date);
-
-    // Filter berdasarkan status
-    const statusMatch =
-      filterStatus === "Semua" ||
-      (filterStatus === "return" &&
-        (item.status === "return" ||
-          item.status.startsWith("return: terlambat"))) ||
-      (filterStatus !== "return" && item.status === filterStatus);
-
-    // Filter pencarian di multiple fields
-    const searchMatch =
-      !searchTerm ||
-      (item.full_name &&
-        item.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.nik && item.nik.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (item.phone_number &&
-        item.phone_number.toLowerCase().includes(searchTerm.toLowerCase()));
-    // Filter berdasarkan rentang tanggal
-    const dateMatch =
-      (!startDate || tanggalPinjam >= startDate.setHours(0, 0, 0, 0)) &&
-      (!endDate ||
-        tanggalPinjam <= new Date(endDate).setHours(23, 59, 59, 999));
-
-    // Filter berdasarkan bulan dan tahun
-    const monthMatch =
-      selectedMonth === "Semua" ||
-      tanggalPinjam.getMonth() + 1 === months.indexOf(selectedMonth);
-
-    return statusMatch && searchMatch && dateMatch && monthMatch;
-  });
-
-  useEffect(() => {
-    setPage(0); // Reset to the first page whenever the search term changes
-  }, [searchTerm]);
-
   const fetchHistory = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -330,6 +292,44 @@ export default function LoanHistory() {
     setPage(0);
   };
 
+  // Filter rows berdasarkan tanggal, bulan dan tahun
+  const filteredRows = history.filter((item) => {
+    const tanggalPinjam = new Date(item.borrow_date);
+
+    // Filter berdasarkan status
+    const statusMatch =
+      filterStatus === "Semua" ||
+      (filterStatus === "return" &&
+        (item.status === "return" ||
+          item.status.startsWith("return: terlambat"))) ||
+      (filterStatus !== "return" && item.status === filterStatus);
+
+    // Filter pencarian di multiple fields
+    const searchMatch =
+      !searchTerm ||
+      (item.full_name &&
+        item.full_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.nik && item.nik.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (item.phone_number &&
+        item.phone_number.toLowerCase().includes(searchTerm.toLowerCase()));
+    // Filter berdasarkan rentang tanggal
+    const dateMatch =
+      (!startDate || tanggalPinjam >= startDate.setHours(0, 0, 0, 0)) &&
+      (!endDate ||
+        tanggalPinjam <= new Date(endDate).setHours(23, 59, 59, 999));
+
+    // Filter berdasarkan bulan dan tahun
+    const monthMatch =
+      selectedMonth === "Semua" ||
+      tanggalPinjam.getMonth() + 1 === months.indexOf(selectedMonth);
+
+    return statusMatch && searchMatch && dateMatch && monthMatch;
+  });
+
+  useEffect(() => {
+    setPage(0); // Reset to the first page whenever the search term changes
+  }, [searchTerm]);
+
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const displayedRows = filteredRows.slice(startIndex, endIndex);
@@ -357,7 +357,15 @@ export default function LoanHistory() {
               },
             }}
             value={startDate}
-            onChange={(newValue) => setStartDate(newValue)}
+            onChange={(newValue) => {
+              if (newValue) {
+                const date = new Date(newValue);
+                date.setHours(0, 0, 0, 0);
+                setStartDate(date);
+              } else {
+                setStartDate(null);
+              }
+            }}
             renderInput={(params) => <TextField {...params} />}
           />
           <DatePicker
@@ -371,7 +379,16 @@ export default function LoanHistory() {
               },
             }}
             value={endDate}
-            onChange={(newValue) => setEndDate(newValue)}
+            onChange={(newValue) => {
+              if (newValue) {
+                const date = new Date(newValue);
+                date.setHours(23, 59, 59, 999);
+                setEndDate(date);
+              } else {
+                setEndDate(null);
+              }
+            }}
+            minDate={startDate}
             renderInput={(params) => <TextField {...params} />}
           />
         </Stack>
@@ -592,7 +609,7 @@ export default function LoanHistory() {
           borderRadius: "12px",
           overflow: "hidden",
         }}
-      ></TableContainer>
+      />
       <div
         style={{
           marginTop: "10px",
@@ -605,7 +622,7 @@ export default function LoanHistory() {
           borderTopRightRadius: "12px",
           borderBottom: "1px solid #e0e0e0",
         }}
-      ></div>
+      />
       <TableContainer
         component={Paper}
         sx={{
@@ -704,15 +721,9 @@ export default function LoanHistory() {
                               alignItems: "center",
                               justifyContent: "center",
                             }}
-                            onClick={() => {
-                              // Buat struktur data yang benar untuk dihapus
-                              const deleteData = {
-                                items: Array.isArray(item.items)
-                                  ? item.items
-                                  : [item],
-                              };
-                              handleOpenDeleteDialog(deleteData);
-                            }}
+                            onClick={() =>
+                              handleOpenDeleteDialog(item.borrowing_id)
+                            }
                           >
                             <DeleteForeverOutlinedIcon
                               sx={{ fontSize: "20px" }}

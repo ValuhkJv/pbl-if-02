@@ -1,37 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from "react";
 import {
   Table,
+  TableBody,
+  TableCell,
+  TableContainer,
   TableHead,
   TableRow,
-  TableCell,
-  TableBody,
-  Button,
-  TextField,
-  TableContainer,
   Paper,
-  Box,
   Typography,
-  Stack,
+  Box,
   Divider,
-  MenuItem,
-  InputAdornment,
-  Select,
   FormControl,
+  Select,
+  MenuItem,
   InputLabel,
+  TextField,
+  InputAdornment,
+  Stack,
   TablePagination
 } from "@mui/material";
 import { styled } from "@mui/system";
-import {
-  Search as SearchIcon,
-} from "@mui/icons-material";
+import { Search as SearchIcon } from "@mui/icons-material";
+import ExportToExcel from './ExportToExcel';
+
 
 const StyledTableCell = styled(TableCell)({
-  padding: "12px",
   border: "1px solid #ddd",
-  textAlign: "left",
-  wordWrap: "break-word",
+  padding: "8px",
 });
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -43,59 +38,26 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const DetailPersetujuanAdmin = () => {
-  const { created_at } = useParams(); // request_id permintaan
-  const [details, setDetails] = useState([]); // Data detail barang
-  const [status, setStatus] = useState(""); // Status aksi
-  const [reason, setReason] = useState(""); // Alasan jika ditolak
-  const [activeIndex, setactiveIndex] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+export default function RequestHistory() {
+  // state untuk menyimpan status filter
+  const [transactions, setTransactions] = useState([]);
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  const token = localStorage.getItem("token"); // Ambil token dari local storage
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    console.log("Tanggal yang dikirim ke backend:", created_at);
+    fetchTransactions();
+  }, []);
 
-    axios
-      .get(
-        `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Sertakan token di header
-          },
-        }
-      )
-      .then((res) => setDetails(res.data))
-      .catch((err) => console.error(err));
-  }, [created_at, token]);
-
-  const handleApproval = (approvalStatus, request_id) => {
-    const payload = {
-      status: approvalStatus,
-      rejection_reason:
-        approvalStatus === "Rejected by Staff SBUM" ? reason : null,
-    };
-
-    axios
-      .put(
-        `http://localhost:5000/requestsApprovalAdmin/${request_id}/admin-approval`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Sertakan token di header
-          },
-        }
-      )
-      .then(() => alert("Permintaan berhasil diperbarui."))
-      .catch((err) => console.error(err));
-  };
-
-  const handleRejectButton = (index) => {
-    setStatus("Rejected by Staff SBUM");
-    setactiveIndex(index);
+  const fetchTransactions = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/requests/history');
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
   };
 
   const handleFilterChange = (event) => {
@@ -107,13 +69,13 @@ const DetailPersetujuanAdmin = () => {
   };
 
   const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(+event.target.value);
+    setRowsPerPage(+event.target.value, 5);
     setPage(0);
   };
 
   // Menggabungkan filter status dan pencarian dalam satu fungsi
   const getFilteredRows = () => {
-    return details.filter((item) => {
+    return transactions.filter((item) => {
       const matchesSearch =
         !searchTerm ||
         Object.values(item)
@@ -122,11 +84,7 @@ const DetailPersetujuanAdmin = () => {
           .includes(searchTerm.toLowerCase());
 
       const matchesStatus =
-        filterStatus === "Semua" ||
-        (filterStatus === "return" &&
-          (item.status === "return" ||
-            item.status.startsWith("return: terlambat"))) ||
-        (filterStatus !== "return" && item.status === filterStatus);
+        filterStatus === "Semua" || item.status === filterStatus;
 
       return matchesSearch && matchesStatus;
     });
@@ -138,7 +96,6 @@ const DetailPersetujuanAdmin = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
 
   return (
     <Box
@@ -174,7 +131,7 @@ const DetailPersetujuanAdmin = () => {
             fontSize: "26px",
           }}
         >
-          DETAIL PERSETUJUAN
+          RIWAYAT TRANSAKSI PERMINTAAN
         </Typography>
         <Divider
           style={{
@@ -199,6 +156,7 @@ const DetailPersetujuanAdmin = () => {
           spacing={2}
           alignItems="center"
         >
+          <ExportToExcel data={filteredRows} />
           <FormControl variant="outlined" sx={{
             width: "250px",
             backgroundColor: "white",
@@ -222,6 +180,8 @@ const DetailPersetujuanAdmin = () => {
             </Select>
           </FormControl>
         </Stack>
+
+        {/* Search di kanan */}
         <TextField
           variant="outlined"
           placeholder="Search..."
@@ -264,96 +224,43 @@ const DetailPersetujuanAdmin = () => {
           borderBottom: "1px solid #e0e0e0",
         }}
       />
-      {/* Tabel Detail Permintaan */}
       <TableContainer
         component={Paper}
         sx={{
-          borderRadius: "6px",
-          overflowX: "hidden",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-          width: "100%",
-          maxWidth: "1400px",
-          margin: "0 auto",
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
         }}
       >
-        <Table>
+        <Table aria-label="request history table">
           <TableHead>
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
+              <StyledTableCell>Nama</StyledTableCell>
+              <StyledTableCell>Divisi</StyledTableCell>
               <StyledTableCell>Nama Barang</StyledTableCell>
               <StyledTableCell>Jumlah</StyledTableCell>
               <StyledTableCell>Alasan</StyledTableCell>
-              <StyledTableCell>Divisi</StyledTableCell>
+              <StyledTableCell>Tanggal Permintaan</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
-              <StyledTableCell>Aksi</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {displayedRows.map((item, index) => (
-              <StyledTableRow key={item.request_id}>
+            {displayedRows.map((request, index) => (
+              <StyledTableRow key={request.id}>
                 <StyledTableCell>{index + 1}</StyledTableCell>
-                <StyledTableCell>{item.item_name}</StyledTableCell>
-                <StyledTableCell>{item.quantity}</StyledTableCell>
-                <StyledTableCell>{item.reason}</StyledTableCell>
-                <StyledTableCell>{item.user_division}</StyledTableCell>
-                <StyledTableCell>{item.status}</StyledTableCell>
-                <StyledTableCell>
-                  {/* Tombol Persetujuan */}
-                  <div style={{ marginTop: "20px" }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      onClick={() =>
-                        handleApproval("Approved by Staff SBUM", item.request_id)
-                      }
-                    >
-                      Setujui
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      color="error"
-                      style={{ marginLeft: "10px" }}
-                      onClick={() => handleRejectButton(index)}
-                    >
-                      Tolak
-                    </Button>
-                  </div>
-
-                  {/* Input Alasan Penolakan */}
-                  {status === "Rejected by Staff SBUM" &&
-                    activeIndex === index && (
-                      <div style={{ marginTop: "20px" }}>
-                        <TextField
-                          fullWidth
-                          label="Alasan Penolakan"
-                          variant="outlined"
-                          multiline
-                          rows={3}
-                          onChange={(e) => setReason(e.target.value)}
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          style={{ marginTop: "10px" }}
-                          onClick={() =>
-                            handleApproval(
-                              "Rejected by Staff SBUM",
-                              item.request_id
-                            )
-                          }
-                        >
-                          Kirim
-                        </Button>
-                      </div>
-                    )}
-                </StyledTableCell>
+                <StyledTableCell>{request.full_name}</StyledTableCell>
+                <StyledTableCell>{request.division_name}</StyledTableCell>
+                <StyledTableCell>{request.item_name}</StyledTableCell>
+                <StyledTableCell>{request.quantity}</StyledTableCell>
+                <StyledTableCell>{request.reason}</StyledTableCell>
+                <StyledTableCell> {new Date(request.created_at).toLocaleDateString()}</StyledTableCell>
+                <StyledTableCell>{request.status}</StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>
         </Table>
         <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[5, 10, 25]} // rows per page options
           component="div"
           count={filteredRows.length}
           rowsPerPage={rowsPerPage}
@@ -364,6 +271,4 @@ const DetailPersetujuanAdmin = () => {
       </TableContainer>
     </Box>
   );
-};
-
-export default DetailPersetujuanAdmin;
+}

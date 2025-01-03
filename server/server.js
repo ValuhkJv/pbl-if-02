@@ -135,6 +135,7 @@ app.post("/login", async (req, res) => {
       roles_id: users.roles_id, // Mengembalikan role untuk redirect di frontend
       user_id: users.user_id,
       full_name: users.full_name,
+      nik: users.nik,
       division_name: users.division_name,
     });
   } catch (error) {
@@ -757,14 +758,71 @@ app.put(
   }
 );
 
+
+app.get("/requests/history", async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        r.request_id,
+        u.full_name,
+        d.division_name,
+        i.item_name,
+        r.quantity,
+        r.reason,
+        r.status,
+        r.created_at
+      FROM requests r
+      JOIN users u ON r.requested_by = u.user_id 
+      JOIN divisions d ON u.division_id = d.division_id
+      JOIN items i ON r.item_id = i.item_id
+      ORDER BY r.created_at DESC
+    `);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+
+app.get("/requests/history/:division", async (req, res) => {
+  const { division } = req.params;
+  
+  try {
+    const result = await db.query(`
+      SELECT 
+        r.request_id,
+        u.full_name,
+        d.division_name,
+        i.item_name,
+        r.quantity,
+        r.reason,
+        r.status,
+        r.created_at
+      FROM requests r
+      JOIN users u ON r.requested_by = u.user_id 
+      JOIN divisions d ON u.division_id = d.division_id
+      JOIN items i ON r.item_id = i.item_id
+      WHERE d.division_name = $1
+      ORDER BY r.created_at DESC
+    `, [division]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 ///CRUD MANAJEMEN BARANG
 // CREATE: Tambah Barang
 app.post("/items", async (req, res) => {
-  const { item_code, item_name, category_id, unit, stock } = req.body;
+  const { item_code, item_name, category_id, unit, initial_stock } = req.body;
   try {
     const result = await db.query(
-      "INSERT INTO items (item_code, item_name, category_id, unit, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [item_code, item_name, category_id, unit, stock]
+      "INSERT INTO items (item_code, item_name, category_id, unit, initial_stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [item_code, item_name, category_id, unit, initial_stock]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -812,13 +870,13 @@ app.get("/items/category/3", async (req, res) => {
 // Mengupdate data item berdasarkan id
 app.put("/items/:itemId", async (req, res) => {
   const { itemId } = req.params; // Mengambil item_id dari URL parameter
-  const { item_code, item_name, category_id, unit, stock } = req.body;
+  const { item_code, item_name, category_id, unit, initial_stock } = req.body;
 
   try {
     // Update data berdasarkan item_id
     const result = await db.query(
-      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5 WHERE item_id = $6 RETURNING *`,
-      [item_code, item_name, category_id, unit, stock, itemId]
+      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, initial_stock = $5 WHERE item_id = $6 RETURNING *`,
+      [item_code, item_name, category_id, unit, initial_stock, itemId]
     );
 
     // Jika item tidak ditemukan
@@ -1623,7 +1681,7 @@ app.get("/report", async (req, res) => {
           items.category_id,
           categories.category_name,
           items.initial_stock AS stock_awal,
-          COALESCE(SUM(stock_in.quantity), 0) AS barang_masuk,
+          COALESCE(SUM(DISTINCT stock_in.quantity), 0) AS barang_masuk,
           COALESCE(SUM(requests.quantity), 0) AS barang_keluar,
           items.stock AS stock_akhir
       FROM 

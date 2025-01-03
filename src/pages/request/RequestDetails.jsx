@@ -8,20 +8,37 @@ import {
   TableHead,
   TableRow,
   Typography,
-  Container,
   TableContainer,
   Paper,
   TablePagination,
   Box,
   TextField,
   InputAdornment,
+  Divider,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
+  InputLabel,
   Stack,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
+import { styled } from "@mui/system";
+
+const StyledTableCell = styled(TableCell)({
+  padding: "12px",
+  border: "1px solid #ddd",
+  textAlign: "center",
+  wordWrap: "break-word",
+});
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
 
 const DetailPermintaan = () => {
   const { date } = useParams();
@@ -60,38 +77,98 @@ const DetailPermintaan = () => {
     setPage(0);
   };
 
-  // Filter rows based on search term
-  const filteredRows = details.filter(
-    (item) =>
-      (!searchTerm || // if no search term, show all
-        (item.item_name &&
-          item.item_name.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-      (filterStatus === "Semua" || item.status === filterStatus)
+  // Menggabungkan filter status dan pencarian dalam satu fungsi
+  const getFilteredRows = () => {
+    return details.filter((item) => {
+      const matchesSearch =
+        !searchTerm ||
+        Object.values(item)
+          .join(" ")
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        filterStatus === "Semua" || item.status === filterStatus;
+
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  // Gunakan fungsi filter gabungan untuk mendapatkan data yang akan ditampilkan
+  const filteredRows = getFilteredRows();
+  const displayedRows = filteredRows.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
   );
 
+
   return (
-    <Container maxWidth="xl" sx={{ mx: "auto", padding: 4 }}>
+    <Box
+      sx={{
+        width: "100%",
+        margin: "0 auto", // Pusatkan di layar
+        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        borderRadius: 2,
+        px: 2,
+        py: 4,
+        bgcolor: "background.paper",
+      }}
+    >
       <Box
         sx={{
-          display: "flex",
+          mb: 4,
+          justifyContent: "center",
           alignItems: "center",
-          mb: 5,
-          padding: 2,
-          justifyContent: "space-between",
-          maxWidth: "1400px",
-          margin: "0 auto",
+          display: "flex",
         }}
       >
-        <Typography variant="h4" gutterBottom>
-          Detail Permintaan Tanggal {formattedDate}
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+        <Typography
+          style={{
+            margin: "0 10px",
+            fontFamily: "Sansita",
+            fontSize: "26px",
+          }}
+        >
+          DATA PERMINTAAN TANGGAL {formattedDate}
         </Typography>
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+      </Box>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{
+          pb: 2,
+        }}
+      >
+        {/* Filter di kiri */}
         <Stack
-          direction="row"
+          direction={{ xs: "column", sm: "row" }}
           spacing={2}
           alignItems="center"
-          sx={{ mt: "4px" }}
         >
-          <FormControl variant="outlined" sx={{ minWidth: 200 }}>
+          <FormControl variant="outlined" sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -99,29 +176,58 @@ const DetailPermintaan = () => {
               label="Status"
             >
               <MenuItem value="Semua">Semua</MenuItem>
-              <MenuItem value="approved">Disetujui</MenuItem>
-              <MenuItem value="pending">Menunggu persetujuan</MenuItem>
-              <MenuItem value="rejected">Ditolak</MenuItem>
+              <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
+              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
+              <MenuItem value="Approved by Staff SBUM">Disetujui Staff SBUM</MenuItem>
+              <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
+              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
             </Select>
           </FormControl>
-          <TextField
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              width: 250,
-            }}
-          />
         </Stack>
-      </Box>
+
+        {/* Search di kanan */}
+        <TextField
+          variant="outlined"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon color="action" />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}
+        />
+      </Stack>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      />
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      />
       <TableContainer
         component={Paper}
         sx={{
@@ -136,36 +242,36 @@ const DetailPermintaan = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>No</TableCell>
-              <TableCell>Hari</TableCell>
-              <TableCell>Tanggal</TableCell>
-              <TableCell>Unit</TableCell>
-              <TableCell>Alasan Permintaan</TableCell>
-              <TableCell>Nama Barang</TableCell>
-              <TableCell>Satuan</TableCell>
-              <TableCell>Jumlah</TableCell>
-              <TableCell>Nama Peminta</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Alasan Penolakan</TableCell>
+              <StyledTableCell>No</StyledTableCell>
+              <StyledTableCell>Hari</StyledTableCell>
+              <StyledTableCell>Tanggal</StyledTableCell>
+              <StyledTableCell>Unit</StyledTableCell>
+              <StyledTableCell>Alasan Permintaan</StyledTableCell>
+              <StyledTableCell>Nama Barang</StyledTableCell>
+              <StyledTableCell>Satuan</StyledTableCell>
+              <StyledTableCell>Jumlah</StyledTableCell>
+              <StyledTableCell>Nama Peminta</StyledTableCell>
+              <StyledTableCell>Status</StyledTableCell>
+              <StyledTableCell>Alasan Penolakan</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {details.map((detail, index) => (
-              <TableRow key={detail.request_id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell>{detail.day_of_week}</TableCell>
-                <TableCell>
+            {displayedRows.map((detail, index) => (
+              <StyledTableRow key={detail.request_id}>
+                <StyledTableCell>{index + 1 + page * rowsPerPage}</StyledTableCell>
+                <StyledTableCell>{detail.day_of_week}</StyledTableCell>
+                <StyledTableCell>
                   {new Date(detail.date).toLocaleDateString()}
-                </TableCell>
-                <TableCell>{detail.division_name}</TableCell>
-                <TableCell>{detail.reason}</TableCell>
-                <TableCell>{detail.item_name}</TableCell>
-                <TableCell>{detail.unit}</TableCell>
-                <TableCell>{detail.quantity}</TableCell>
-                <TableCell>{detail.requested_by}</TableCell>
-                <TableCell>{detail.status}</TableCell>
-                <TableCell>{detail.rejection_reason || "-"}</TableCell>
-              </TableRow>
+                </StyledTableCell>
+                <StyledTableCell>{detail.division_name}</StyledTableCell>
+                <StyledTableCell>{detail.reason}</StyledTableCell>
+                <StyledTableCell>{detail.item_name}</StyledTableCell>
+                <StyledTableCell>{detail.unit}</StyledTableCell>
+                <StyledTableCell>{detail.quantity}</StyledTableCell>
+                <StyledTableCell>{detail.requested_by}</StyledTableCell>
+                <StyledTableCell>{detail.status}</StyledTableCell>
+                <StyledTableCell>{detail.rejection_reason || "-"}</StyledTableCell>
+              </StyledTableRow>
             ))}
           </TableBody>
         </Table>
@@ -179,7 +285,8 @@ const DetailPermintaan = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-    </Container>
+    </Box>
+
   );
 };
 

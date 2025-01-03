@@ -10,16 +10,14 @@ import {
   Stack,
   TextField,
   InputAdornment,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   TablePagination,
   TableContainer,
   Paper,
   Box,
+  Divider,
+  Tooltip
 } from "@mui/material";
-import { Container, styled } from "@mui/system";
+import { styled } from "@mui/system";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,19 +30,40 @@ const RequestList = ({ userId }) => {
   const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Semua");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
-    textAlign: "left",
+    textAlign: "center",
     wordWrap: "break-word",
   });
 
-  const handleFilterChange = (event) => {
-    setFilterStatus(event.target.value);
-  };
+  const StyledTableRow = styled(TableRow)(({ theme }) => ({
+    "&:nth-of-type(odd)": {
+      backgroundColor: theme.palette.action.hover,
+    },
+    "&:hover": {
+      backgroundColor: theme.palette.action.selected,
+    },
+  }));
+
+  // Tombol Detail (Biru)
+  const DetailButton = styled(Button)(({ theme }) => ({
+    backgroundColor: "#1976d2", // Biru
+    color: "white",
+    "&:hover": {
+      backgroundColor: "#0d47a1", // Biru lebih gelap saat hover
+      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+    },
+    textTransform: "none",
+    fontWeight: 100,
+    padding: "4px 8px",
+    borderRadius: "50%",
+    transition: "all 0.3s ease",
+    fontSize: "12px",
+  }));
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -58,15 +77,20 @@ const RequestList = ({ userId }) => {
   // Filter rows based on search term
   const filteredRows = requests.filter(
     (item) =>
-      (!searchTerm || // if no search term, show all
-        (item.item_name &&
-          item.item_name.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-      (filterStatus === "Semua" || item.status === filterStatus)
+      !searchTerm || 
+      new Date(item.date).toLocaleDateString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.total_requests.toString().includes(searchTerm)
   );
 
+  // Calculate pagination
+  const startIndex = page * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedRows = filteredRows.slice(startIndex, endIndex);
+
   useEffect(() => {
-    setPage(0); // Reset to the first page whenever the search term changes
+    setPage(0);
   }, [searchTerm]);
+
 
   useEffect(() => {
     const userId = localStorage.getItem("user_id");
@@ -82,96 +106,139 @@ const RequestList = ({ userId }) => {
   }, [userId]);
 
   return (
-    <Container maxWidth="xl" sx={{ mx: "auto", padding: 4 }}>
+    <Box
+      sx={{
+        width: "100%",
+        margin: "0 auto", // Pusatkan di layar
+        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+        borderRadius: 2,
+        px: 2,
+        py: 4,
+        bgcolor: "background.paper",
+        justifyContent: "space-between",
+      }}
+    >
       <Box
         sx={{
-          display: "flex",
+          mb: 4,
+          justifyContent: "center",
           alignItems: "center",
-          mb: 5,
-          padding: 2,
-          justifyContent: "space-between",
-          maxWidth: "1400px",
-          margin: "0 auto",
+          display: "flex",
         }}
       >
-        <Typography variant="h4" gutterBottom flexGrow={1}>
-          Data Permintaan Barang
-        </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => navigate("/request")}
-          disabled={
-            requests.filter(
-              (req) =>
-                new Date(req.request_date).toDateString() ===
-                new Date().toDateString()
-            ).length >= 5
-          }
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+        <Typography
+          style={{
+            margin: "0 10px",
+            fontFamily: "Sansita",
+            fontSize: "26px",
+          }}
         >
-          <AddIcon />
-          Permintaan
-        </Button>
+          DATA PERMINTAAN BARANG
+        </Typography>
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
       </Box>
 
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{
+          pb: 2,
+        }}
+      >
+        {/* Filter di kiri */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+        >
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => navigate("/request")}
+            disabled={
+              requests.filter(
+                (req) =>
+                  new Date(req.request_date).toDateString() ===
+                  new Date().toDateString()
+              ).length >= 5
+            }
+          >
+            <AddIcon />
+            Permintaan
+          </Button>
+        </Stack>
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+        >
+          
+          <TextField
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          />
+        </Stack>
+      </Stack>
       <TableContainer
         component={Paper}
         sx={{
           borderRadius: "12px",
-          overflowX: "auto",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-          width: "100%",
-          maxWidth: "1400px",
-          margin: "0 auto",
+          overflow: "hidden",
+        }}
+      />
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      />
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: 2,
-            mb: 2,
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={2}
-            alignItems="center"
-            sx={{ mt: "4px" }}
-          >
-            <FormControl variant="outlined" sx={{ minWidth: 200 }}>
-              <InputLabel>Status</InputLabel>
-              <Select
-                value={filterStatus}
-                onChange={handleFilterChange}
-                label="Status"
-              >
-                <MenuItem value="Semua">Semua</MenuItem>
-                <MenuItem value="approved">Disetujui</MenuItem>
-                <MenuItem value="pending">Menunggu persetujuan</MenuItem>
-                <MenuItem value="rejected">Ditolak</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              variant="outlined"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                width: 250,
-              }}
-            />
-          </Stack>
-        </Box>
-        <Table sx={{ minWidth: 650 }}>
+        <Table>
           <TableHead>
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
@@ -181,25 +248,44 @@ const RequestList = ({ userId }) => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {requests.map((request, index) => (
-              <TableRow key={request.date}>
+            {paginatedRows.map((request, index) => (
+              <StyledTableRow key={request.date}>
                 <StyledTableCell>{index + 1}</StyledTableCell>
                 <StyledTableCell>
                   {new Date(request.date).toLocaleDateString()}
                 </StyledTableCell>
                 <StyledTableCell>{request.total_requests}</StyledTableCell>
                 <StyledTableCell>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() =>
-                      navigate(`/DetailPermintaan/${request.date}`)
-                    }
+                <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   >
-                    <InfoOutlinedIcon />
-                  </Button>
+                  <Tooltip title="Detail">
+                    <DetailButton
+                      variant="contained"
+                      sx={{
+                        padding: "0",
+                        borderRadius: "50%",
+                        height: "35px",
+                        width: "35px",
+                        minWidth: "35px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      onClick={() =>
+                        navigate(`/DetailPermintaan/${request.date}`)
+                      }
+                    >
+                      <InfoOutlinedIcon />
+                    </DetailButton>
+                  </Tooltip>
+                  </div>
                 </StyledTableCell>
-              </TableRow>
+              </StyledTableRow>
             ))}
           </TableBody>
         </Table>
@@ -213,7 +299,8 @@ const RequestList = ({ userId }) => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-    </Container>
+
+    </Box>
   );
 };
 

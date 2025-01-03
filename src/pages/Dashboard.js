@@ -57,6 +57,7 @@ import DetailRequest from "./request/RequestDetails";
 import RequestApprovalAdmin from "./request/RequestApprovaladmin";
 import RequestApprovDetailadmin from "./request/RequestApprovDetailadmin";
 import StockIn from "./stockin/StockIn";
+import RequestHistoryAdmin from "./request/RequestHistoryAdmin";
 
 const drawerWidth = 280;
 
@@ -476,13 +477,7 @@ export default function Dashboard() {
                     >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                    <ListItemButton
-                      sx={{ pl: 8, color: "white" }}
-                      component={Link}
-                      to="/request/transaction/history"
-                    >
-                      <ListItemText primary="Riwayat Transaksi" />
-                    </ListItemButton>
+                
                   </List>
                 </Collapse>
               </>
@@ -684,6 +679,15 @@ export default function Dashboard() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/request/transaction/history"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <RequestHistoryAdmin />
+              </ProtectedRoute>
+            }
+          />
+          
           <Route
             path="/loan-approval/detail/:date"
             element={

@@ -16,6 +16,23 @@ import {
   Paper,
 } from "@mui/material";
 import axios from "axios";
+import { styled } from "@mui/system";
+
+const StyledTableCell = styled(TableCell)({
+  padding: "12px",
+  border: "1px solid #ddd",
+  textAlign: "center",
+  wordWrap: "break-word",
+});
+
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:hover": {
+    backgroundColor: theme.palette.action.selected,
+  },
+}));
 
 const RequestForm = () => {
   const [categories, setCategories] = useState([]);
@@ -290,22 +307,22 @@ const RequestForm = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Nama Barang</TableCell>
-                <TableCell>Kategori</TableCell>
-                <TableCell>Jumlah</TableCell>
-                <TableCell>Stok</TableCell>
-                <TableCell>Alasan</TableCell>
+                <StyledTableCell>Nama Barang</StyledTableCell>
+                <StyledTableCell>Kategori</StyledTableCell>
+                <StyledTableCell>Jumlah</StyledTableCell>
+                <StyledTableCell>Stok</StyledTableCell>
+                <StyledTableCell>Alasan</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {requests.map((request, index) => (
-                <TableRow key={index}>
-                  <TableCell>{request.item_name}</TableCell>
-                  <TableCell>{request.category_name}</TableCell>
-                  <TableCell>{request.quantity}</TableCell>
-                  <TableCell>{request.stock}</TableCell>
-                  <TableCell>{request.reason}</TableCell>
-                </TableRow>
+                <StyledTableRow key={index}>
+                  <StyledTableCell>{request.item_name}</StyledTableCell>
+                  <StyledTableCell>{request.category_name}</StyledTableCell>
+                  <StyledTableCell>{request.quantity}</StyledTableCell>
+                  <StyledTableCell>{request.stock}</StyledTableCell>
+                  <StyledTableCell>{request.reason}</StyledTableCell>
+                </StyledTableRow>
               ))}
             </TableBody>
           </Table>
