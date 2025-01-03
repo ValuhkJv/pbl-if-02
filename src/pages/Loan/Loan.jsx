@@ -124,20 +124,17 @@ const Borrowing = () => {
 
         const data = await response.json();
         // Filter data based on role and deletion status
-        const filteredData = data.filter(transaction => {
+        const filteredData = data.filter((transaction) => {
           const isStaff = userRole === "1";
           const isOwner = transaction.borrower_id === parseInt(userId);
 
           // Staff can see all non-deleted items
           // Regular users see their own items, including soft-deleted ones
-          return isStaff
-            ? !transaction.is_deleted
-            : isOwner;
+          return isStaff ? !transaction.is_deleted : isOwner;
         });
 
         setTransactions(filteredData);
         localStorage.setItem("transactions", JSON.stringify(filteredData));
-
       } catch (error) {
         console.error("DETAILED Fetch Transactions Error:", {
           name: error.name,
@@ -203,7 +200,7 @@ const Borrowing = () => {
 
       // Cek apakah item sudah ada di daftar
       const existingItemIndex = items.findIndex(
-        item => item.item_code === newItem.item_code && item.userId === userId
+        (item) => item.item_code === newItem.item_code && item.userId === userId
       );
 
       if (existingItemIndex > -1) {
@@ -230,9 +227,11 @@ const Borrowing = () => {
 
   // Fungsi untuk menghapus item dari keranjang
   const removeItemCart = (itemCode) => {
-    setItems(items.filter(item =>
-      !(item.item_code === itemCode && item.userId === userId)
-    ));
+    setItems(
+      items.filter(
+        (item) => !(item.item_code === itemCode && item.userId === userId)
+      )
+    );
   };
 
   // Fungsi untuk submit peminjaman
@@ -273,13 +272,12 @@ const Borrowing = () => {
       0
     );
 
-
     try {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("user_id");
 
       // Create borrowing transactions
-      const promises = items.map(item => {
+      const promises = items.map((item) => {
         const borrowingData = {
           item_code: item.item_code,
           borrower_id: parseInt(userId),
@@ -698,7 +696,7 @@ const Borrowing = () => {
               </TableHead>
               <TableBody>
                 {items
-                  .filter(item => item.userId === userId)
+                  .filter((item) => item.userId === userId)
                   .map((item) => (
                     <TableRow key={item.borrowing_id}>
                       <TableCell>{item.item_code}</TableCell>

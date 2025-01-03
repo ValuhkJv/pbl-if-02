@@ -14,8 +14,11 @@ import {
   Grid,
   Box,
   Paper,
+  IconButton,
 } from "@mui/material";
 import axios from "axios";
+import ClearIcon from "@mui/icons-material/Clear";
+import Alert from "../../components/alert";
 import { styled } from "@mui/system";
 
 const StyledTableCell = styled(TableCell)({
@@ -145,6 +148,11 @@ const RequestForm = () => {
     }
   };
 
+  // Fungsi untuk menghapus item dari daftar pinjaman
+  const removeItem = (itemId) => {
+    setRequests(requests.filter((request) => request.item_id !== itemId));
+  };
+
   const handleSubmit = () => {
     const userId = localStorage.getItem("user_id");
     const payload = {
@@ -161,7 +169,7 @@ const RequestForm = () => {
     axios
       .post("http://localhost:5000/requests/batch", payload)
       .then(() => {
-        alert("Permintaan berhasil diajukan!");
+        Alert.success("Berhasil!", "Data telah disimpan dengan sukses.");
         setRequests([]);
       })
       .catch((err) => console.error(err));
@@ -312,17 +320,26 @@ const RequestForm = () => {
                 <StyledTableCell>Jumlah</StyledTableCell>
                 <StyledTableCell>Stok</StyledTableCell>
                 <StyledTableCell>Alasan</StyledTableCell>
+                <TableCell>Aksi</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {requests.map((request, index) => (
-                <StyledTableRow key={index}>
-                  <StyledTableCell>{request.item_name}</StyledTableCell>
-                  <StyledTableCell>{request.category_name}</StyledTableCell>
-                  <StyledTableCell>{request.quantity}</StyledTableCell>
-                  <StyledTableCell>{request.stock}</StyledTableCell>
-                  <StyledTableCell>{request.reason}</StyledTableCell>
-                </StyledTableRow>
+                <TableRow key={index}>
+                  <TableCell>{request.item_name}</TableCell>
+                  <TableCell>{request.category_name}</TableCell>
+                  <TableCell>{request.quantity}</TableCell>
+                  <TableCell>{request.stock}</TableCell>
+                  <TableCell>{request.reason}</TableCell>
+                  <TableCell>
+                    <IconButton
+                      color="error"
+                      onClick={() => removeItem(request.item_id)}
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
               ))}
             </TableBody>
           </Table>

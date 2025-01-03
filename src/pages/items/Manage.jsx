@@ -13,12 +13,6 @@ import {
   Box,
   TextField,
   IconButton,
-  useMediaQuery,
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
   Grid,
   Divider,
   InputAdornment,
@@ -34,8 +28,8 @@ import {
   AddCircle as AddCircleIcon,
 } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
-import { useTheme } from "@mui/material/styles";
 import { styled } from "@mui/system";
+import Alert from "../../components/alert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -90,7 +84,6 @@ function ManageInventory() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [itemIdToDelete, setItemIdToDelete] = useState(null);
   const [isEditing, setEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -101,16 +94,14 @@ function ManageInventory() {
     item_name: "",
     category_id: "",
     unit: "",
-    stock: "",
+    initial_stock: "",
   });
 
   useEffect(() => {
     setPage(0); // Reset to the first page whenever the search term changes
   }, [searchTerm]);
 
-  const theme = useTheme();
-  const fullScreen = useMediaQuery(theme.breakpoints.down("md"));
-
+  // Map category ID to URL
   const categoryMap = {
     1: "/manage/barangkonsumsi",
     2: "/manage/barangrt",
@@ -154,7 +145,7 @@ function ManageInventory() {
       item_name: "",
       category_id: currentCategoryId || "",
       unit: "",
-      stock: "",
+      initial_stock: "",
     });
     setOpenModal(true);
   };
@@ -165,21 +156,31 @@ function ManageInventory() {
     setOpenModal(true);
   };
 
-  const handleDeleteData = () => {
-    fetch(`http://localhost:5000/items/${itemIdToDelete}`, {
+  const handleDeleteData = (itemId) => {
+    console.log("itemId to delete in handleDeleteData:", itemId); // Debugging untuk melihat nilai itemId
+
+    if (itemId === null) {
+      Alert.error("Error", "Item ID is not valid.");
+      return;
+    }
+
+    fetch(`http://localhost:5000/items/${itemId}`, {
       method: "DELETE",
     })
       .then((response) => {
         if (response.ok) {
           // Jika berhasil, hapus item dari state
           setItems((prevItems) =>
-            prevItems.filter((item) => item.item_id !== itemIdToDelete)
+            prevItems.filter((item) => item.item_id !== itemId)
           );
+          Alert.success("Deleted!", "Item has been successfully deleted.");
+        } else {
+          Alert.error("Error", "Failed to delete the item.");
         }
-        setOpenDeleteDialog(false);
       })
       .catch((error) => {
         console.error("Error:", error);
+        Alert.error("Error", "Something went wrong.");
       });
   };
 
@@ -190,7 +191,7 @@ function ManageInventory() {
       item_name: "",
       category_id: "",
       unit: "",
-      stock: "",
+      initial_stock: "",
     });
   };
 
@@ -208,14 +209,28 @@ function ManageInventory() {
     const url = isEditing
       ? `http://localhost:5000/items/${formData.item_id}` // Ganti id dengan item_id
       : "http://localhost:5000/items";
+
+    const payload = isEditing
+      ? formData // Saat mengedit barang
+      : {
+          ...formData,
+          stock: formData.initial_stock, // Saat menambah, backend otomatis gunakan initial_stock untuk stock
+        };
+
     fetch(url, {
       method: method,
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(payload), // Kirim data dalam bentuk JSON
     })
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) {
+          // If the response is not OK, throw an error
+          throw new Error("Data gagal disimpan. Periksa kembali input.");
+        }
+        return response.json();
+      })
       .then((data) => {
         if (isEditing) {
           setItems(
@@ -229,8 +244,11 @@ function ManageInventory() {
           setItems([...items, data]);
         }
         handleCloseModal();
+        Alert.success("Berhasil!", "Data barang berhasil disimpan.", "success");
       })
       .catch((error) => console.error("Error:", error));
+    handleCloseModal(); // Tutup modal setelah submit
+    Alert.error("Gagal!", "Kode barang atau Barang Sudah ada.", "error");
   };
 
   const categoryNames = {
@@ -385,7 +403,8 @@ function ManageInventory() {
                 <StyledTableCell>Nama Barang</StyledTableCell>
                 <StyledTableCell>Kategori</StyledTableCell>
                 <StyledTableCell>Satuan</StyledTableCell>
-                <StyledTableCell>Stok</StyledTableCell>
+                <StyledTableCell>Stok Awal</StyledTableCell>
+                <StyledTableCell>Stok Saat Ini</StyledTableCell>
                 <StyledTableCell>Aksi</StyledTableCell>
               </TableRow>
             </TableHead>
@@ -399,6 +418,7 @@ function ManageInventory() {
                     {categoryNames[item.category_id]}
                   </StyledTableCell>
                   <StyledTableCell>{item.unit}</StyledTableCell>
+                  <StyledTableCell>{item.initial_stock}</StyledTableCell>
                   <StyledTableCell>{item.stock}</StyledTableCell>
                   <StyledTableCell>
                     <div
@@ -409,78 +429,52 @@ function ManageInventory() {
                       }}
                     >
                       <Tooltip title="Edit" placement="top">
-                      <DetailButton
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => handleEditData(item)}
-                        color="primary"
-                      >
-                        <EditIcon />
-                      </DetailButton>
+                        <DetailButton
+                          sx={{
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => handleEditData(item)}
+                          color="primary"
+                        >
+                          <EditIcon />
+                        </DetailButton>
                       </Tooltip>
-                      <Tooltip title="Hapus" placement="top">
-                      <RemoveButton
-                        sx={{
-                          my: 1,
-                          mx: 2,
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => {
-                          setItemIdToDelete(item.item_id);
-                          setOpenDeleteDialog(true);
-                        }}
-                        color="error"
-                      >
-                        <DeleteForeverOutlinedIcon />
-                      </RemoveButton>
+                      <Tooltip title="Hapus" placement="top" key={item.item_id}>
+                        <RemoveButton
+                          sx={{
+                            my: 1,
+                            mx: 2,
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => {
+                            console.log(
+                              "Setting itemIdToDelete to:",
+                              item.item_id
+                            ); // Debugging untuk melihat ID yang dipilih
+                            setItemIdToDelete(item.item_id);
+                            Alert.confirmDelete(() =>
+                              handleDeleteData(item.item_id)
+                            );
+                          }}
+                        >
+                          <DeleteForeverOutlinedIcon />
+                        </RemoveButton>
                       </Tooltip>
                     </div>
-                    <Dialog
-                      fullScreen={fullScreen}
-                      open={openDeleteDialog}
-                      onClose={() => setOpenDeleteDialog(false)}
-                      aria-labelledby="responsive-dialog-title"
-                    >
-                      <DialogTitle id="responsive-dialog-title">
-                        Konfirmasi Penghapusan
-                      </DialogTitle>
-                      <DialogContent>
-                        <DialogContentText>
-                          Apakah Anda yakin ingin menghapus barang ini? Tindakan
-                          ini tidak dapat dibatalkan.
-                        </DialogContentText>
-                      </DialogContent>
-                      <DialogActions>
-                        <Button
-                          variant="outlined"
-                          color="black"
-                          onClick={() => setOpenDeleteDialog(false)}
-                        >
-                          Batal
-                        </Button>
-                        <Button
-                          variant="contained"
-                          onClick={() => handleDeleteData(itemIdToDelete)}
-                        >
-                          Hapus
-                        </Button>
-                      </DialogActions>
-                    </Dialog>
                   </StyledTableCell>
                 </StyledTableRow>
               ))}
@@ -570,15 +564,17 @@ function ManageInventory() {
             />
             <TextField
               margin="normal"
-              required
+              required={!isEditing}
               fullWidth
-              id="stock"
-              label="Stok"
-              name="stock"
+              id="initial_stock"
+              label="Stok Awal"
+              name="initial_stock"
               type="number"
-              value={formData.stock}
+              value={formData.initial_stock}
               onChange={handleChange}
+              disabled={isEditing}
             />
+
             <Button
               type="submit"
               fullWidth

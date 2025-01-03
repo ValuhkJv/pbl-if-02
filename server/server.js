@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -85,6 +85,7 @@ const upload = multer({
   },
 });
 
+// Endpoint login
 // Endpoint login
 app.post("/login", async (req, res) => {
   const { username, password, roles_id } = req.body;
@@ -821,8 +822,8 @@ app.post("/items", async (req, res) => {
   const { item_code, item_name, category_id, unit, initial_stock } = req.body;
   try {
     const result = await db.query(
-      "INSERT INTO items (item_code, item_name, category_id, unit, initial_stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [item_code, item_name, category_id, unit, initial_stock]
+      "INSERT INTO items (item_code, item_name, category_id, unit, stock) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [item_code, item_name, category_id, unit, stock]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -855,7 +856,7 @@ app.get("/manage/:categoryId", async (req, res) => {
 app.get("/items/category/3", async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT i.*, c.category_name 
+      `SELECT i.*, c.category_name, i.initial_stock 
        FROM items i 
        JOIN categories c ON i.category_id = c.category_id
        WHERE c.category_id = 3 AND i.stock > 0
@@ -875,8 +876,8 @@ app.put("/items/:itemId", async (req, res) => {
   try {
     // Update data berdasarkan item_id
     const result = await db.query(
-      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, initial_stock = $5 WHERE item_id = $6 RETURNING *`,
-      [item_code, item_name, category_id, unit, initial_stock, itemId]
+      `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5 WHERE item_id = $6 RETURNING *`,
+      [item_code, item_name, category_id, unit, stock, itemId]
     );
 
     // Jika item tidak ditemukan

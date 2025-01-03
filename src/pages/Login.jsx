@@ -50,7 +50,6 @@ const Login = () => {
       const userData = {
         id: response.data.user_id,
         fullName: response.data.full_name,
-        nik: response.data.nik,
         divisionName: response.data.division_name
       };
 
@@ -59,7 +58,6 @@ const Login = () => {
       localStorage.setItem("role", response.data.roles_id);
       localStorage.setItem("user_id", response.data.user_id);
       localStorage.setItem("full_name", response.data.full_name);
-      localStorage.setItem("nik", response.data.nik);
       localStorage.setItem("division_name", response.data.division_name);
       localStorage.setItem("user", JSON.stringify(userData));  // Store user data as JSON string
 
