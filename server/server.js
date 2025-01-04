@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -775,7 +775,7 @@ app.get("/requests/export/:date", async (req, res) => {
       requestedDate: date,
       formattedDate,
       userId: user_id,
-      query: `SELECT * FROM requests WHERE requested_by = ${user_id} AND DATE(created_at) = '${formattedDate}'`
+      query: `SELECT * FROM requests WHERE requested_by = ${user_id} AND DATE(created_at) = '${formattedDate}'`,
     });
 
     const result = await db.query(
@@ -836,12 +836,11 @@ app.get("/requests/export/:date", async (req, res) => {
 ///CRUD MANAJEMEN BARANG
 // CREATE: Tambah Barang
 app.post("/items", async (req, res) => {
-  const { item_code, item_name, category_id, unit, stock, initial_stock } =
-    req.body;
+  const { item_code, item_name, category_id, unit, initial_stock } = req.body;
   try {
     const result = await db.query(
       "INSERT INTO items (item_code, item_name, category_id, unit, stock, initial_stock) VALUES ($1, $2, $3, $4, $5, $5) RETURNING *",
-      [item_code, item_name, category_id, unit, stock, initial_stock]
+      [item_code, item_name, category_id, unit, initial_stock]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -889,14 +888,13 @@ app.get("/items/category/3", async (req, res) => {
 // Mengupdate data item berdasarkan id
 app.put("/items/:itemId", async (req, res) => {
   const { itemId } = req.params; // Mengambil item_id dari URL parameter
-  const { item_code, item_name, category_id, unit, stock, initial_stock } =
-    req.body;
+  const { item_code, item_name, category_id, unit, stock } = req.body;
 
   try {
     // Update data berdasarkan item_id
     const result = await db.query(
       `UPDATE items SET item_code = $1, item_name = $2, category_id = $3, unit = $4, stock = $5 WHERE item_id = $6 RETURNING *`,
-      [item_code, item_name, category_id, unit, stock, initial_stock, itemId]
+      [item_code, item_name, category_id, unit, stock, itemId]
     );
 
     // Jika item tidak ditemukan
