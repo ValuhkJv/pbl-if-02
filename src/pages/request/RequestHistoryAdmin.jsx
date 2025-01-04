@@ -17,7 +17,6 @@ import {
   Tooltip,
   TablePagination,
   CircularProgress,
-
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
@@ -35,12 +34,12 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; import {
 const RequestApprovalAdmin = () => {
   const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
-  const division = localStorage.getItem("division_name");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // State untuk filter tanggal
   const [startDate, setStartDate] = useState(null);
@@ -72,14 +71,6 @@ const RequestApprovalAdmin = () => {
     alignItems: "center",
     justifyContent: "center",
   }));
-
-  useEffect(() => {
-    axios
-      .get(`http://localhost:5000/requestsApprovalAdmin/${division}`)
-      .then((res) => setRequests(res.data))
-      .catch((err) => console.error(err));
-  }, [division]);
-
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -126,7 +117,46 @@ const RequestApprovalAdmin = () => {
   const endIndex = startIndex + rowsPerPage;
   const displayedRows = filteredRows.slice(startIndex, endIndex);
 
-  const handleExportDetail = async (date) => {
+  useEffect(() => {
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+      console.error("User ID is required!");
+      return;
+    }
+    axios
+      .get(`http://localhost:5000/requests?user_id=${userId}`)
+      .then((response) => setRequests(response.data))
+      .catch((error) => console.error("Error fetching requests:", error));
+  }, []);
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    setLoading(true);
+    setError(null);
+    const userId = localStorage.getItem("user_id");
+
+    if (!userId) {
+      setError("User ID tidak ditemukan. Silakan login kembali.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.get(`http://localhost:5000/requests?user_id=${userId}`);
+      console.log("Fetched requests:", response.data); // Debug log
+      setRequests(response.data);
+    } catch (err) {
+      setError("Gagal memuat data permintaan. " + (err.response?.data?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExportDetail = async (createdAt) => {
     setExporting(true);
     try {
       const userId = localStorage.getItem("user_id");
@@ -134,21 +164,21 @@ const RequestApprovalAdmin = () => {
       if (!userId) {
         throw new Error("User ID tidak ditemukan - silakan login ulang");
       }
-      // Format the date to YYYY-MM-DD to match backend expectation
-      const formattedDate = new Date(date).toISOString().split('T')[0];
+      // Format the date properly
+      const date = new Date(createdAt);
+      const formattedDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+      console.log('Export request details:', {
+        originalDate: createdAt,
+        formattedDate: formattedDate,
+        userId: userId
+      });
 
       const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
         params: {
           user_id: userId
         },
       });
-      console.log('Exporting date:', date);
-      console.log("Export request:", {
-        date,
-        row: requests.find(r => new Date(r.date).toISOString().split('T')[0] === date)
-      });
-      console.log("Respons dari server:", response.data);
-
 
       if (!response.data.success || !response.data.data?.length) {
         throw new Error("Tidak ada data untuk diekspor");
@@ -233,7 +263,6 @@ const RequestApprovalAdmin = () => {
         }
       }
 
-
       // Header styling
       const headerStyle = {
         font: { bold: true, sz: 12 },
@@ -276,14 +305,14 @@ const RequestApprovalAdmin = () => {
       });
       const blob = new Blob([wbout], { type: 'application/octet-stream' });
       saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
-
+      
     } catch (err) {
       setError(err.message || "Gagal mengekspor data");
+      console.error("Export error:", err);
     } finally {
       setExporting(false);
     }
   };
-
 
   // Tambahkan method render untuk filter tambahan
   const renderDateFilterSection = () => (
@@ -537,7 +566,7 @@ const RequestApprovalAdmin = () => {
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        onClick={() => handleExportDetail(request.date)}
+                        onClick={() => handleExportDetail(request.created_at)}
                         disabled={exporting}
                       >
                         {exporting ? <CircularProgress size={24} /> : <FileDownloadIcon />}

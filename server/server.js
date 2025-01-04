@@ -805,7 +805,7 @@ app.get("/requests/export/:date", async (req, res) => {
       LEFT JOIN users head ON r.approved_by_head = head.user_id
       LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
       WHERE r.requested_by = $1 
-      AND DATE(r.created_at) = $2
+      AND r.created_at::date = $2::date
       ORDER BY r.created_at ASC`,
       [user_id, formattedDate]
     );

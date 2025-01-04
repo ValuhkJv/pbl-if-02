@@ -54,9 +54,7 @@ const DetailPersetujuanAdmin = () => {
 
   useEffect(() => {
     console.log("Tanggal yang dikirim ke backend:", created_at);
-
-    axios
-      .get(
+    axios.get(
         `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
         {
           headers: {
@@ -67,8 +65,6 @@ const DetailPersetujuanAdmin = () => {
       .then((res) => setDetails(res.data))
       .catch((err) => console.error(err));
   }, [created_at, token]);
-
-
 
   const handleFilterChange = (event) => {
     setFilterStatus(event.target.value);

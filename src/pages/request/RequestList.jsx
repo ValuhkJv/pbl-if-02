@@ -30,7 +30,6 @@ import {
   FileDownload as FileDownloadIcon,
 } from "@mui/icons-material";
 
-
 const RequestList = ({ userId }) => {
   const [requests, setRequests] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -94,7 +93,6 @@ const RequestList = ({ userId }) => {
     setPage(0);
   }, [searchTerm]);
 
-
   useEffect(() => {
     const userId = localStorage.getItem("user_id");
 
@@ -144,20 +142,25 @@ const RequestList = ({ userId }) => {
       if (!userId) {
         throw new Error("User ID tidak ditemukan - silakan login ulang");
       }
-      // Format the date to YYYY-MM-DD to match backend expectation
-      const formattedDate = new Date(date).toISOString().split('T')[0];
+
+      // Get the date in YYYY-MM-DD format, considering timezone
+      const d = new Date(date);
+      const formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+      console.log('Export request details:', {
+        originalDate: date,
+        formattedDate: formattedDate,
+        userId: userId
+      });
+
 
       const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
         params: {
           user_id: userId
         },
       });
-      console.log('Exporting date:', date);
-      console.log("Export request:", {
-        date,
-        row: requests.find(r => new Date(r.date).toISOString().split('T')[0] === date)
-      });
-      console.log("Respons dari server:", response.data);
+
+      console.log('Response data:', response.data.data[0]); // Add this line
 
 
       if (!response.data.success || !response.data.data?.length) {
