@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
@@ -758,6 +758,7 @@ app.put(
   }
 );
 
+
 app.get("/requests/export/:date", async (req, res) => {
   const { date } = req.params;
   const { user_id } = req.query;
@@ -830,6 +831,45 @@ app.get("/requests/export/:date", async (req, res) => {
       success: false,
       message: "Terjadi kesalahan pada server: " + error.message,
     });
+  }
+});
+
+app.get("/requests/history", async (req, res) => {
+  const { user_id } = req.query;
+  console.log("Received user_id:", user_id);
+
+  if (!user_id) {
+    return res.status(400).json({ message: "User ID diperlukan" });
+  }
+
+  try {
+    const result = await db.query(
+      `
+      SELECT 
+        u.user_id,
+        u.full_name,
+        COUNT(*) AS total_requests,
+        r.created_at,
+        d.division_name,
+        r.status
+      FROM 
+        requests r
+      JOIN users u ON r.requested_by = u.user_id
+      JOIN divisions d ON u.division_id = d.division_id
+      WHERE 
+        r.requested_by = $1
+      GROUP BY 
+        u.user_id, u.full_name, r.created_at, d.division_name, r.status
+      ORDER BY 
+        r.created_at DESC
+      `,
+      [user_id]
+    );
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching requests:", error.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 

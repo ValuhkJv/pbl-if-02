@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
 import {
   Table,
   TableHead,
@@ -42,29 +41,15 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const DetailPersetujuanAdmin = () => {
-  const { created_at } = useParams(); // request_id permintaan
+const DetailTransaksi = () => {
+  const { date } = useParams();
   const [details, setDetails] = useState([]); // Data detail barang
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  const token = localStorage.getItem("token"); // Ambil token dari local storage
-
-  useEffect(() => {
-    console.log("Tanggal yang dikirim ke backend:", created_at);
-    axios.get(
-        `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Sertakan token di header
-          },
-        }
-      )
-      .then((res) => setDetails(res.data))
-      .catch((err) => console.error(err));
-  }, [created_at, token]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const handleFilterChange = (event) => {
     setFilterStatus(event.target.value);
@@ -78,6 +63,8 @@ const DetailPersetujuanAdmin = () => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
+
+  
 
   // Menggabungkan filter status dan pencarian dalam satu fungsi
   const getFilteredRows = () => {
@@ -282,4 +269,4 @@ const DetailPersetujuanAdmin = () => {
   );
 };
 
-export default DetailPersetujuanAdmin;
+export default DetailTransaksi;

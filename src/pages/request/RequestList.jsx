@@ -20,6 +20,7 @@ import {
   Divider,
   Tooltip,
   CircularProgress,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { useNavigate } from "react-router-dom";
@@ -153,7 +154,6 @@ const RequestList = ({ userId }) => {
         userId: userId
       });
 
-
       const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
         params: {
           user_id: userId
@@ -161,7 +161,6 @@ const RequestList = ({ userId }) => {
       });
 
       console.log('Response data:', response.data.data[0]); // Add this line
-
 
       if (!response.data.success || !response.data.data?.length) {
         throw new Error("Tidak ada data untuk diekspor");
@@ -246,7 +245,6 @@ const RequestList = ({ userId }) => {
         }
       }
 
-
       // Header styling
       const headerStyle = {
         font: { bold: true, sz: 12 },
@@ -272,7 +270,6 @@ const RequestList = ({ userId }) => {
         ws[cell_ref].s = headerStyle;
       }
 
-
       ws['!merges'] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
@@ -297,6 +294,17 @@ const RequestList = ({ userId }) => {
     }
   };
 
+  if (loading) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <CircularProgress />
+    </Box>
+  );
+
+  if (error) return (
+    <Box p={3}>
+      <Alert severity="error">{error}</Alert>
+    </Box>
+  );
 
   return (
     <Box
