@@ -268,12 +268,8 @@ const DetailPersetujuanAdmin = () => {
       <TableContainer
         component={Paper}
         sx={{
-          borderRadius: "6px",
-          overflowX: "hidden",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-          width: "100%",
-          maxWidth: "1400px",
-          margin: "0 auto",
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
         }}
       >
         <Table>

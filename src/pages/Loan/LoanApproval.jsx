@@ -474,13 +474,8 @@ export default function LoanApproval() {
                 </StyledTableCell>
 
                 <StyledTableCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
+                  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+
                     <Tooltip title="Detail" placement="top">
                       <DetailButton
                         variant="contained"
@@ -510,6 +505,11 @@ export default function LoanApproval() {
                         <InfoOutlinedIcon />
                       </DetailButton>
                     </Tooltip>
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ mx: 1 }}
+                    />
                     {/* Only show delete button for return/rejected status */}
                     {(loan.status === "return" ||
                       loan.status === "rejected") && (
@@ -534,7 +534,7 @@ export default function LoanApproval() {
                           </RemoveButton>
                         </Tooltip>
                       )}
-                  </div>
+                  </Stack>
                 </StyledTableCell>
               </StyledTableRow>
             ))}

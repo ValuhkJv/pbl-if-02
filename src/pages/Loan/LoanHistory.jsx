@@ -673,15 +673,8 @@ export default function LoanHistory() {
                 <StyledTableCell>
                   {item.return_condition || "-"}
                 </StyledTableCell>
-
                 <StyledTableCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
+                  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
                     <Tooltip title="Detail">
                       <DetailButton
                         variant="contained"
@@ -702,6 +695,11 @@ export default function LoanHistory() {
                         <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
                       </DetailButton>
                     </Tooltip>
+                    <Divider
+                      orientation="vertical"
+                      flexItem
+                      sx={{ mx: 1 }}
+                    />
                     {/* Only show delete button for return/rejected status */}
                     {(item.status === "return" ||
                       item.status === "rejected" ||
@@ -731,7 +729,7 @@ export default function LoanHistory() {
                           </RemoveButton>
                         </Tooltip>
                       )}
-                  </div>
+                  </Stack>
                 </StyledTableCell>
               </StyledTableRow>
             ))}

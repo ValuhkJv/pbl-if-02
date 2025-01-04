@@ -127,7 +127,7 @@ const RequestList = ({ userId }) => {
       const response = await axios.get(`http://localhost:5000/requests?user_id=${userId}`);
       setRequests(response.data);
       console.log("Fetched requests:", requests);
-      
+
 
     } catch (err) {
       setError("Gagal memuat data permintaan. " + (err.response?.data?.message || err.message));
@@ -158,7 +158,7 @@ const RequestList = ({ userId }) => {
         row: requests.find(r => new Date(r.date).toISOString().split('T')[0] === date)
       });
       console.log("Respons dari server:", response.data);
-      
+
 
       if (!response.data.success || !response.data.data?.length) {
         throw new Error("Tidak ada data untuk diekspor");
