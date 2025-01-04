@@ -320,7 +320,7 @@ const RequestForm = () => {
                 <StyledTableCell>Jumlah</StyledTableCell>
                 <StyledTableCell>Stok</StyledTableCell>
                 <StyledTableCell>Alasan</StyledTableCell>
-                <TableCell>Aksi</TableCell>
+                <StyledTableCell>Aksi</StyledTableCell>
               </TableRow>
             </TableHead>
             <TableBody>
