@@ -180,7 +180,7 @@ const RequestForm = () => {
       <Box sx={{ padding: 2 }}>
         <Paper elevation={3} sx={{ padding: 3, borderRadius: "6px" }}>
           <Typography variant="h4" gutterBottom>
-            Form Permintaan Barang
+            FORM PERMINTAAN BARANG
           </Typography>
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>

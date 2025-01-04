@@ -82,7 +82,7 @@ function Dashboard() {
          1. Panduan Peminjaman Barang
         </Typography>
 
-        <YouTubeEmbed videoId="IpFX2vq8HKw" aspectRatio="16:9"/>
+        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9"/>
       </Box>
 
       {/* Panduan 2 */}
@@ -95,7 +95,7 @@ function Dashboard() {
           2. Panduan Permintaan Barang
         </Typography>
        
-        <YouTubeEmbed videoId="EPMkXQK3uXM" aspectRatio="16:9"/>
+        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9"/>
       </Box>
     </Container>
   );

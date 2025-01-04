@@ -58,6 +58,7 @@ import RequestApprovalAdmin from "./request/RequestApprovaladmin";
 import RequestApprovDetailadmin from "./request/RequestApprovDetailadmin";
 import StockIn from "./stockin/StockIn";
 import RequestHistoryAdmin from "./request/RequestHistoryAdmin";
+import RequestHistoryAdminDetail from "./request/RequestHistoryAdminDetail";
 
 const drawerWidth = 280;
 
@@ -684,6 +685,14 @@ export default function Dashboard() {
             element={
               <ProtectedRoute allowedRoles={[1]}>
                 <RequestApprovDetailadmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/requestsHistory/details/:created_at"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <RequestHistoryAdminDetail />
               </ProtectedRoute>
             }
           />

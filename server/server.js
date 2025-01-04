@@ -86,7 +86,6 @@ const upload = multer({
 });
 
 // Endpoint login
-// Endpoint login
 app.post("/login", async (req, res) => {
   const { username, password, roles_id } = req.body;
 
@@ -759,87 +758,86 @@ app.put(
   }
 );
 
-app.get("/requests/history", async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT 
-        r.request_id,
-        u.full_name,
-        d.division_name,
-        i.item_name,
-        r.quantity,
-        r.reason,
-        r.status,
-        r.created_at
-      FROM requests r
-      JOIN users u ON r.requested_by = u.user_id 
-      JOIN divisions d ON u.division_id = d.division_id
-      JOIN items i ON r.item_id = i.item_id
-      ORDER BY r.created_at DESC
-    `);
-    
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
 app.get("/requests/export/:date", async (req, res) => {
   const { date } = req.params;
   const { user_id } = req.query;
 
-  if (!user_id) {
-    return res.status(400).json({ message: "User ID diperlukan" });
+  if (!date || !user_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Tanggal dan User ID diperlukan",
+    });
   }
 
   try {
+    const formattedDate = new Date(date).toISOString().split("T")[0];
+    console.log({
+      requestedDate: date,
+      formattedDate,
+      userId: user_id,
+      query: `SELECT * FROM requests WHERE requested_by = ${user_id} AND DATE(created_at) = '${formattedDate}'`
+    });
+
     const result = await db.query(
       `SELECT 
-          r.request_id,
-          r.request_number,
-          r.quantity,
-          r.reason,
-          r.status,
-          TO_CHAR(r.created_at, 'Day') AS day_of_week,
-          TO_CHAR(r.created_at, 'DD Month YYYY') AS formatted_date,
-          i.item_name,
-          i.unit,
-          -- Requester details
-          req.full_name AS requester_name,
-          req.employee_id AS requester_employee_id,
-          d.division_name,
-          -- Head details
-          head.full_name AS head_name,
-          head.employee_id AS head_employee_id,
-          -- Admin details
-          admin.full_name AS admin_name,
-          admin.employee_id AS admin_employee_id
-       FROM 
-          requests r
-          INNER JOIN items i ON r.item_id = i.item_id
-          INNER JOIN users req ON r.requested_by = req.user_id
-          INNER JOIN divisions d ON req.division_id = d.division_id
-          LEFT JOIN users head ON r.approved_by_head = head.user_id
-          LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
-       WHERE 
-          r.requested_by = $1 
-          AND DATE(r.created_at) = $2`,
-      [user_id, date]
+        r.request_id,
+        COALESCE(r.request_number, CONCAT('REQ/', TO_CHAR(r.created_at, 'YYYYMMDD'), '/', r.request_id)) as request_number,
+        COALESCE(r.quantity, 0) as quantity,
+        COALESCE(r.reason, '-') as reason,
+        COALESCE(r.status, 'Pending') as status,
+        TO_CHAR(r.created_at, 'Day') AS day_of_week,
+        TO_CHAR(r.created_at, 'DD Month YYYY') AS formatted_date,
+        COALESCE(i.item_name, '-') as item_name,
+        COALESCE(i.unit, '-') as unit,
+        COALESCE(req.full_name, '-') as requester_name,
+        COALESCE(req.nik, '-') as request_by_id,
+        COALESCE(d.division_name, '-') as division_name,
+        COALESCE(head.full_name, '-') as head_name,
+        COALESCE(head.nik, '-') as head_nik,
+        COALESCE(admin.full_name, '-') as admin_name,
+        COALESCE(admin.nik, '-') as admin_nik,
+        COALESCE(r.rejection_reason, '-') as rejection_reason,
+        r.created_at::date AS request_date
+      FROM requests r
+      LEFT JOIN items i ON r.item_id = i.item_id
+      LEFT JOIN users req ON r.requested_by = req.user_id
+      LEFT JOIN divisions d ON req.division_id = d.division_id
+      LEFT JOIN users head ON r.approved_by_head = head.user_id
+      LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
+      WHERE r.requested_by = $1 
+      AND DATE(r.created_at) = $2
+      ORDER BY r.created_at ASC`,
+      [user_id, formattedDate]
     );
 
-    res.status(200).json(result.rows);
+    console.log("Received date:", date);
+    console.log("Formatted date:", formattedDate);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `Tidak ada permintaan ditemukan untuk tanggal ${formattedDate}`,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
   } catch (error) {
-    console.error("Error fetching request details:", error.message);
-    res.status(500).json({ message: "Terjadi kesalahan pada server" });
+    console.error("Error in request export:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan pada server: " + error.message,
+    });
   }
 });
-
 
 ///CRUD MANAJEMEN BARANG
 // CREATE: Tambah Barang
 app.post("/items", async (req, res) => {
-  const { item_code, item_name, category_id, unit, stock, initial_stock } = req.body;
+  const { item_code, item_name, category_id, unit, stock, initial_stock } =
+    req.body;
   try {
     const result = await db.query(
       "INSERT INTO items (item_code, item_name, category_id, unit, stock, initial_stock) VALUES ($1, $2, $3, $4, $5, $5) RETURNING *",
@@ -891,7 +889,8 @@ app.get("/items/category/3", async (req, res) => {
 // Mengupdate data item berdasarkan id
 app.put("/items/:itemId", async (req, res) => {
   const { itemId } = req.params; // Mengambil item_id dari URL parameter
-  const { item_code, item_name, category_id, unit, stock, initial_stock } = req.body;
+  const { item_code, item_name, category_id, unit, stock, initial_stock } =
+    req.body;
 
   try {
     // Update data berdasarkan item_id

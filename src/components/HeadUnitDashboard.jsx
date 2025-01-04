@@ -83,7 +83,7 @@ function Dashboard() {
           1. Cara Mengajukan Peminjaman Barang
         </Typography>
 
-        <YouTubeEmbed videoId="IpFX2vq8HKw" aspectRatio="16:9" />
+        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
       </Box>
 
       {/* Panduan 2 */}
@@ -96,7 +96,7 @@ function Dashboard() {
           2. Cara Mengajukan Permintaan Barang
         </Typography>
 
-        <YouTubeEmbed videoId="EPMkXQK3uXM" aspectRatio="16:9" />
+        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
       </Box>
 
       {/* Panduan 3 */}
@@ -109,7 +109,7 @@ function Dashboard() {
           3. Cara Menyetujui/Menolak Permintaan Barang
         </Typography>
 
-        <YouTubeEmbed videoId="XqZsoesa55w" aspectRatio="16:9" />
+        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
       </Box>
     </Container>
   );

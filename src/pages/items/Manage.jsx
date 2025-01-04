@@ -312,7 +312,7 @@ function ManageInventory() {
               fontSize: "26px",
             }}
           >
-            Manajemen Barang
+            MANAJEMEN BARANG
           </Typography>
           <Divider
             style={{

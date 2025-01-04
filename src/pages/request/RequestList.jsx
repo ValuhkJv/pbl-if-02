@@ -18,7 +18,8 @@ import {
   Paper,
   Box,
   Divider,
-  Tooltip
+  Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { useNavigate } from "react-router-dom";
@@ -29,14 +30,16 @@ import {
   FileDownload as FileDownloadIcon,
 } from "@mui/icons-material";
 
+
 const RequestList = ({ userId }) => {
   const [requests, setRequests] = useState([]);
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const navigate = useNavigate();
 
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
@@ -54,20 +57,15 @@ const RequestList = ({ userId }) => {
     },
   }));
 
-  // Tombol Detail (Biru)
-  const DetailButton = styled(Button)(({ theme }) => ({
-    backgroundColor: "#1976d2", // Biru
-    color: "white",
-    "&:hover": {
-      backgroundColor: "#0d47a1", // Biru lebih gelap saat hover
-      boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-    },
-    textTransform: "none",
-    fontWeight: 100,
-    padding: "4px 8px",
+  const ActionButton = styled(Button)(({ theme }) => ({
+    padding: "0",
     borderRadius: "50%",
-    transition: "all 0.3s ease",
-    fontSize: "12px",
+    height: "35px",
+    width: "35px",
+    minWidth: "35px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   }));
 
   const handleChangePage = (event, newPage) => {
@@ -110,6 +108,10 @@ const RequestList = ({ userId }) => {
       .catch((error) => console.error("Error fetching requests:", error));
   }, [userId]);
 
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
   const fetchRequests = async () => {
     setLoading(true);
     setError(null);
@@ -124,6 +126,9 @@ const RequestList = ({ userId }) => {
     try {
       const response = await axios.get(`http://localhost:5000/requests?user_id=${userId}`);
       setRequests(response.data);
+      console.log("Fetched requests:", requests);
+      
+
     } catch (err) {
       setError("Gagal memuat data permintaan. " + (err.response?.data?.message || err.message));
     } finally {
@@ -131,53 +136,60 @@ const RequestList = ({ userId }) => {
     }
   };
 
-  const handleExportDetailExcel = async (date) => {
-
+  const handleExportDetail = async (date) => {
+    setExporting(true);
     try {
-      // Format date to match PostgreSQL date format (YYYY-MM-DD)
-      const formattedDate = new Date(date).toISOString().split('T')[0];
       const userId = localStorage.getItem("user_id");
 
       if (!userId) {
-        throw new Error("User ID not found");
+        throw new Error("User ID tidak ditemukan - silakan login ulang");
       }
+      // Format the date to YYYY-MM-DD to match backend expectation
+      const formattedDate = new Date(date).toISOString().split('T')[0];
 
       const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
-        params: { user_id: userId },
+        params: {
+          user_id: userId
+        },
       });
+      console.log('Exporting date:', date);
+      console.log("Export request:", {
+        date,
+        row: requests.find(r => new Date(r.date).toISOString().split('T')[0] === date)
+      });
+      console.log("Respons dari server:", response.data);
+      
 
-      const details = response.data;
-
-      if (details.length === 0) {
-        alert("Tidak ada detail permintaan untuk tanggal ini.");
-        return;
+      if (!response.data.success || !response.data.data?.length) {
+        throw new Error("Tidak ada data untuk diekspor");
       }
-      // Get the first detail for header information
-      const firstDetail = details[0];
 
+      const firstDetail = response.data.data[0];
+
+      // Create worksheet data
       const ws_data = [
         ["No.BO.16.2.2-V0 Borang Permintaan dan Serah Terima Persediaan"],
-        ["27 Agustus 2024"],
-        ["No", ":", firstDetail.request_number || "", ""],
-        ["Hari", ":", firstDetail.day_of_week || "", ""],
+        [firstDetail.formatted_date],
+        ["No", `: ${firstDetail.request_number}`, "", ""],
+        ["Hari", `: ${firstDetail.day_of_week?.trim()}`, "", ""],
         ["Tanggal", `: Batam, ${firstDetail.formatted_date}`, "", ""],
-        ["Unit/Bagian", ":", firstDetail.division_name || "", ""],
-        ["Uraian", ":", firstDetail.reason || "", ""],
+        ["Unit/Bagian", `: ${firstDetail.division_name}`, "", ""],
+        ["Uraian", `: ${firstDetail.reason}`, "", ""],
         [],
         ["No", "Jenis Barang", "Satuan", "Jumlah"]
       ];
 
-      // Add the details
-      details.forEach((detail, index) => {
+      // Add items
+      response.data.data.forEach((detail, index) => {
         ws_data.push([
           index + 1,
-          detail.item_name,
-          detail.unit,
-          detail.quantity
+          detail.item_name || "-",
+          detail.unit || "-",
+          detail.quantity || 0
         ]);
       });
 
-      // Add signature section with actual names and employee IDs
+      // Add signature section
       ws_data.push(
         [],
         [],
@@ -185,64 +197,103 @@ const RequestList = ({ userId }) => {
         ["", "", "", ""],
         ["", "", "", ""],
         ["", "", "", ""],
-        [`Nama    : ${firstDetail.requester_name || ""}`,
-        `Nama    : ${firstDetail.approved_by_head || ""}`,
-        `Nama    : ${firstDetail.approved_by_admin || ""}`, ""],
-        [`NIK/NIP : ${firstDetail.request_by_id || ""}`,
-          `NIK/NIP : `,
-          `NIK/NIP : `, ""],
+        [`Nama    : ${firstDetail.requester_name || "-"}`,
+        `Nama    : ${firstDetail.head_name || "-"}`,
+        `Nama    : ${firstDetail.admin_name || "-"}`, ""],
+        [`NIK/NIP : ${firstDetail.request_by_id || "-"}`,
+        `NIK/NIP : ${firstDetail.head_nik || "-"}`,
+        `NIK/NIP : ${firstDetail.admin_nik || "-"}`, ""],
         ["*)Kajur/KPS/Ka.Bag/Ka.Subbag/Ka.Unit/Ka.Pokja/Ka.Pusat", "", "", ""]
       );
 
-      // Create worksheet
+      // Create and configure workbook
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
 
-      // Set column widths
+      // Configure columns and merges
       ws['!cols'] = [
-        { width: 5 },   // A
-        { width: 30 },  // B
-        { width: 15 },  // C
-        { width: 15 }   // D
+        { width: 20 }, { width: 40 }, { width: 25 }, { width: 25 }
       ];
 
-      // Create workbook
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      // Add borders to all cells in the table
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const cell_address = { c: C, r: R };
+          const cell_ref = XLSX.utils.encode_cell(cell_address);
 
-      // Define merges
+          if (!ws[cell_ref]) {
+            ws[cell_ref] = { t: 's', v: '' };
+          }
+
+          ws[cell_ref].s = {
+            font: { name: "Arial", sz: 11 },
+            alignment: {
+              vertical: 'center',
+              horizontal: R < 8 ? 'left' : 'center',
+              wrapText: true
+            },
+            border: {
+              top: { style: 'thin' },
+              bottom: { style: 'thin' },
+              left: { style: 'thin' },
+              right: { style: 'thin' }
+            }
+          };
+        }
+      }
+
+
+      // Header styling
+      const headerStyle = {
+        font: { bold: true, sz: 12 },
+        fill: { fgColor: { rgb: "EEEEEE" } },
+        alignment: { vertical: 'center', horizontal: 'center' },
+        border: {
+          top: { style: 'medium' },
+          bottom: { style: 'medium' },
+          left: { style: 'medium' },
+          right: { style: 'medium' }
+        }
+      };
+      // Apply header styles
+      for (let C = 0; C <= 3; C++) {
+        const cell_ref = XLSX.utils.encode_cell({ c: C, r: 8 });
+        ws[cell_ref].s = headerStyle;
+      }
+
+      // Apply header style to the header row
+      const headerRow = 8; // Index of the header row (No, Jenis Barang, Satuan, Jumlah)
+      for (let C = 0; C <= 3; C++) {
+        const cell_ref = XLSX.utils.encode_cell({ c: C, r: headerRow });
+        ws[cell_ref].s = headerStyle;
+      }
+
+
       ws['!merges'] = [
-        // Title
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
-        // Date
         { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
-        // Signature section merges
-        { s: { r: ws_data.length - 7, c: 0 }, e: { r: ws_data.length - 7, c: 0 } },
-        { s: { r: ws_data.length - 7, c: 1 }, e: { r: ws_data.length - 7, c: 1 } },
-        { s: { r: ws_data.length - 7, c: 2 }, e: { r: ws_data.length - 7, c: 2 } },
-        // Footer note merge
         { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 3 } }
       ];
 
-      // Generate buffer and save file
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+      // Generate and save file
       const wbout = XLSX.write(wb, {
         bookType: 'xlsx',
-        type: 'array'
+        type: 'array',
+        cellStyles: true // Enable cell styles
       });
-
       const blob = new Blob([wbout], { type: 'application/octet-stream' });
       saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
-    } catch (error) {
-      console.error("Error exporting details:", error);
-      if (error.response) {
-        alert(`Export failed: ${error.response.data.message || 'Server error occurred'}`);
-      } else if (error.message === "User ID not found") {
-        alert("Please login again to export data");
-      } else {
-        alert("An error occurred while trying to export. Please try again.");
-        console.error(error); // Log the full error for debugging
-      }
+
+    } catch (err) {
+      setError(err.message || "Gagal mengekspor data");
+    } finally {
+      setExporting(false);
     }
   };
+
 
   return (
     <Box
@@ -350,6 +401,7 @@ const RequestList = ({ userId }) => {
           />
         </Stack>
       </Stack>
+
       <TableContainer
         component={Paper}
         sx={{
@@ -370,100 +422,71 @@ const RequestList = ({ userId }) => {
           borderBottom: "1px solid #e0e0e0",
         }}
       />
-      <TableContainer
-        component={Paper}
-        sx={{
-          borderRadius: "12px",
-          overflow: "hidden",
-        }}
-      >
-        <Table>
-          <TableHead>
-            <TableRow>
-              <StyledTableCell>No</StyledTableCell>
-              <StyledTableCell>Tanggal Permintaan</StyledTableCell>
-              <StyledTableCell>Jumlah Permintaan</StyledTableCell>
-              <StyledTableCell>Aksi</StyledTableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedRows.map((request, index) => (
-              <StyledTableRow key={request.date}>
-                <StyledTableCell>{index + 1}</StyledTableCell>
-                <StyledTableCell>
-                  {new Date(request.date).toLocaleDateString()}
-                </StyledTableCell>
-                <StyledTableCell>{request.total_requests}</StyledTableCell>
-                <StyledTableCell>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Tooltip title="Detail" placement="top">
-                      <DetailButton
-                        variant="contained"
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() =>
-                          navigate(`/DetailPermintaan/${request.date}`)
-                        }
-                      >
-                        <InfoOutlinedIcon />
-                      </DetailButton>
-                    </Tooltip>
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1 }}
-                    />
-                    <Tooltip title="Export" placement="top">
-                      <Button
-                        variant="contained"
-                        color="secondary"
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => handleExportDetailExcel(request.date)}
-                      >
-                        <FileDownloadIcon />
-                      </Button>
-                    </Tooltip>
-
-                  </div>
-                </StyledTableCell>
-              </StyledTableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]} // rows per page options
-          component="div"
-          count={filteredRows.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
-
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", my: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ bgcolor: "#0C628B", height: "25px", borderTopLeftRadius: "12px", borderTopRightRadius: "12px" }} />
+          <Table>
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>No</StyledTableCell>
+                <StyledTableCell>Tanggal Permintaan</StyledTableCell>
+                <StyledTableCell>Jumlah Permintaan</StyledTableCell>
+                <StyledTableCell>Aksi</StyledTableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedRows.map((request, index) => (
+                <StyledTableRow key={request.date}>
+                  <StyledTableCell>{page * rowsPerPage + index + 1}</StyledTableCell>
+                  <StyledTableCell>{new Date(request.date).toLocaleDateString()}</StyledTableCell>
+                  <StyledTableCell>{request.total_requests}</StyledTableCell>
+                  <StyledTableCell>
+                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                      <Tooltip title="Detail" placement="top">
+                        <ActionButton
+                          variant="contained"
+                          color="primary"
+                          onClick={() => navigate(`/DetailPermintaan/${request.date}`)}
+                        >
+                          <InfoOutlinedIcon />
+                        </ActionButton>
+                      </Tooltip>
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ mx: 1 }}
+                      />
+                      <Tooltip title="Export" placement="top">
+                        <ActionButton
+                          variant="contained"
+                          color="secondary"
+                          onClick={() => handleExportDetail(request.date)}
+                          disabled={exporting}
+                        >
+                          {exporting ? <CircularProgress size={24} /> : <FileDownloadIcon />}
+                        </ActionButton>
+                      </Tooltip>
+                    </Stack>
+                  </StyledTableCell>
+                </StyledTableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]} // rows per page options
+            component="div"
+            count={filteredRows.length}
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+          />
+        </TableContainer>
+      )}
     </Box>
   );
 };

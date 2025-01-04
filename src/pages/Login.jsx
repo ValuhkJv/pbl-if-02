@@ -12,10 +12,11 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
-  Alert,
 } from "@mui/material";
 import polibatam from "../assets/polibatam.png";
 import backgroundImage from "../assets/tekno.png";
+import Alert from "../components/alert";
+
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -50,6 +51,7 @@ const Login = () => {
       const userData = {
         id: response.data.user_id,
         fullName: response.data.full_name,
+        nik: response.data.nik,
         divisionName: response.data.division_name
       };
 
@@ -58,8 +60,14 @@ const Login = () => {
       localStorage.setItem("role", response.data.roles_id);
       localStorage.setItem("user_id", response.data.user_id);
       localStorage.setItem("full_name", response.data.full_name);
+      localStorage.setItem("nik", response.data.nik);
       localStorage.setItem("division_name", response.data.division_name);
       localStorage.setItem("user", JSON.stringify(userData));  // Store user data as JSON string
+
+      // Tampilkan Toast sukses
+      Alert.successToast(
+        `Selamat datang, ${response.data.full_name || "Pengguna"}!`
+      );
 
       // Arahkan ke dashboard sesuai role
       const roleId = response.data.roles_id;
@@ -82,6 +90,8 @@ const Login = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || "Login gagal");
+      // Tampilkan Toast error
+      Alert.error("Login gagal", err.response?.data?.message || "Coba lagi.");
     }
   };
 
@@ -122,7 +132,7 @@ const Login = () => {
             alt="polibatam"
             style={{ width: "320px", height: "103px" }}
           />
-        </Box>
+         </Box>
         <Typography
           display="flex"
           justifyContent="center"
@@ -139,8 +149,8 @@ const Login = () => {
                 {error}
               </Alert>
             )}
-          {/*dropdown jenis user */}
-          <Box display="flex" justifyContent="center">
+           {/*dropdown jenis user */}
+           <Box display="flex" justifyContent="center">
             <FormControl fullWidth margin="normal" required>
               <InputLabel id="jenis-user-label">Jenis User</InputLabel>
               <Select
@@ -167,8 +177,8 @@ const Login = () => {
             </FormControl>
           </Box>
           
-          {/*field username & passwowrd */}
-          <TextField
+           {/*field username & passwowrd */}
+           <TextField
             variant="outlined"
             margin="normal"
             required

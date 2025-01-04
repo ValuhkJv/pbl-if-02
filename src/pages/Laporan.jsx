@@ -47,6 +47,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 const columns = [
+  { id: "no", label: "No", minWidth: 50, align: "center" },
   { id: "kode", label: "Kode Barang", minWidth: 100, align: "center" },
   { id: "nama", label: "Nama Barang", minWidth: 170, align: "center" },
   { id: "awal", label: "Stock Awal", minWidth: 100, align: "center" },
@@ -109,11 +110,38 @@ export default function StockReport() {
     setPage(0);
   };
 
+  // Fungsi filter yang dikombinasikan
+  const getFilteredRows = () => {
+    return report.filter((item) => {
+      const matchesCategory = selectedCategory ? item.kategori === selectedCategory : true;
+      const matchesSearch = !searchTerm
+        ? true
+        : Object.values(item)
+          .some(value =>
+            value &&
+            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+          );
+      return matchesCategory && matchesSearch;
+    });
+  };
+
+  // Reset halaman ketika filter berubah
+  useEffect(() => {
+    setPage(0);
+  }, [searchTerm, selectedCategory]);
+
+  // Dapatkan data yang sudah difilter
+  const filteredRows = getFilteredRows();
+
+  // Hitung pagination
+  const startIndex = page * rowsPerPage;
+  const endIndex = startIndex + rowsPerPage;
+  const paginatedRows = filteredRows.slice(startIndex, endIndex);
+
   const exportToPDF = () => {
     const doc = new jsPDF();
-    const filteredData = report.filter((item) =>
-      selectedCategory ? item.kategori === selectedCategory : true
-    ); // Filter berdasarkan kategori
+    const filteredData = getFilteredRows();
+
 
     doc.autoTable({
       head: [columns.map((col) => col.label)],
@@ -130,9 +158,7 @@ export default function StockReport() {
       `Laporan Stok ${selectedCategory || "Semua"}`
     );
 
-    const filteredData = report.filter((item) =>
-      selectedCategory ? item.kategori === selectedCategory : true
-    ); // Filter berdasarkan kategori
+    const filteredData = getFilteredRows();
 
     worksheet.addRow(columns.map((col) => col.label)); // Header
     filteredData.forEach((row) =>
@@ -150,9 +176,7 @@ export default function StockReport() {
     window.URL.revokeObjectURL(url);
   };
 
-  const filteredReport = report.filter((item) =>
-    selectedCategory ? item.kategori === selectedCategory : true
-  );
+
 
   return (
     <Box
@@ -169,7 +193,7 @@ export default function StockReport() {
     >
       <Box
         sx={{
-          mb: 4,
+          mb: 2,
           justifyContent: "center",
           alignItems: "center",
           display: "flex",
@@ -189,7 +213,7 @@ export default function StockReport() {
             fontSize: "26px",
           }}
         >
-          Stock Barang
+          STOCK BARANG
         </Typography>
         <Divider
           style={{
@@ -297,61 +321,61 @@ export default function StockReport() {
             />
           </Stack>
         </Stack>
-        </Box>
-          <div
-            style={{
-              marginTop: "10px",
-              display: "flex",
-              justifyContent: "flex-start",
-              alignItems: "center",
-              backgroundColor: "#0C628B",
-              padding: "25px",
-              borderTopLeftRadius: "12px",
-              borderTopRightRadius: "12px",
-              borderBottom: "1px solid #e0e0e0",
-            }}
-          />
+      </Box>
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      />
 
-          <TableContainer component={Paper}
-            sx={{
-              borderRadius: "12px",
-              overflow: "hidden",
-            }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  {columns.map((column) => (
-                    <StyledTableCell key={column.id} align={column.align}>
-                      {column.label}
-                    </StyledTableCell>
-                  ))}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredReport
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((row) => (
-                    <StyledTableRow key={row.kode}>
-                      {columns.map((column) => (
-                        <StyledTableCell key={column.id} align={column.align}>
-                          {row[column.id]}
-                        </StyledTableCell>
-                      ))}
-                    </StyledTableRow>
-                  ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              rowsPerPageOptions={[5, 10, 20]}
-              component="div"
-              count={report.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-          </TableContainer>
+      <TableContainer component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              {columns.map((column) => (
+                <StyledTableCell key={column.id} align={column.align}>
+                  {column.label}
+                </StyledTableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {paginatedRows.map((row, index) => (
+              <StyledTableRow key={row.kode}>
+                <StyledTableCell>{page * rowsPerPage + index + 1}</StyledTableCell>
+                <StyledTableCell>{row.kode}</StyledTableCell>
+                <StyledTableCell>{row.nama}</StyledTableCell>
+                <StyledTableCell>{row.awal}</StyledTableCell>
+                <StyledTableCell>{row.masuk}</StyledTableCell>
+                <StyledTableCell>{row.keluar}</StyledTableCell>
+                <StyledTableCell>{row.akhir}</StyledTableCell>
+              </StyledTableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 20]}
+          component="div"
+          count={filteredRows.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </TableContainer>
 
-        </Box>
-        );
+    </Box>
+  );
 }
