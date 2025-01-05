@@ -326,19 +326,19 @@ const RequestForm = () => {
             <TableBody>
               {requests.map((request, index) => (
                 <StyledTableRow key={index}>
-                  <TableCell>{request.item_name}</TableCell>
-                  <TableCell>{request.category_name}</TableCell>
-                  <TableCell>{request.quantity}</TableCell>
-                  <TableCell>{request.stock}</TableCell>
-                  <TableCell>{request.reason}</TableCell>
-                  <TableCell>
+                  <StyledTableCell>{request.item_name}</StyledTableCell>
+                  <StyledTableCell>{request.category_name}</StyledTableCell>
+                  <StyledTableCell>{request.quantity}</StyledTableCell>
+                  <StyledTableCell>{request.stock}</StyledTableCell>
+                  <StyledTableCell>{request.reason}</StyledTableCell>
+                  <StyledTableCell>
                     <IconButton
                       color="error"
                       onClick={() => removeItem(request.item_id)}
                     >
                       <ClearIcon />
                     </IconButton>
-                  </TableCell>
+                  </StyledTableCell>
                 </StyledTableRow>
               ))}
             </TableBody>

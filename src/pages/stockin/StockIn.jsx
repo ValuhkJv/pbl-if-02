@@ -443,11 +443,24 @@ const StockInPage = () => {
             </Grid>
           </form>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} color="secondary">
+        <DialogActions sx={{mr: 2}}>
+          <Button onClick={handleClose} color="secondary" sx={{
+            border: "2px solid",
+            borderColor: "black",
+            color: "black",
+            borderRadius: "8px",
+            padding: "8px 16px",
+            textTransform: "none"
+          }}>
             Batal
           </Button>
-          <Button onClick={handleSubmit} color="primary">
+          <Button onClick={handleSubmit} color="primary" variant="contained"
+            sx={{
+              color: "white",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              textTransform: "none"
+            }}>
             Tambah Stok
           </Button>
         </DialogActions>

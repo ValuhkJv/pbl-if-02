@@ -213,7 +213,6 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
               color: "black",
               borderRadius: "8px",
               padding: "8px 16px",
-              
             }}
             color="secondary"
           >
