@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import axios from "axios";
 import {
   Table,
   TableHead,
@@ -41,15 +42,44 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const DetailTransaksi = () => {
-  const { date } = useParams();
+const RequestHistoryAdminDetail = () => {
+  const { created_at, user_id } = useParams();
   const [details, setDetails] = useState([]); // Data detail barang
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+
+  const token = localStorage.getItem("token"); // Ambil token dari local storage
+
+  useEffect(() => {
+    console.log("Making request for date:", created_at);
+    
+    axios
+      .get(
+        `http://localhost:5000/requests/details/${created_at}/${user_id}}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((res) => {
+        console.log("Response status:", res.status);
+        console.log("Response data:", res.data);
+        if (Array.isArray(res.data)) {
+          console.log("Number of records:", res.data.length);
+        }
+        setDetails(res.data);
+      })
+      .catch((err) => {
+        console.error("Full error object:", err);
+        console.error("Error response:", err.response);
+        console.error("Error status:", err.response?.status);
+        console.error("Error message:", err.response?.data);
+      });
+  }, [created_at, user_id, token]);
 
   const handleFilterChange = (event) => {
     setFilterStatus(event.target.value);
@@ -63,8 +93,6 @@ const DetailTransaksi = () => {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
-
-  
 
   // Menggabungkan filter status dan pencarian dalam satu fungsi
   const getFilteredRows = () => {
@@ -235,22 +263,28 @@ const DetailTransaksi = () => {
           <TableHead>
             <TableRow>
               <StyledTableCell>No</StyledTableCell>
+              <StyledTableCell>Hari</StyledTableCell>
               <StyledTableCell>Nama Barang</StyledTableCell>
+              <StyledTableCell>Satuan</StyledTableCell>
               <StyledTableCell>Jumlah</StyledTableCell>
-              <StyledTableCell>Alasan</StyledTableCell>
+              <StyledTableCell>Alasan Permintaan</StyledTableCell>
               <StyledTableCell>Divisi</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
+              <StyledTableCell>Alasan Penolakan</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {displayedRows.map((item, index) => (
               <StyledTableRow key={item.request_id}>
                 <StyledTableCell>{index + 1}</StyledTableCell>
+                <StyledTableCell>{item.day_of_week}</StyledTableCell>
                 <StyledTableCell>{item.item_name}</StyledTableCell>
+                <StyledTableCell>{item.unit}</StyledTableCell>
                 <StyledTableCell>{item.quantity}</StyledTableCell>
                 <StyledTableCell>{item.reason}</StyledTableCell>
                 <StyledTableCell>{item.user_division}</StyledTableCell>
                 <StyledTableCell>{item.status}</StyledTableCell>
+                <StyledTableCell>{item.rejection_reason || "-"}</StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>
@@ -269,4 +303,4 @@ const DetailTransaksi = () => {
   );
 };
 
-export default DetailTransaksi;
+export default RequestHistoryAdminDetail;

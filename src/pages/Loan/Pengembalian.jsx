@@ -681,59 +681,63 @@ const Pengembalian = () => {
                   <StyledTableCell>
                     {transaction.status === "approved" &&
                       !transaction.return_proof && (
-                        <Button
-                          variant="contained"
-                          sx={{
-                            padding: "6px",
-                            color: "white",
-                            backgroundColor: "#3691BE",
-                            borderColor: "#0C628B",
-                            borderRadius: "8px",
-                            textTransform: "none",
-                            boxShadow: "-moz-initial",
-                            "&:hover": {
-                              borderColor: "#3333",
-                              color: "#fff",
-                            },
-                          }}
-                          onClick={() => {
-                            console.log(
-                              "Full transaction object:",
-                              JSON.stringify(transaction, null, 2)
-                            );
-                            console.log(
-                              "borrowing_id:",
-                              transaction?.borrowing_id
-                            );
-                            handleOpenPengembalianModal(transaction);
-                          }}
-                        >
-                          Upload Pengembalian
-                        </Button>
+                        <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                          <Button
+                            variant="contained"
+                            sx={{
+                              padding: "6px",
+                              color: "white",
+                              backgroundColor: "#3691BE",
+                              borderColor: "#0C628B",
+                              borderRadius: "8px",
+                              textTransform: "none",
+                              boxShadow: "-moz-initial",
+                              "&:hover": {
+                                borderColor: "#3333",
+                                color: "#fff",
+                              },
+                            }}
+                            onClick={() => {
+                              console.log(
+                                "Full transaction object:",
+                                JSON.stringify(transaction, null, 2)
+                              );
+                              console.log(
+                                "borrowing_id:",
+                                transaction?.borrowing_id
+                              );
+                              handleOpenPengembalianModal(transaction);
+                            }}
+                          >
+                            Upload Pengembalian
+                          </Button>
+                        </Stack>
                       )}
                   </StyledTableCell>
                   <StyledTableCell>
                     {" "}
-                    <Tooltip title="Detail">
-                      <DetailButton
-                        variant="contained"
-                        sx={{
-                          padding: "0",
-                          borderRadius: "50%",
-                          height: "35px",
-                          width: "35px",
-                          minWidth: "35px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                        onClick={() => {
-                          handleOpenDetail(transaction);
-                        }}
-                      >
-                        <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
-                      </DetailButton>
-                    </Tooltip>
+                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                      <Tooltip title="Detail">
+                        <DetailButton
+                          variant="contained"
+                          sx={{
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => {
+                            handleOpenDetail(transaction);
+                          }}
+                        >
+                          <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
+                        </DetailButton>
+                      </Tooltip>
+                    </Stack>
                   </StyledTableCell>
                   <StyledTableCell>
                     {["rejected", "return"].includes(transaction.status) && (
@@ -749,6 +753,17 @@ const Pengembalian = () => {
                     {transaction.status === "pending" && (
                       <Button
                         variant="contained"
+                        sx={{
+                          padding: "6px",
+                          color: "white",
+                          borderRadius: "8px",
+                          textTransform: "none",
+                          boxShadow: "-moz-initial",
+                          "&:hover": {
+                            borderColor: "darkred",
+                            color: "#fff",
+                          },
+                        }}
                         color="error"
                         onClick={() =>
                           handleCancelBorrowing(transaction.borrowing_id)

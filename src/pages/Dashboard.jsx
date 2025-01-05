@@ -689,7 +689,7 @@ export default function Dashboard() {
             }
           />
           <Route
-            path="/requestsHistory/details/:created_at"
+            path="/requestsHistory/details/:created_at/:user_id"
             element={
               <ProtectedRoute allowedRoles={[1]}>
                 <RequestHistoryAdminDetail />

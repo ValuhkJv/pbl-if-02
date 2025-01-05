@@ -749,6 +749,7 @@ const Borrowing = () => {
           <TextField
             fullWidth
             label="Nomor Telepon"
+            type="number"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             sx={{ mt: 2 }}

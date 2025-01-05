@@ -695,6 +695,7 @@ app.get(
   }
 );
 
+//
 app.put(
   "/requestsApprovalAdmin/:request_id/admin-approval",
   authenticateToken,
@@ -758,7 +759,6 @@ app.put(
   }
 );
 
-
 app.get("/requests/export/:date", async (req, res) => {
   const { date } = req.params;
   const { user_id } = req.query;
@@ -786,7 +786,16 @@ app.get("/requests/export/:date", async (req, res) => {
         COALESCE(r.quantity, 0) as quantity,
         COALESCE(r.reason, '-') as reason,
         COALESCE(r.status, 'Pending') as status,
-        TO_CHAR(r.created_at, 'Day') AS day_of_week,
+        TO_CHAR(r.created_at, 'Day') AS raw_day,
+        CASE 
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Sunday%' THEN 'Minggu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Monday%' THEN 'Senin'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Tuesday%' THEN 'Selasa'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Wednesday%' THEN 'Rabu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Thursday%' THEN 'Kamis'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Friday%' THEN 'Jumat'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Saturday%' THEN 'Sabtu'
+        END AS day_of_week,
         TO_CHAR(r.created_at, 'DD Month YYYY') AS formatted_date,
         COALESCE(i.item_name, '-') as item_name,
         COALESCE(i.unit, '-') as unit,
@@ -834,42 +843,282 @@ app.get("/requests/export/:date", async (req, res) => {
   }
 });
 
-app.get("/requests/history", async (req, res) => {
-  const { user_id } = req.query;
-  console.log("Received user_id:", user_id);
+app.get("/requests/history", authenticateToken, async (req, res) => {
+  try {
+    const query = `
+      WITH request_counts AS (
+        SELECT 
+          r.requested_by,
+          DATE(r.created_at) as request_date,
+          COUNT(*) as total_requests
+        FROM requests r
+        GROUP BY r.requested_by, DATE(r.created_at)
+      )
+      SELECT 
+        rc.requested_by AS user_id,
+        u.full_name,
+        u.nik,
+        d.division_name,
+        rc.request_date as created_at,
+        rc.total_requests,
+        STRING_AGG(DISTINCT i.item_name, ', ') as items_requested
+      FROM request_counts rc
+      LEFT JOIN users u ON rc.requested_by = u.user_id
+      LEFT JOIN divisions d ON u.division_id = d.division_id
+      LEFT JOIN requests r ON rc.requested_by = r.requested_by 
+        AND rc.request_date = DATE(r.created_at)
+      LEFT JOIN items i ON r.item_id = i.item_id
+      GROUP BY 
+        rc.requested_by,
+        u.full_name,
+        u.nik,
+        d.division_name,
+        rc.request_date,
+        rc.total_requests
+      ORDER BY rc.request_date DESC
+    `;
 
-  if (!user_id) {
-    return res.status(400).json({ message: "User ID diperlukan" });
+    const result = await db.query(query);
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error("Error fetching request history:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch request history",
+      error: error.message,
+    });
+  }
+});
+
+app.get(
+  "/requests/details/:created_at/:user_id",
+  authenticateToken,
+  async (req, res) => {
+    let { created_at, user_id } = req.params;
+
+    // Clean up the user_id by removing any non-numeric characters
+    user_id = user_id.replace(/[^0-9]/g, "");
+
+    console.log("Cleaned parameters:", {
+      created_at,
+      user_id,
+    });
+
+    console.log("User ID:", user_id);
+    console.log("Date received:", created_at);
+    console.log(
+      "SQL Query with date:",
+      `SELECT * FROM requests WHERE created_at::date = '${created_at}'`
+    );
+    console.log("Query params:", req.params);
+
+    try {
+      if (!user_id || isNaN(user_id)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
+
+      // Langsung query requests berdasarkan user_id dan tanggal
+      const detailResult = await db.query(
+        `
+      SELECT 
+        r.request_id, 
+        r.item_id, 
+        r.requested_by AS user_id,
+        u.full_name,
+        i.item_name, 
+        r.quantity, 
+        TO_CHAR(r.created_at, 'Day') AS raw_day,
+        CASE 
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Sunday%' THEN 'Minggu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Monday%' THEN 'Senin'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Tuesday%' THEN 'Selasa'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Wednesday%' THEN 'Rabu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Thursday%' THEN 'Kamis'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Friday%' THEN 'Jumat'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Saturday%' THEN 'Sabtu'
+        END AS day_of_week,
+        i.unit as unit,
+        r.reason, 
+        r.status, 
+        r.rejection_reason,
+        d.division_name AS user_division,
+        r.created_at
+      FROM 
+        requests r
+      JOIN 
+        items i ON r.item_id = i.item_id
+      JOIN 
+        users u ON r.requested_by = u.user_id
+      JOIN
+        divisions d ON u.division_id = d.division_id 
+      WHERE 
+        r.requested_by = $1
+        AND r.created_at::date = $2
+      ORDER BY 
+        r.created_at;
+      `,
+        [parseInt(user_id), created_at]
+      );
+
+      if (detailResult.rows.length === 0) {
+        return res.status(404).json({
+          message: "Detail permintaan tidak ditemukan.",
+          params: { user_id, created_at },
+        });
+      }
+
+      res.status(200).json(detailResult.rows);
+    } catch (error) {
+      console.error("Error fetching detail persetujuan:", error.message);
+      console.error("Parameters received:", { user_id, created_at });
+      res.status(500).json({
+        message: "Terjadi kesalahan pada server.",
+        error: error.message,
+        params: { user_id, created_at },
+      });
+    }
+  }
+);
+
+app.get("/requests/export/admin/:date", async (req, res) => {
+  const { date } = req.params;
+  const { user_id } = req.query;
+
+  console.log("Export request received:", {
+    date,
+    user_id,
+    parsed_date: new Date(date).toISOString(),
+  });
+
+  if (!date || !user_id) {
+    return res.status(400).json({
+      success: false,
+      message: "Tanggal dan User ID diperlukan",
+    });
   }
 
   try {
-    const result = await db.query(
-      `
-      SELECT 
-        u.user_id,
-        u.full_name,
-        COUNT(*) AS total_requests,
-        r.created_at,
-        d.division_name,
-        r.status
-      FROM 
-        requests r
-      JOIN users u ON r.requested_by = u.user_id
-      JOIN divisions d ON u.division_id = d.division_id
-      WHERE 
-        r.requested_by = $1
-      GROUP BY 
-        u.user_id, u.full_name, r.created_at, d.division_name, r.status
-      ORDER BY 
-        r.created_at DESC
-      `,
+    // First verify the user exists
+    const userCheck = await db.query(
+      `SELECT user_id, division_id FROM users WHERE user_id = $1`,
       [user_id]
     );
 
-    res.status(200).json(result.rows);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `User dengan ID ${user_id} tidak ditemukan`,
+      });
+    }
+
+    // Check for approved requests with proper date handling
+    const requestCheck = await db.query(
+      `SELECT COUNT(*) as request_count
+       FROM requests 
+       WHERE requested_by = $1 
+       AND DATE(created_at) = $2::date`,
+      [user_id, date]
+    );
+
+    console.log("Request check result:", requestCheck.rows[0]);
+
+    // Get all requests for the date (for logging purposes)
+    const allRequestsForDate = await db.query(
+      `SELECT request_id, status, created_at
+       FROM requests 
+       WHERE requested_by = $1 
+       AND DATE(created_at) = $2::date`,
+      [user_id, date]
+    );
+
+    console.log("All requests for date:", allRequestsForDate.rows);
+
+    if (parseInt(requestCheck.rows[0].request_count) === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `Tidak ada permintaan yang disetujui untuk tanggal ${date}`,
+        debug: {
+          total_requests: allRequestsForDate.rows.length,
+          date_queried: date,
+          user_queried: user_id,
+        },
+      });
+    }
+
+    const result = await db.query(
+      `SELECT 
+        r.request_id,
+        COALESCE(r.request_number, CONCAT('REQ/', TO_CHAR(r.created_at, 'YYYYMMDD'), '/', r.request_id)) as request_number,
+        COALESCE(r.quantity, 0) as quantity,
+        COALESCE(r.reason, '-') as reason,
+        COALESCE(r.status, 'Pending') as status,
+        TO_CHAR(r.created_at, 'Day') AS raw_day,
+        CASE 
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Sunday%' THEN 'Minggu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Monday%' THEN 'Senin'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Tuesday%' THEN 'Selasa'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Wednesday%' THEN 'Rabu'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Thursday%' THEN 'Kamis'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Friday%' THEN 'Jumat'
+          WHEN TO_CHAR(r.created_at, 'Day') LIKE 'Saturday%' THEN 'Sabtu'
+        END AS day_of_week,
+        TO_CHAR(r.created_at, 'DD Month YYYY') AS formatted_date,
+        COALESCE(i.item_name, '-') as item_name,
+        COALESCE(i.unit, '-') as unit,
+        COALESCE(req.full_name, '-') as requester_name,
+        COALESCE(req.nik, '-') as request_by_id,
+        COALESCE(d.division_name, '-') as division_name,
+        COALESCE(head.full_name, '-') as head_name,
+        COALESCE(head.nik, '-') as head_nik,
+        COALESCE(admin.full_name, '-') as admin_name,
+        COALESCE(admin.nik, '-') as admin_nik
+      FROM requests r
+      LEFT JOIN items i ON r.item_id = i.item_id
+      LEFT JOIN users req ON r.requested_by = req.user_id
+      LEFT JOIN divisions d ON req.division_id = d.division_id
+      LEFT JOIN users head ON r.approved_by_head = head.user_id
+      LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
+      WHERE r.requested_by = $1 
+      AND DATE(r.created_at) = $2::date
+      AND r.status IN ('Approved by Head', 'Approved by Staff SBUM')
+      ORDER BY r.created_at ASC`,
+      [user_id, date]
+    );
+
+    console.log("Export query result count:", result.rows.length);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Tidak ada data yang dapat diekspor",
+        debug: {
+          date_queried: date,
+          user_queried: user_id,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: result.rows,
+    });
   } catch (error) {
-    console.error("Error fetching requests:", error.message);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Export error:", {
+      error: error.message,
+      stack: error.stack,
+      date,
+      user_id,
+    });
+
+    return res.status(500).json({
+      success: false,
+      message: "Terjadi kesalahan pada server: " + error.message,
+      details: {
+        date,
+        user_id,
+        error: error.message,
+      },
+    });
   }
 });
 

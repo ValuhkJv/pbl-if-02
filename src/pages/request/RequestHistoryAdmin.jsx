@@ -17,7 +17,7 @@ import {
   Tooltip,
   TablePagination,
   CircularProgress,
-  Alert
+
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
@@ -32,7 +32,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; import {
   FileDownload as FileDownloadIcon,
 } from "@mui/icons-material";
 
-const TransactionHistory = () => {
+const RequestHistoryAdmin = () => {
   const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +40,7 @@ const TransactionHistory = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // State untuk filter tanggal
   const [startDate, setStartDate] = useState(null);
@@ -73,6 +73,7 @@ const TransactionHistory = () => {
     justifyContent: "center",
   }));
 
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -81,46 +82,6 @@ const TransactionHistory = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const userId = localStorage.getItem("user_id");
-        console.log("User ID from localStorage:", localStorage.getItem("user_id"));
-
-        if (!userId) {
-          throw new Error("User ID tidak ditemukan");
-        }
-
-        const response = await axios.get("http://localhost:5000/requests/history", {
-          params: { user_id: userId }
-        });
-
-        // Make sure to check if response.data exists and is an array
-        if (Array.isArray(response.data)) {
-          const transformedData = response.data.map(item => ({
-            ...item,
-            created_at: new Date(item.created_at).toISOString(),
-            formatted_date: new Date(item.created_at).toLocaleDateString("id-ID")
-          }));
-
-          setRequests(transformedData);
-        } else {
-          throw new Error("Invalid data format received from server");
-        }
-
-        setLoading(false);
-      } catch (err) {
-        console.error("Error details:", err);
-        setError(err.message || "Gagal memuat data");
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
 
   // Filter rows berdasarkan tanggal, bulan dan tahun
   const filteredRows = requests.filter((item) => {
@@ -153,33 +114,59 @@ const TransactionHistory = () => {
     return searchMatch && dateMatch;  // Return the combined filter result
   });
 
+
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const displayedRows = filteredRows.slice(startIndex, endIndex);
 
-  const handleExportDetail = async (date) => {
-    setExporting(true);
+
+  const fetchRequestHistory = async () => {
+    setLoading(true);
     try {
-      const userId = localStorage.getItem("user_id");
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/requests/history', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      if (!userId) {
-        throw new Error("User ID tidak ditemukan - silakan login ulang");
+      if (response.data.success) {
+        setRequests(response.data.data);
       }
-      // Format the date to YYYY-MM-DD to match backend expectation
-      const formattedDate = new Date(date).toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
-        params: {
-          user_id: userId
-        },
-      });
-      console.log('Exporting date:', date);
-      console.log("Export request:", {
-        date,
-        row: requests.find(r => new Date(r.date).toISOString().split('T')[0] === date)
-      });
-      console.log("Respons dari server:", response.data);
+  useEffect(() => {
+    fetchRequestHistory();
+  }, []);
 
+  const handleExportDetail = async (date, requestUserId) => {
+    setExporting(true);
+    setError(null); // Reset error state at start
+
+    try {
+      console.log('Starting export with:', {
+        date: formatDateForExport(date), // Tambahkan fungsi helper untuk format tanggal
+        userId: requestUserId,
+      });
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error("Token tidak ditemukan - silakan login ulang");
+      }
+
+      // Format tanggal menggunakan fungsi helper
+    const formattedDate = formatDateForExport(date);
+
+      const response = await axios.get(
+        `http://localhost:5000/requests/export/admin/${formattedDate}`,
+        {
+          params: { user_id: requestUserId },
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
 
       if (!response.data.success || !response.data.data?.length) {
         throw new Error("Tidak ada data untuk diekspor");
@@ -219,11 +206,11 @@ const TransactionHistory = () => {
         ["", "", "", ""],
         ["", "", "", ""],
         [`Nama    : ${firstDetail.requester_name || "-"}`,
-        `Nama    : ${firstDetail.head_name || "-"}`,
-        `Nama    : ${firstDetail.admin_name || "-"}`, ""],
+         `Nama    : ${firstDetail.head_name || "-"}`,
+         `Nama    : ${firstDetail.admin_name || "-"}`, ""],
         [`NIK/NIP : ${firstDetail.request_by_id || "-"}`,
-        `NIK/NIP : ${firstDetail.head_nik || "-"}`,
-        `NIK/NIP : ${firstDetail.admin_nik || "-"}`, ""],
+         `NIK/NIP : ${firstDetail.head_nik || "-"}`,
+         `NIK/NIP : ${firstDetail.admin_nik || "-"}`, ""],
         ["*)Kajur/KPS/Ka.Bag/Ka.Subbag/Ka.Unit/Ka.Pokja/Ka.Pusat", "", "", ""]
       );
 
@@ -231,12 +218,12 @@ const TransactionHistory = () => {
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
       const wb = XLSX.utils.book_new();
 
-      // Configure columns and merges
+      // Configure column widths
       ws['!cols'] = [
         { width: 20 }, { width: 40 }, { width: 25 }, { width: 25 }
       ];
 
-      // Add borders to all cells in the table
+      // Add borders and styling
       const range = XLSX.utils.decode_range(ws['!ref']);
       for (let R = range.s.r; R <= range.e.r; R++) {
         for (let C = range.s.c; C <= range.e.c; C++) {
@@ -264,7 +251,6 @@ const TransactionHistory = () => {
         }
       }
 
-
       // Header styling
       const headerStyle = {
         font: { bold: true, sz: 12 },
@@ -277,20 +263,14 @@ const TransactionHistory = () => {
           right: { style: 'medium' }
         }
       };
+
       // Apply header styles
       for (let C = 0; C <= 3; C++) {
         const cell_ref = XLSX.utils.encode_cell({ c: C, r: 8 });
         ws[cell_ref].s = headerStyle;
       }
 
-      // Apply header style to the header row
-      const headerRow = 8; // Index of the header row (No, Jenis Barang, Satuan, Jumlah)
-      for (let C = 0; C <= 3; C++) {
-        const cell_ref = XLSX.utils.encode_cell({ c: C, r: headerRow });
-        ws[cell_ref].s = headerStyle;
-      }
-
-
+      // Define merged cells
       ws['!merges'] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
@@ -303,18 +283,21 @@ const TransactionHistory = () => {
       const wbout = XLSX.write(wb, {
         bookType: 'xlsx',
         type: 'array',
-        cellStyles: true // Enable cell styles
+        cellStyles: true
       });
+
       const blob = new Blob([wbout], { type: 'application/octet-stream' });
       saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
 
+      setError("Berhasil mengekspor data");
+
     } catch (err) {
+      console.error('Export error:', err);
       setError(err.message || "Gagal mengekspor data");
     } finally {
       setExporting(false);
     }
   };
-
 
   // Tambahkan method render untuk filter tambahan
   const renderDateFilterSection = () => (
@@ -388,17 +371,14 @@ const TransactionHistory = () => {
     });
   };
 
-  if (loading) return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-      <CircularProgress />
-    </Box>
-  );
-
-  if (error) return (
-    <Box p={3}>
-      <Alert severity="error">{error}</Alert>
-    </Box>
-  );
+  // Tambahkan fungsi helper untuk format tanggal
+const formatDateForExport = (dateString) => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
   return (
     <Box
@@ -551,11 +531,8 @@ const TransactionHistory = () => {
                           justifyContent: "center",
                         }}
                         onClick={() => {
-                          navigate(
-                            `/requestsHistory/details/${new Date(
-                              request.created_at
-                            ).toLocaleDateString("en-CA")}`
-                          );
+                          navigate(`/requestsHistory/details/${new Date(request.created_at).toLocaleDateString("en-CA")}/${request.user_id}`); // Make sure there's no extra characters
+                          console.log("Date being sent:", new Date(request.created_at).toLocaleDateString("en-CA"));
                         }}
                       >
                         <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
@@ -580,7 +557,10 @@ const TransactionHistory = () => {
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        onClick={() => handleExportDetail(request.date)}
+                        onClick={() => handleExportDetail(
+                          request.created_at, // Kirim langsung created_at tanpa modifikasi
+                          request.user_id
+                        )}
                         disabled={exporting}
                       >
                         {exporting ? <CircularProgress size={24} /> : <FileDownloadIcon />}
@@ -606,4 +586,4 @@ const TransactionHistory = () => {
   );
 };
 
-export default TransactionHistory;
+export default RequestHistoryAdmin;
