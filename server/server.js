@@ -1979,9 +1979,10 @@ app.delete("/stock-in/:stock_in_id", async (req, res) => {
 // **2. Endpoint untuk membuat laporan stok barang**
 app.get("/report", async (req, res) => {
   const client = await db.connect();
+  const { month } = req.query; // Ambil parameter bulan dari request
 
   try {
-    const reportQuery = `
+    let reportQuery = `
       SELECT 
           items.item_id,
           items.item_code,
@@ -1991,7 +1992,8 @@ app.get("/report", async (req, res) => {
           items.initial_stock AS stock_awal,
           COALESCE(SUM(DISTINCT stock_in.quantity), 0) AS barang_masuk,
           COALESCE(SUM(requests.quantity), 0) AS barang_keluar,
-          items.stock AS stock_akhir
+          items.stock AS stock_akhir,
+          TO_CHAR(stock_in.created_at, 'YYYY-MM-DD') as created_at
       FROM 
           items
       LEFT JOIN 
@@ -2000,15 +2002,30 @@ app.get("/report", async (req, res) => {
           categories ON items.category_id = categories.category_id
       LEFT JOIN 
           requests ON items.item_id = requests.item_id AND requests.status = 'Approved by Staff SBUM'
-      WHERE
-          items.category_id != 3
+    `;
+
+    // Tambahkan filter bulan jika parameter month ada
+    if (month) {
+      reportQuery += `
+        WHERE 
+          items.category_id != 3 
+          AND EXTRACT(MONTH FROM stock_in.created_at) = $1
+      `;
+    } else {
+      reportQuery += `
+        WHERE items.category_id != 3
+      `;
+    }
+
+    reportQuery += `
       GROUP BY 
-          items.item_id, items.item_name, items.initial_stock, items.stock, categories.category_name
+          items.item_id, items.item_name, items.initial_stock, items.stock, 
+          categories.category_name, stock_in.created_at
       ORDER BY 
           items.item_name;
     `;
 
-    const result = await client.query(reportQuery);
+    const result = await client.query(reportQuery, month ? [month] : []);
 
     res.json({
       message: "Laporan stok barang berhasil diambil",

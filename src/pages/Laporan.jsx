@@ -28,7 +28,7 @@ import "jspdf-autotable";
 import ExcelJS from "exceljs";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
-
+import { format } from "date-fns";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -56,6 +56,12 @@ const columns = [
   { id: "akhir", label: "Stock Akhir", minWidth: 100, align: "center" },
 ];
 
+const months = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
+
+
 export default function StockReport() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -63,15 +69,18 @@ export default function StockReport() {
   const [categories, setCategories] = useState([]); // Semua kategori barang
   const [selectedCategory, setSelectedCategory] = useState(""); // Kategori terpilih
   const [searchTerm, setSearchTerm] = useState("");
-
-
-  useEffect(() => {
-    fetchReport();
-  }, []);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const currentYear = new Date().getFullYear(); // Get current year
 
   const fetchReport = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/report"); // Endpoint backend yang benar
+      // Tambahkan parameter bulan ke URL jika bulan dipilih
+      const url = selectedMonth !== ""
+        ? `http://localhost:5000/report?month=${parseInt(selectedMonth) + 1}`
+        : "http://localhost:5000/report";
+
+      const response = await axios.get(url); // Endpoint backend yang benar
+
       if (response.data && Array.isArray(response.data.data)) {
         const formattedData = response.data.data.map((item) => ({
           kode: item.item_code, // Properti dari backend
@@ -81,6 +90,8 @@ export default function StockReport() {
           masuk: item.barang_masuk,
           keluar: item.barang_keluar,
           akhir: item.stock_akhir,
+          bulan: item.created_at ? new Date(item.created_at).getMonth() : null,
+          tanggal: item.created_at ? format(new Date(item.created_at), "dd/MM/yyyy") : "-"
         }));
         // Ekstrak kategori unik
         const uniqueCategories = [
@@ -101,6 +112,10 @@ export default function StockReport() {
     }
   };
 
+  useEffect(() => {
+    fetchReport();
+  }, [selectedMonth]);
+
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -114,14 +129,15 @@ export default function StockReport() {
   const getFilteredRows = () => {
     return report.filter((item) => {
       const matchesCategory = selectedCategory ? item.kategori === selectedCategory : true;
-      const matchesSearch = !searchTerm
-        ? true
-        : Object.values(item)
-          .some(value =>
-            value &&
-            value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-          );
-      return matchesCategory && matchesSearch;
+      const matchesMonth = selectedMonth !== ""
+        ? item.bulan === parseInt(selectedMonth)
+        : true;
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = searchTerm === "" ||
+        item.nama.toLowerCase().includes(searchLower) ||
+        item.kode.toLowerCase().includes(searchLower);
+
+      return matchesCategory && matchesMonth && matchesSearch;
     });
   };
 
@@ -129,6 +145,13 @@ export default function StockReport() {
   useEffect(() => {
     setPage(0);
   }, [searchTerm, selectedCategory]);
+
+  const getPeriodLabel = () => {
+    if (selectedMonth !== "") {
+      return `Periode: ${months[parseInt(selectedMonth)]} ${currentYear}`; // Use dynamic year
+    }
+    return "Periode: Semua Bulan";
+  };
 
   // Dapatkan data yang sudah difilter
   const filteredRows = getFilteredRows();
@@ -142,41 +165,136 @@ export default function StockReport() {
     const doc = new jsPDF();
     const filteredData = getFilteredRows();
 
+    // Add title and period
+    doc.setFontSize(16);
+    doc.text("LAPORAN STOCK BARANG", 105, 15, { align: "center" });
+    doc.setFontSize(12);
+    doc.text(getPeriodLabel(), 105, 25, { align: "center" });
 
     doc.autoTable({
+      startY: 35,
       head: [columns.map((col) => col.label)],
-      body: filteredData.map((row) => columns.map((col) => row[col.id])),
+      body: filteredData.map((row, index) => [
+        index + 1,
+        row.kode,
+        row.nama,
+        row.awal,
+        row.masuk,
+        row.keluar,
+        row.akhir
+      ]),
     });
-    doc.save(
-      `Laporan_Stok_Barang${selectedCategory ? `_${selectedCategory}` : ""}.pdf`
-    );
+
+    doc.save(`Laporan_Stok_Barang_${format(new Date(), "dd-MM-yyyy")}.pdf`);
   };
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(
-      `Laporan Stok ${selectedCategory || "Semua"}`
-    );
+    const worksheet = workbook.addWorksheet("Laporan Stok");
 
+    // Add title and period
+    worksheet.mergeCells('A1:G1');
+    worksheet.getCell('A1').value = 'LAPORAN STOCK BARANG';
+    worksheet.getCell('A1').alignment = { horizontal: 'center' };
+    worksheet.getCell('A1').font = { bold: true, size: 14 };
+
+    worksheet.mergeCells('A2:G2');
+    worksheet.getCell('A2').value = getPeriodLabel();
+    worksheet.getCell('A2').alignment = { horizontal: 'center' };
+    worksheet.getCell('A2').font = { size: 12 };
+
+    // Add headers
+    const headerRow = worksheet.addRow(['No', 'Kode Barang', 'Nama Barang', 'Stock Awal', 'Stock Masuk', 'Stock Keluar', 'Stock Akhir']);
+
+    // Style headers
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '0C628B' }
+      };
+      cell.font = {
+        bold: true,
+        color: { argb: 'FFFFFF' }
+      };
+      cell.alignment = {
+        horizontal: 'center',
+        vertical: 'middle'
+      };
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+
+    // Add data
     const filteredData = getFilteredRows();
+    filteredData.forEach((row, index) => {
+      const dataRow = worksheet.addRow([
+        index + 1,
+        row.kode,
+        row.nama,
+        row.awal,
+        row.masuk,
+        row.keluar,
+        row.akhir
+      ]);
 
-    worksheet.addRow(columns.map((col) => col.label)); // Header
-    filteredData.forEach((row) =>
-      worksheet.addRow(columns.map((col) => row[col.id]))
-    );
+      // Style data cells
+      dataRow.eachCell((cell) => {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    // Set column widths
+    worksheet.columns.forEach((column) => {
+      column.width = 15;
+    });
+    worksheet.getColumn(3).width = 30; // Make the Name column wider
+
+    // Style the title cells border
+    worksheet.getCell('A1').border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+    worksheet.getCell('G1').border = {
+      top: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+    worksheet.getCell('A2').border = {
+      left: { style: 'thin' },
+      bottom: { style: 'thin' }
+    };
+    worksheet.getCell('G2').border = {
+      right: { style: 'thin' },
+      bottom: { style: 'thin' }
+    };
+
+    // Draw border for cells between A2 and G2
+    for (let i = 2; i <= 6; i++) {
+      worksheet.getCell(2, i).border = {
+        bottom: { style: 'thin' }
+      };
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer]);
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Laporan_Stok_Barang${selectedCategory ? `_${selectedCategory}` : ""
-      }.xlsx`;
+    a.download = `Laporan_Stok_Barang_${format(new Date(), "dd-MM-yyyy")}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
-
-
 
   return (
     <Box
@@ -213,7 +331,7 @@ export default function StockReport() {
             fontSize: "26px",
           }}
         >
-          STOCK BARANG
+          LAPORAN STOCK BARANG
         </Typography>
         <Divider
           style={{
@@ -223,105 +341,124 @@ export default function StockReport() {
           }}
         />
       </Box>
-      <Box sx={{
-        width: '100%', p: 2, mb: 2,
-        justifyContent: "center",
-        alignItems: "center",
-        display: "flex",
-      }}>
+      <Box sx={{ width: '100%', p: 2, mb: 2, display: "flex", justifyContent: "center" }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems="center"
           spacing={2}
-          sx={{
-            pb: 2,
-          }}
+          alignItems="center"
         >
-          {/* Filter di kiri */}
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            alignItems="center"
+          <FormControl sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
+            <InputLabel>Bulan</InputLabel>
+            <Select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <MenuItem value="">Semua Bulan</MenuItem>
+              {months.map((month, index) => (
+                <MenuItem key={month} value={index}>
+                  {month}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
+            <InputLabel>Kategori</InputLabel>
+            <Select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+            >
+              <MenuItem value="">Semua Kategori</MenuItem>
+              {categories.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <Button
+            onClick={exportToPDF}
+            startIcon={<FileDownloadIcon />}
+            sx={{
+              backgroundColor: '#0C628B',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#3691BE',
+              },
+              borderRadius: '8px',
+              textTransform: 'none',
+              ml: 2,
+              width: "150px",
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
           >
-            <Button onClick={exportToPDF} startIcon={<FileDownloadIcon />}
-              sx={{
-                padding: "8px",
-                color: "#fff",
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                backgroundColor: "#0C628B",
-                borderRadius: "8px",
-                "&:hover": {
-                  backgroundColor: "#242D34",
-                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                  color: "#fff",
-                },
-                textTransform: "none",
-              }}>
-              Export to PDF
-            </Button>
-            <Button onClick={exportToExcel} startIcon={<FileDownloadIcon />}
-              sx={{
-                padding: "8px",
-                color: "#fff",
-                boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                backgroundColor: "#3691BE",
-                borderRadius: "8px",
-                "&:hover": {
-                  backgroundColor: "#242D34",
-                  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                  color: "#fff",
-                },
-                textTransform: "none",
-              }}>
-              Export to Excel
-            </Button>
-            <FormControl sx={{
+            Export to PDF
+          </Button>
+
+          <Button
+            onClick={exportToExcel}
+            startIcon={<FileDownloadIcon />}
+            sx={{
+              backgroundColor: '#3691BE',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: '#0C628B',
+              },
+              borderRadius: '8px',
+              textTransform: 'none',
+              ml: 2,
+              width: "150px",
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
+            Export to Excel
+          </Button>
+          <TextField
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
               width: "250px",
               backgroundColor: "white",
               borderRadius: 1,
               "& .MuiOutlinedInput-root": {
                 height: "40px",
               },
-            }}>
-              <InputLabel>Kategori</InputLabel>
-              <Select
-                value={selectedCategory}
-
-                onChange={(e) => setSelectedCategory(e.target.value)}
-              >
-                <MenuItem value="">Semua Kategori</MenuItem>
-                {categories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              variant="outlined"
-              placeholder="Search..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                width: "250px",
-                backgroundColor: "white",
-                borderRadius: 1,
-                "& .MuiOutlinedInput-root": {
-                  height: "40px",
-                },
-              }}
-            />
-          </Stack>
+            }}
+          />
         </Stack>
       </Box>
+
+      <Typography variant="h6" align="center" sx={{ mb: 2 }}>
+        {getPeriodLabel()}
+      </Typography>
       <div
         style={{
           marginTop: "10px",
