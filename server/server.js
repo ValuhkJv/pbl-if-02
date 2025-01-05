@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
