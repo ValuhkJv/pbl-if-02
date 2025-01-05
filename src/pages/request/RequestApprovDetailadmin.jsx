@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import {
+  Box,
   Table,
   TableHead,
   TableRow,
@@ -11,21 +12,19 @@ import {
   TextField,
   TableContainer,
   Paper,
-  Box,
   Typography,
-  Stack,
-  Divider,
+  Checkbox,
   MenuItem,
   InputAdornment,
   Select,
   FormControl,
   InputLabel,
-  TablePagination
+  TablePagination,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import {
-  Search as SearchIcon,
-} from "@mui/icons-material";
+import { Search as SearchIcon } from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -44,234 +43,206 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 const DetailPersetujuanAdmin = () => {
-  const { created_at } = useParams(); // request_id permintaan
-  const [details, setDetails] = useState([]); // Data detail barang
-  const [status, setStatus] = useState(""); // Status aksi
-  const [reason, setReason] = useState(""); // Alasan jika ditolak
-  const [activeIndex, setactiveIndex] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Semua");
+  const { created_at } = useParams();
+  const [details, setDetails] = useState([]);
+  const [itemApprovals, setItemApprovals] = useState({});
+  const [rejectionReasons, setRejectionReasons] = useState({});
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("Semua");
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
-  const token = localStorage.getItem("token"); // Ambil token dari local storage
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    console.log("Tanggal yang dikirim ke backend:", created_at);
-
-    axios
-      .get(
-        `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Sertakan token di header
-          },
-        }
-      )
-      .then((res) => setDetails(res.data))
-      .catch((err) => console.error(err));
-  }, [created_at, token]);
-
-  const handleApproval = (approvalStatus, request_id) => {
-    const payload = {
-      status: approvalStatus,
-      rejection_reason:
-        approvalStatus === "Rejected by Staff SBUM" ? reason : null,
+    const fetchDetails = async () => {
+      setLoading(true);
+      try {
+        const response = await axios.get(
+          `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setDetails(response.data);
+      } catch (error) {
+        console.error("Error fetching details:", error);
+        setSnackbar({
+          open: true,
+          message: "Failed to fetch details",
+          severity: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
     };
 
-    axios
-      .put(
-        `http://localhost:5000/requestsApprovalAdmin/${request_id}/admin-approval`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Sertakan token di header
-          },
-        }
-      )
-      .then(() => alert("Permintaan berhasil diperbarui."))
-      .catch((err) => console.error(err));
+    fetchDetails();
+  }, [created_at, token]);
+
+  const handleApprovalChange = (request_id, checked) => {
+    setItemApprovals((prev) => ({
+      ...prev,
+      [request_id]: checked,
+    }));
+
+    if (checked) {
+      setRejectionReasons((prev) => {
+        const updated = { ...prev };
+        delete updated[request_id];
+        return updated;
+      });
+    } else {
+      setRejectionReasons((prev) => ({
+        ...prev,
+        [request_id]: prev[request_id] || "",
+      }));
+    }
   };
 
-  const handleRejectButton = (index) => {
-    setStatus("Rejected by Staff SBUM");
-    setactiveIndex(index);
+  const handleRejectionReasonChange = (request_id, reason) => {
+    setRejectionReasons((prev) => ({
+      ...prev,
+      [request_id]: reason,
+    }));
   };
 
-  const handleFilterChange = (event) => {
-    setFilterStatus(event.target.value);
+  const validateSubmission = () => {
+    const hasDecisions = details.some(
+      (item) =>
+        itemApprovals[item.request_id] ||
+        rejectionReasons[item.request_id]?.trim()
+    );
+
+    if (!hasDecisions) {
+      setSnackbar({
+        open: true,
+        message: "Please make a decision for at least one item",
+        severity: "error",
+      });
+      return false;
+    }
+    return true;
   };
 
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
+  const handleSubmit = async () => {
+    if (!validateSubmission()) return;
+    setLoading(true);
+    try {
+      const requests = details.map((item) => {
+        const isApproved = itemApprovals[item.request_id];
+        return {
+          request_id: item.request_id,
+          status: isApproved
+            ? "Approved by Staff SBUM"
+            : "Rejected by Staff SBUM",
+          rejection_reason: isApproved
+            ? null
+            : rejectionReasons[item.request_id]?.trim(),
+        };
+      });
+
+      await Promise.all(
+        requests.map((request) =>
+          axios.put(
+            `http://localhost:5000/requestsApprovalAdmin/${request.request_id}/admin-approval`,
+            request,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          )
+        )
+      );
+
+      setSnackbar({
+        open: true,
+        message: "Successfully updated requests",
+        severity: "success",
+      });
+      setItemApprovals({});
+      setRejectionReasons({});
+    } catch (error) {
+      console.error("Error updating requests:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to update requests",
+        severity: "error",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(+event.target.value);
-    setPage(0);
-  };
-
-  // Menggabungkan filter status dan pencarian dalam satu fungsi
   const getFilteredRows = () => {
-    return details.filter((item) => {
-      const matchesSearch =
-        !searchTerm ||
-        Object.values(item)
-          .join(" ")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
-
-      const matchesStatus =
-        filterStatus === "Semua" ||
-        (filterStatus === "return" &&
-          (item.status === "return" ||
-            item.status.startsWith("return: terlambat"))) ||
-        (filterStatus !== "return" && item.status === filterStatus);
-
-      return matchesSearch && matchesStatus;
-    });
+    return details.filter(
+      (item) =>
+        (!searchTerm ||
+          item.item_name.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (filterStatus === "Semua" || item.status === filterStatus)
+    );
   };
 
-  // Gunakan fungsi filter gabungan untuk mendapatkan data yang akan ditampilkan
-  const filteredRows = getFilteredRows();
-  const displayedRows = filteredRows.slice(
+  const displayedRows = getFilteredRows().slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
 
   return (
     <Box
       sx={{
         width: "100%",
-        margin: "0 auto", // Pusatkan di layar
-        boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-        borderRadius: 2,
+        margin: "0 auto",
         px: 2,
         py: 4,
         bgcolor: "background.paper",
       }}
     >
-      <Box
-        sx={{
-          mb: 4,
-          justifyContent: "center",
-          alignItems: "center",
-          display: "flex",
-        }}
-      >
-        <Divider
-          style={{
-            width: "3%",
-            backgroundColor: "black",
-            height: "10%",
-          }}
-        />
-        <Typography
-          style={{
-            margin: "0 10px",
-            fontFamily: "Sansita",
-            fontSize: "26px",
-          }}
+      <Typography variant="h5" align="center" gutterBottom>
+        Detail Persetujuan Staff SBUM
+      </Typography>
+
+      <FormControl variant="outlined" sx={{ mb: 2, width: "250px" }}>
+        <InputLabel>Status</InputLabel>
+        <Select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          label="Status"
         >
-          DETAIL PERSETUJUAN
-        </Typography>
-        <Divider
-          style={{
-            width: "3%",
-            backgroundColor: "black",
-            height: "10%",
-          }}
-        />
-      </Box>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        alignItems="center"
-        spacing={2}
-        sx={{
-          pb: 2,
+          <MenuItem value="Semua">Semua</MenuItem>
+          <MenuItem value="Approved by Staff SBUM">
+            Disetujui Staff SBUM
+          </MenuItem>
+          <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
+          <MenuItem value="Approved by Head">Menunggu Persetujuan</MenuItem>
+        </Select>
+      </FormControl>
+
+      <TextField
+        variant="outlined"
+        placeholder="Search..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
         }}
-      >
-        {/* Filter di kiri */}
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={2}
-          alignItems="center"
-        >
-          <FormControl variant="outlined" sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filterStatus}
-              onChange={handleFilterChange}
-              label="Status"
-            >
-              <MenuItem value="Semua">Semua</MenuItem>
-              <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
-              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
-              <MenuItem value="Approved by Staff SBUM">Disetujui Staff SBUM</MenuItem>
-              <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
-              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
-            </Select>
-          </FormControl>
-        </Stack>
-        <TextField
-          variant="outlined"
-          placeholder="Search..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon color="action" />
-              </InputAdornment>
-            ),
-          }}
-          sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}
-        />
-      </Stack>
-      <TableContainer
-        component={Paper}
-        sx={{
-          borderRadius: "12px",
-          overflow: "hidden",
-        }}
+        sx={{ mb: 2, width: "250px" }}
       />
-      <div
-        style={{
-          marginTop: "10px",
-          display: "flex",
-          justifyContent: "flex-start",
-          alignItems: "center",
-          backgroundColor: "#0C628B",
-          padding: "25px",
-          borderTopLeftRadius: "12px",
-          borderTopRightRadius: "12px",
-          borderBottom: "1px solid #e0e0e0",
-        }}
-      />
-      {/* Tabel Detail Permintaan */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          borderRadius: "12px", // Border-radius untuk tabel
-          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
-        }}
-      >
+
+      <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
@@ -281,68 +252,53 @@ const DetailPersetujuanAdmin = () => {
               <StyledTableCell>Alasan</StyledTableCell>
               <StyledTableCell>Divisi</StyledTableCell>
               <StyledTableCell>Status</StyledTableCell>
-              <StyledTableCell>Aksi</StyledTableCell>
+              <StyledTableCell>Approve</StyledTableCell>
+              <StyledTableCell>Alasan Penolakan</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {displayedRows.map((item, index) => (
               <StyledTableRow key={item.request_id}>
-                <StyledTableCell>{index + 1}</StyledTableCell>
+                <StyledTableCell>
+                  {index + 1 + page * rowsPerPage}
+                </StyledTableCell>
                 <StyledTableCell>{item.item_name}</StyledTableCell>
                 <StyledTableCell>{item.quantity}</StyledTableCell>
                 <StyledTableCell>{item.reason}</StyledTableCell>
                 <StyledTableCell>{item.user_division}</StyledTableCell>
                 <StyledTableCell>{item.status}</StyledTableCell>
                 <StyledTableCell>
-                  {/* Tombol Persetujuan */}
-                  <div style={{ marginTop: "20px" }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      onClick={() =>
-                        handleApproval("Approved by Staff SBUM", item.request_id)
+                  {item.status === "Approved by Head" ? (
+                    <Checkbox
+                      checked={itemApprovals[item.request_id] || false}
+                      onChange={(e) =>
+                        handleApprovalChange(item.request_id, e.target.checked)
                       }
-                    >
-                      Setujui
-                    </Button>
-
-                    <Button
-                      variant="contained"
-                      color="error"
-                      style={{ marginLeft: "10px" }}
-                      onClick={() => handleRejectButton(index)}
-                    >
-                      Tolak
-                    </Button>
-                  </div>
-
-                  {/* Input Alasan Penolakan */}
-                  {status === "Rejected by Staff SBUM" &&
-                    activeIndex === index && (
-                      <div style={{ marginTop: "20px" }}>
-                        <TextField
-                          fullWidth
-                          label="Alasan Penolakan"
-                          variant="outlined"
-                          multiline
-                          rows={3}
-                          onChange={(e) => setReason(e.target.value)}
-                        />
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          style={{ marginTop: "10px" }}
-                          onClick={() =>
-                            handleApproval(
-                              "Rejected by Staff SBUM",
-                              item.request_id
-                            )
-                          }
-                        >
-                          Kirim
-                        </Button>
-                      </div>
-                    )}
+                    />
+                  ) : item.status === "Approved by Staff SBUM" ? (
+                    "✓"
+                  ) : (
+                    "-"
+                  )}
+                </StyledTableCell>
+                <StyledTableCell>
+                  {item.status === "Approved by Head" &&
+                  !itemApprovals[item.request_id] ? (
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={rejectionReasons[item.request_id] || ""}
+                      onChange={(e) =>
+                        handleRejectionReasonChange(
+                          item.request_id,
+                          e.target.value
+                        )
+                      }
+                      placeholder="Enter reason for rejection"
+                    />
+                  ) : (
+                    item.rejection_reason || "-"
+                  )}
                 </StyledTableCell>
               </StyledTableRow>
             ))}
@@ -351,13 +307,34 @@ const DetailPersetujuanAdmin = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={filteredRows.length}
+          count={details.length}
           rowsPerPage={rowsPerPage}
           page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
+          onPageChange={(e, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(e) => setRowsPerPage(+e.target.value)}
         />
       </TableContainer>
+
+      <Button
+        variant="contained"
+        onClick={handleSubmit}
+        sx={{ mt: 2, backgroundColor: "#0C628B", color: "white" }}
+      >
+        Submit
+      </Button>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
