@@ -22,6 +22,8 @@ import {
   TablePagination,
   Snackbar,
   Alert,
+  Divider,
+  Stack
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
@@ -136,19 +138,32 @@ const RequestApprovDetail = () => {
     if (!validateSubmission()) return;
     setLoading(true);
     try {
-      const requests = details.map((item) => {
-        const isApproved = itemApprovals[item.request_id];
-        return {
+      // Only process items that are pending and have been modified
+      const modifiedRequests = details
+        .filter(item => 
+          item.status.toLowerCase() === "pending" && 
+          (itemApprovals.hasOwnProperty(item.request_id) || 
+           rejectionReasons.hasOwnProperty(item.request_id))
+        )
+        .map(item => ({
           request_id: item.request_id,
-          status: isApproved ? "Approved by Head" : "Rejected by Head",
-          rejection_reason: isApproved
-            ? null
-            : rejectionReasons[item.request_id]?.trim(),
-        };
-      });
-
-      await Promise.all(
-        requests.map((request) =>
+          status: itemApprovals[item.request_id] ? "Approved by Head" : "Rejected by Head",
+          rejection_reason: itemApprovals[item.request_id] 
+            ? null 
+            : rejectionReasons[item.request_id]?.trim()
+        }));
+  
+      if (modifiedRequests.length === 0) {
+        setSnackbar({
+          open: true,
+          message: "No pending items were modified",
+          severity: "warning"
+        });
+        return;
+      }
+  
+      const results = await Promise.allSettled(
+        modifiedRequests.map(request =>
           axios.put(
             `http://localhost:5000/requestsApprovHead/${request.request_id}/head-approval`,
             request,
@@ -160,20 +175,27 @@ const RequestApprovDetail = () => {
           )
         )
       );
-
+  
+      // Handle partial success/failure
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+  
       setSnackbar({
         open: true,
-        message: "Successfully updated requests",
-        severity: "success",
+        message: `Updated ${successful} requests. ${failed ? `Failed: ${failed}` : ''}`,
+        severity: failed ? "warning" : "success"
       });
-      setItemApprovals({});
-      setRejectionReasons({});
+  
+      if (successful > 0) {
+        // Refresh the data
+        window.location.reload();
+      }
     } catch (error) {
       console.error("Error updating requests:", error);
       setSnackbar({
         open: true,
-        message: "Failed to update requests",
-        severity: "error",
+        message: "Failed to update requests: " + (error.response?.data?.message || error.message),
+        severity: "error"
       });
     } finally {
       setLoading(false);
@@ -204,40 +226,124 @@ const RequestApprovDetail = () => {
         bgcolor: "background.paper",
       }}
     >
-      <Typography variant="h5" align="center" gutterBottom>
-        Detail Persetujuan
-      </Typography>
-
-      <FormControl variant="outlined" sx={{ mb: 2, width: "250px" }}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          label="Status"
-        >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
-          <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
-          <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
-        </Select>
-      </FormControl>
-
-      <TextField
-        variant="outlined"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
+      <Box
+        sx={{
+          mb: 4,
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
         }}
-        sx={{ mb: 2, width: "250px" }}
-      />
+      >
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+        <Typography
+          style={{
+            margin: "0 10px",
+            fontFamily: "Sansita",
+            fontSize: "26px",
+          }}
+        >
+          DETAIL PERSETUJUAN
+        </Typography>
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+      </Box>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{
+          pb: 2,
+        }}
+      >
+        {/* Filter di kiri */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+        >
 
-      <TableContainer component={Paper}>
+          <FormControl variant="outlined" sx={{
+            marginRight: 2, width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              label="Status"
+            >
+              <MenuItem value="Semua">Semua</MenuItem>
+              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
+              <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
+              <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+        <TextField
+          variant="outlined"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}
+        />
+      </Stack>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
+      />
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      />
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>
@@ -263,7 +369,7 @@ const RequestApprovDetail = () => {
                 <StyledTableCell>{item.user_division}</StyledTableCell>
                 <StyledTableCell>{item.status}</StyledTableCell>
                 <StyledTableCell>
-                  {item.status === "pending" ? (
+                  {item.status.toLowerCase() === "pending" ? (
                     <Checkbox
                       checked={itemApprovals[item.request_id] || false}
                       onChange={(e) =>
@@ -278,7 +384,7 @@ const RequestApprovDetail = () => {
                 </StyledTableCell>
                 <StyledTableCell>
                   {item.status === "pending" &&
-                  !itemApprovals[item.request_id] ? (
+                    !itemApprovals[item.request_id] ? (
                     <TextField
                       fullWidth
                       size="small"

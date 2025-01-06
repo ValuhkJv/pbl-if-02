@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
@@ -379,7 +379,6 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         divisions d ON u.division_id = d.division_id
       WHERE 
         d.division_name = $1 
-        AND r.status = 'pending'
       GROUP BY 
         r.requested_by, u.full_name, d.division_name, r.created_at, r.status
       ORDER BY 
@@ -429,7 +428,6 @@ app.get(
         FROM requests r
         JOIN users u ON r.requested_by = u.user_id
         WHERE u.division_id = $1
-          AND r.status = 'pending'
           AND r.created_at::date = $2;
         `,
         [division_id, created_at]
@@ -499,6 +497,7 @@ app.put(
     const approved_by_head = req.user.user_id;
 
     try {
+      
       // Validasi input status
       if (!["Approved by Head", "Rejected by Head"].includes(status)) {
         return res.status(400).json({ message: "Status tidak valid." });
@@ -516,7 +515,10 @@ app.put(
 
       // Ambil data permintaan
       const request = await db.query(
-        `SELECT item_id, quantity,status FROM requests WHERE request_id = $1`,
+        `SELECT item_id, quantity, status 
+         FROM requests 
+         WHERE request_id = $1 
+         AND LOWER(status) = LOWER('Pending')`,
         [request_id]
       );
 
@@ -525,6 +527,7 @@ app.put(
       }
 
       const { status: currentStatus } = request.rows[0];
+      console.log('Current request status:', currentStatus);
 
       // Cek jika permintaan sudah disetujui/ditolak sebelumnya
       if (currentStatus !== "pending") {
@@ -535,13 +538,13 @@ app.put(
 
       // Update status permintaan
       await db.query(
-        `UPDATE 
-        requests SET 
-        status = $1, 
-        rejection_reason = $2,
-        approved_by_head = $3
-         WHERE 
-        request_id = $4 AND status = 'pending'`,
+        `UPDATE requests 
+         SET status = $1, 
+             rejection_reason = $2,
+             approved_by_head = $3,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE request_id = $4 
+         AND LOWER(status) = LOWER('Pending')`,
         [status, rejection_reason || null, approved_by_head, request_id]
       );
 
@@ -556,13 +559,13 @@ app.put(
         request_number: updatedRequest.rows[0].request_number, // Sertakan request_number di respons
       });
     } catch (error) {
-      console.error(error);
-      res
-        .status(500)
-        .json({ message: "Gagal memperbarui persetujuan kepala unit." });
+      console.error('Detailed error:', error);
+      res.status(500).json({ 
+        message: "Gagal memperbarui persetujuan kepala unit.",
+        error: error.message 
+      });
     }
-  }
-);
+  });
 
 //menampilkan daftar persetujuan staff
 app.get("/requestsApprovalAdmin/:division", async (req, res) => {
@@ -585,7 +588,6 @@ app.get("/requestsApprovalAdmin/:division", async (req, res) => {
       divisions d ON u.division_id = d.division_id
     WHERE 
       d.division_name = $1 
-      AND r.status = 'Approved by Head'
     GROUP BY 
       r.requested_by, u.full_name, d.division_name, r.created_at, r.status
     ORDER BY 
@@ -635,7 +637,6 @@ app.get(
         FROM requests r
         JOIN users u ON r.requested_by = u.user_id
         WHERE u.division_id = $1
-          AND r.status = 'Approved by Head'
           AND r.created_at::date = $2;
         `,
         [division_id, created_at]

@@ -22,6 +22,8 @@ import {
   TablePagination,
   Snackbar,
   Alert,
+  Divider,
+  Stack
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
@@ -133,55 +135,71 @@ const DetailPersetujuanAdmin = () => {
     return true;
   };
 
-  const handleSubmit = async () => {
-    if (!validateSubmission()) return;
-    setLoading(true);
-    try {
-      const requests = details.map((item) => {
-        const isApproved = itemApprovals[item.request_id];
-        return {
-          request_id: item.request_id,
-          status: isApproved
-            ? "Approved by Staff SBUM"
-            : "Rejected by Staff SBUM",
-          rejection_reason: isApproved
-            ? null
-            : rejectionReasons[item.request_id]?.trim(),
-        };
-      });
+const handleSubmit = async () => {
+  if (!validateSubmission()) return;
+  setLoading(true);
+  try {
+    const requests = details
+      .filter(item => item.status === "Approved by Head" && 
+                     (itemApprovals[item.request_id] !== undefined || 
+                      rejectionReasons[item.request_id]?.trim()))
+      .map((item) => ({
+        request_id: item.request_id,
+        status: itemApprovals[item.request_id]
+          ? "Approved by Staff SBUM"
+          : "Rejected by Staff SBUM",
+        rejection_reason: itemApprovals[item.request_id]
+          ? null
+          : rejectionReasons[item.request_id]?.trim(),
+      }));
 
-      await Promise.all(
-        requests.map((request) =>
-          axios.put(
-            `http://localhost:5000/requestsApprovalAdmin/${request.request_id}/admin-approval`,
-            request,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          )
-        )
-      );
-
-      setSnackbar({
-        open: true,
-        message: "Successfully updated requests",
-        severity: "success",
-      });
-      setItemApprovals({});
-      setRejectionReasons({});
-    } catch (error) {
-      console.error("Error updating requests:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to update requests",
-        severity: "error",
-      });
-    } finally {
-      setLoading(false);
+    if (requests.length === 0) {
+      throw new Error("No eligible requests to update");
     }
-  };
+
+    // Process requests sequentially instead of concurrently
+    for (const request of requests) {
+      await axios.put(
+        `http://localhost:5000/requestsApprovalAdmin/${request.request_id}/admin-approval`,
+        request,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+    }
+
+    setSnackbar({
+      open: true,
+      message: "Successfully updated requests",
+      severity: "success",
+    });
+    setItemApprovals({});
+    setRejectionReasons({});
+    
+    // Refresh the details after successful update
+    const response = await axios.get(
+      `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    setDetails(response.data);
+
+  } catch (error) {
+    console.error("Error updating requests:", error);
+    setSnackbar({
+      open: true,
+      message: error.response?.data?.message || "Failed to update requests",
+      severity: "error",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const getFilteredRows = () => {
     return details.filter(
@@ -207,42 +225,125 @@ const DetailPersetujuanAdmin = () => {
         bgcolor: "background.paper",
       }}
     >
-      <Typography variant="h5" align="center" gutterBottom>
-        Detail Persetujuan Staff SBUM
-      </Typography>
-
-      <FormControl variant="outlined" sx={{ mb: 2, width: "250px" }}>
-        <InputLabel>Status</InputLabel>
-        <Select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          label="Status"
-        >
-          <MenuItem value="Semua">Semua</MenuItem>
-          <MenuItem value="Approved by Staff SBUM">
-            Disetujui Staff SBUM
-          </MenuItem>
-          <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
-          <MenuItem value="Approved by Head">Menunggu Persetujuan</MenuItem>
-        </Select>
-      </FormControl>
-
-      <TextField
-        variant="outlined"
-        placeholder="Search..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <SearchIcon />
-            </InputAdornment>
-          ),
+      <Box
+        sx={{
+          mb: 4,
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
         }}
-        sx={{ mb: 2, width: "250px" }}
+      >
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+        <Typography
+          style={{
+            margin: "0 10px",
+            fontFamily: "Sansita",
+            fontSize: "26px",
+          }}
+        >
+          DETAIL PERSETUJUAN
+        </Typography>
+        <Divider
+          style={{
+            width: "3%",
+            backgroundColor: "black",
+            height: "10%",
+          }}
+        />
+      </Box>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+        sx={{
+          pb: 2,
+        }}
+      >
+        {/* Filter di kiri */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
+        >
+          <FormControl variant="outlined" sx={{
+            marginRight: 2, width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}>
+            <InputLabel>Status</InputLabel>
+            <Select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              label="Status"
+            >
+              <MenuItem value="Semua">Semua</MenuItem>
+              <MenuItem value="Approved by Staff SBUM">
+                Disetujui Staff SBUM
+              </MenuItem>
+              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
+              <MenuItem value="Approved by Head">Menunggu Persetujuan</MenuItem>
+            </Select>
+          </FormControl>
+        </Stack>
+        <TextField
+          variant="outlined"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{
+            marginRight: 2, width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}
+        />
+      </Stack>
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px",
+          overflow: "hidden",
+        }}
       />
-
-      <TableContainer component={Paper}>
+      <div
+        style={{
+          marginTop: "10px",
+          display: "flex",
+          justifyContent: "flex-start",
+          alignItems: "center",
+          backgroundColor: "#0C628B",
+          padding: "25px",
+          borderTopLeftRadius: "12px",
+          borderTopRightRadius: "12px",
+          borderBottom: "1px solid #e0e0e0",
+        }}
+      />
+      <TableContainer
+        component={Paper}
+        sx={{
+          borderRadius: "12px", // Border-radius untuk tabel
+          overflow: "hidden", // Agar isi tabel tidak keluar dari border-radius
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>
@@ -283,7 +384,7 @@ const DetailPersetujuanAdmin = () => {
                 </StyledTableCell>
                 <StyledTableCell>
                   {item.status === "Approved by Head" &&
-                  !itemApprovals[item.request_id] ? (
+                    !itemApprovals[item.request_id] ? (
                     <TextField
                       fullWidth
                       size="small"
