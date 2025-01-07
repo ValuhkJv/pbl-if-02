@@ -1,7 +1,7 @@
 // Code to display alert messages
 import Swal from "sweetalert2";
 
-const Alert = {
+const sweetAlert = {
   success: (title, text) => {
     Swal.fire({
       title: title || "Berhasil!",
@@ -86,4 +86,4 @@ const Alert = {
     });
   }
 };
-export default Alert;
+export default sweetAlert;

@@ -22,13 +22,15 @@ import {
   InputAdornment,
   TablePagination,
   Tooltip,
-  Autocomplete
+  Autocomplete,
 } from "@mui/material";
 import axios from "axios";
-import Alert from "../../components/alert";
+import sweetAlert from "../../components/Alert";
 import { styled } from "@mui/system";
 import {
-  Search as SearchIcon, Add as AddIcon, DeleteForeverOutlined as DeleteForeverOutlinedIcon,
+  Search as SearchIcon,
+  Add as AddIcon,
+  DeleteForeverOutlined as DeleteForeverOutlinedIcon,
 } from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)({
@@ -62,7 +64,6 @@ const RemoveButton = styled(Button)(({ theme }) => ({
   transition: "all 0.3s ease",
   fontSize: "8px",
 }));
-
 
 const StockInPage = () => {
   const [formData, setFormData] = useState({
@@ -144,7 +145,7 @@ const StockInPage = () => {
     e.preventDefault();
     try {
       await axios.post("http://localhost:5000/stock-in", formData);
-      Alert.success("Berhasil!", "Stok barang berhasil ditambahkan.");
+      sweetAlert.success("Berhasil!", "Stok barang berhasil ditambahkan.");
       setFormData({ category_id: "", item_id: "", quantity: "" });
       fetchStockInData(); // Refresh table after adding stock
       handleClose(); // Tutup modal setelah submit
@@ -155,14 +156,14 @@ const StockInPage = () => {
   };
 
   const handleDelete = (stock_in_id) => {
-    Alert.confirmDelete(async () => {
+    sweetAlert.confirmDelete(async () => {
       try {
         await axios.delete(`http://localhost:5000/stock-in/${stock_in_id}`);
-        Alert.success("Berhasil!", "Data barang masuk berhasil dihapus!");
+        sweetAlert.success("Berhasil!", "Data barang masuk berhasil dihapus!");
         fetchStockInData(); // Refresh tabel setelah penghapusan
       } catch (error) {
         console.error("Error deleting stock-in data:", error);
-        Alert.error("Gagal!", "Data barang masuk gagal dihapus.");
+        sweetAlert.error("Gagal!", "Data barang masuk gagal dihapus.");
       }
     });
   };
@@ -185,10 +186,15 @@ const StockInPage = () => {
 
     const searchLower = searchTerm.toLowerCase();
     return (
-      (item.category_name && item.category_name.toLowerCase().includes(searchLower)) ||
+      (item.category_name &&
+        item.category_name.toLowerCase().includes(searchLower)) ||
       (item.item_name && item.item_name.toLowerCase().includes(searchLower)) ||
       (item.quantity && item.quantity.toString().includes(searchTerm)) ||
-      (item.created_at && new Date(item.created_at).toLocaleDateString().toLowerCase().includes(searchLower))
+      (item.created_at &&
+        new Date(item.created_at)
+          .toLocaleDateString()
+          .toLowerCase()
+          .includes(searchLower))
     );
   });
 
@@ -262,12 +268,7 @@ const StockInPage = () => {
           spacing={2}
           alignItems="center"
         >
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handleOpen}
-
-          >
+          <Button variant="contained" color="primary" onClick={handleOpen}>
             <AddIcon />
             Tambah stock
           </Button>
@@ -277,7 +278,6 @@ const StockInPage = () => {
           spacing={2}
           alignItems="center"
         >
-
           <TextField
             variant="outlined"
             placeholder="Search..."
@@ -323,11 +323,13 @@ const StockInPage = () => {
       />
 
       {/* Tabel */}
-      <TableContainer component={Paper}
+      <TableContainer
+        component={Paper}
         sx={{
           borderRadius: "12px",
           overflow: "hidden",
-        }}>
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>
@@ -371,7 +373,8 @@ const StockInPage = () => {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                        }} onClick={() => handleDelete(row.stock_in_id)}
+                        }}
+                        onClick={() => handleDelete(row.stock_in_id)}
                       >
                         <DeleteForeverOutlinedIcon />
                       </RemoveButton>
@@ -423,7 +426,10 @@ const StockInPage = () => {
                 <Autocomplete
                   options={items}
                   getOptionLabel={(option) => option.item_name}
-                  value={items.find(item => item.item_id === formData.item_id) || null}
+                  value={
+                    items.find((item) => item.item_id === formData.item_id) ||
+                    null
+                  }
                   onChange={handleItemChange}
                   renderInput={(params) => (
                     <TextField
@@ -435,9 +441,9 @@ const StockInPage = () => {
                   )}
                   ListboxProps={{
                     style: {
-                      maxHeight: '200px',
-                      overflow: 'auto'
-                    }
+                      maxHeight: "200px",
+                      overflow: "auto",
+                    },
                   }}
                 />
               </Grid>
@@ -456,30 +462,37 @@ const StockInPage = () => {
             </Grid>
           </form>
         </DialogContent>
-        <DialogActions sx={{ mr: 2 , gap:"1px" }}>
-          <Button onClick={handleClose} color="secondary" sx={{
-            border: "2px solid",
-            borderColor: "black",
-            color: "black",
-            borderRadius: "8px",
-            padding: "8px 16px",
-            textTransform: "none"
-          }}>
+        <DialogActions sx={{ mr: 2, gap: "1px" }}>
+          <Button
+            onClick={handleClose}
+            color="secondary"
+            sx={{
+              border: "2px solid",
+              borderColor: "black",
+              color: "black",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              textTransform: "none",
+            }}
+          >
             Batal
           </Button>
-          <Button onClick={handleSubmit} color="primary" variant="contained"
+          <Button
+            onClick={handleSubmit}
+            color="primary"
+            variant="contained"
             sx={{
               color: "white",
               border: "2px",
               borderRadius: "8px",
               padding: "8px 16px",
-              textTransform: "none"
-            }}>
+              textTransform: "none",
+            }}
+          >
             Tambah Stok
           </Button>
         </DialogActions>
       </Dialog>
-
     </Box>
   );
 };

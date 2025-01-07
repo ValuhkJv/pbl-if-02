@@ -15,11 +15,11 @@ import {
   Box,
   Paper,
   IconButton,
-  Autocomplete
+  Autocomplete,
 } from "@mui/material";
 import axios from "axios";
 import ClearIcon from "@mui/icons-material/Clear";
-import Alert from "../../components/alert";
+import sweetAlert from "../../components/Alert";
 import { styled } from "@mui/system";
 
 const StyledTableCell = styled(TableCell)({
@@ -170,19 +170,17 @@ const RequestForm = () => {
     axios
       .post("http://localhost:5000/requests/batch", payload)
       .then(() => {
-        Alert.success("Berhasil!", "Data telah disimpan dengan sukses.");
+        sweetAlert.success("Berhasil!", "Data telah disimpan dengan sukses.");
         setRequests([]);
       })
       .catch((err) => console.error(err));
   };
 
-
-
   const handleItemChange = (_, newValue) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       item_id: newValue?.item_id || null,
-      stock: newValue?.stock || ""
+      stock: newValue?.stock || "",
     }));
   };
 
@@ -241,7 +239,10 @@ const RequestForm = () => {
               <Autocomplete
                 options={items}
                 getOptionLabel={(option) => option.item_name || ""}
-                value={items.find(item => item.item_id === formData.item_id) || null}
+                value={
+                  items.find((item) => item.item_id === formData.item_id) ||
+                  null
+                }
                 onChange={handleItemChange}
                 disabled={!formData.category_id}
                 renderInput={(params) => (
@@ -252,12 +253,16 @@ const RequestForm = () => {
                   />
                 )}
                 className="w-full"
-                noOptionsText={formData.category_id ? "Barang belum tersedia" : "Pilih kategori terlebih dahulu"}
+                noOptionsText={
+                  formData.category_id
+                    ? "Barang belum tersedia"
+                    : "Pilih kategori terlebih dahulu"
+                }
                 ListboxProps={{
                   style: {
-                    maxHeight: '200px',
-                    overflow: 'auto'
-                  }
+                    maxHeight: "200px",
+                    overflow: "auto",
+                  },
                 }}
               />
             </Grid>
