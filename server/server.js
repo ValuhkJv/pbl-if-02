@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -497,7 +497,6 @@ app.put(
     const approved_by_head = req.user.user_id;
 
     try {
-      
       // Validasi input status
       if (!["Approved by Head", "Rejected by Head"].includes(status)) {
         return res.status(400).json({ message: "Status tidak valid." });
@@ -527,7 +526,7 @@ app.put(
       }
 
       const { status: currentStatus } = request.rows[0];
-      console.log('Current request status:', currentStatus);
+      console.log("Current request status:", currentStatus);
 
       // Cek jika permintaan sudah disetujui/ditolak sebelumnya
       if (currentStatus !== "pending") {
@@ -559,13 +558,14 @@ app.put(
         request_number: updatedRequest.rows[0].request_number, // Sertakan request_number di respons
       });
     } catch (error) {
-      console.error('Detailed error:', error);
-      res.status(500).json({ 
+      console.error("Detailed error:", error);
+      res.status(500).json({
         message: "Gagal memperbarui persetujuan kepala unit.",
-        error: error.message 
+        error: error.message,
       });
     }
-  });
+  }
+);
 
 //menampilkan daftar persetujuan staff
 app.get("/requestsApprovalAdmin/:division", async (req, res) => {
