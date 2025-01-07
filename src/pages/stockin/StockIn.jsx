@@ -25,7 +25,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import axios from "axios";
-import Alert from "../../components/Alert";
+import sweetAlert from "../../components/Alert";
 import { styled } from "@mui/system";
 import {
   Search as SearchIcon,
@@ -145,7 +145,7 @@ const StockInPage = () => {
     e.preventDefault();
     try {
       await axios.post("http://localhost:5000/stock-in", formData);
-      Alert.success("Berhasil!", "Stok barang berhasil ditambahkan.");
+      sweetAlert.success("Berhasil!", "Stok barang berhasil ditambahkan.");
       setFormData({ category_id: "", item_id: "", quantity: "" });
       fetchStockInData(); // Refresh table after adding stock
       handleClose(); // Tutup modal setelah submit
@@ -156,14 +156,14 @@ const StockInPage = () => {
   };
 
   const handleDelete = (stock_in_id) => {
-    Alert.confirmDelete(async () => {
+    sweetAlert.confirmDelete(async () => {
       try {
         await axios.delete(`http://localhost:5000/stock-in/${stock_in_id}`);
-        Alert.success("Berhasil!", "Data barang masuk berhasil dihapus!");
+        sweetAlert.success("Berhasil!", "Data barang masuk berhasil dihapus!");
         fetchStockInData(); // Refresh tabel setelah penghapusan
       } catch (error) {
         console.error("Error deleting stock-in data:", error);
-        Alert.error("Gagal!", "Data barang masuk gagal dihapus.");
+        sweetAlert.error("Gagal!", "Data barang masuk gagal dihapus.");
       }
     });
   };
