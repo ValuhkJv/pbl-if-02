@@ -46,13 +46,13 @@ const Alert = {
   // Menambahkan konfirmasi dialog sebelum menghapus
   confirmDelete: (onConfirm) => {
     Swal.fire({
-      title: "Are you sure?",
-      text: "You won't be able to revert this!",
+      title: "Apakah anda yakin ingin menghapus?",
+      text: "Anda tidak akan bisa mengembalikannya!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#3085d6",
       cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: "Ya, hapus!",
     }).then((result) => {
       if (result.isConfirmed) {
         // Callback untuk melakukan aksi penghapusan
@@ -61,11 +61,29 @@ const Alert = {
         }
         Swal.fire({
           title: "Deleted!",
-          text: "Your file has been deleted.",
+          text: "File anda telah terhapus.",
           icon: "success",
         });
       }
     });
   },
+  confirmCancel: (onConfirm) => {
+    Swal.fire({
+      title: "Batalkan Peminjaman?",
+      text: "Anda yakin ingin membatalkan peminjaman ini?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Ya, batalkan!",
+      cancelButtonText: "Tidak",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (typeof onConfirm === "function") {
+          onConfirm();
+        }
+      }
+    });
+  }
 };
 export default Alert;

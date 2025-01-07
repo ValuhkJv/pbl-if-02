@@ -205,29 +205,46 @@ const LoanApprovalDetail = () => {
             rejectionReasons
         });
 
-        const decisions = loanDetails.items.map(item => {
-            const isApproved = itemApprovals[item.borrowing_id];
-            const rejectionReason = rejectionReasons[item.borrowing_id]?.trim();
-
-            console.log("Validating item:", {
-                borrowing_id: item.borrowing_id,
-                isApproved,
-                rejectionReason
+        // Get only items that have been explicitly approved or rejected
+        const decidedItems = loanDetails.items
+            .filter(item => item.status === 'pending')
+            .filter(item => {
+                const isApproved = itemApprovals[item.borrowing_id];
+                const hasRejectionReason = rejectionReasons[item.borrowing_id]?.trim();
+                return isApproved !== undefined || hasRejectionReason;
             });
 
-            return isApproved || (!isApproved && rejectionReason);
-        });
-
-        const hasAnyDecision = decisions.some(decision => decision);
-        console.log("Validation result:", {
-            decisions,
-            hasAnyDecision
-        });
-
-        if (!hasAnyDecision) {
+        // Check if any decisions have been made
+        if (decidedItems.length === 0) {
             setSnackbar({
                 open: true,
-                message: 'Please make a decision (approve/reject) for at least one item',
+                message: 'Please make at least one decision (approve/reject)',
+                severity: 'error'
+            });
+            return false;
+        }
+
+        // Check if any decisions have been made
+        if (decidedItems.length === 0) {
+            setSnackbar({
+                open: true,
+                message: 'Please make at least one decision (approve/reject)',
+                severity: 'error'
+            });
+            return false;
+        }
+
+        // Validate rejection reasons for rejected items
+        const invalidRejections = decidedItems.filter(item => {
+            const isApproved = itemApprovals[item.borrowing_id];
+            const rejectionReason = rejectionReasons[item.borrowing_id]?.trim();
+            return isApproved === false && !rejectionReason;
+        });
+
+        if (invalidRejections.length > 0) {
+            setSnackbar({
+                open: true,
+                message: 'Please provide rejection reasons for all rejected items',
                 severity: 'error'
             });
             return false;
@@ -235,6 +252,7 @@ const LoanApprovalDetail = () => {
 
         return true;
     };
+
     const handleRejectionReasonChange = (borrowing_id, reason) => {
         setRejectionReasons(prev => ({
             ...prev,
@@ -248,32 +266,37 @@ const LoanApprovalDetail = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const itemsToProcess = loanDetails.items.filter(item => item.status === 'pending');
+            const pendingItems = loanDetails.items.filter(item => item.status === 'pending');
+            const itemsToProcess = pendingItems.filter(item => {
+                // Only process items that have been explicitly approved or rejected
+                return itemApprovals[item.borrowing_id] !== undefined ||
+                    rejectionReasons[item.borrowing_id]?.trim();
+            });
 
             for (const item of itemsToProcess) {
                 const borrowing_id = item.borrowing_id;
                 const isApproved = itemApprovals[borrowing_id];
                 const rejectionReason = rejectionReasons[borrowing_id];
 
-                const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}/approval`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        // Jika tidak diapprove dan ada rejection reason, maka ini adalah rejection
-                        status: isApproved ? 'approved' : 'rejected',
-                        rejection_reason: !isApproved ? rejectionReason : null,
-                    }),
-                });
+                if (isApproved !== undefined || rejectionReason) {
+                    const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}/approval`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            status: isApproved ? 'approved' : 'rejected',
+                            rejection_reason: !isApproved ? rejectionReason : null,
+                        }),
+                    });
 
-                // Log response untuk debugging
-                const responseData = await response.json();
-                console.log("Server response:", responseData);
+                    const responseData = await response.json();
+                    console.log("Server response:", responseData);
 
-                if (!response.ok) {
-                    throw new Error(responseData.message || 'Failed to process approval');
+                    if (!response.ok) {
+                        throw new Error(responseData.message || 'Failed to process approval');
+                    }
                 }
             }
 
@@ -284,8 +307,15 @@ const LoanApprovalDetail = () => {
                 severity: 'success'
             });
 
-            setItemApprovals({});
-            setRejectionReasons({});
+            // Clear only the processed decisions
+            const newApprovals = { ...itemApprovals };
+            const newRejections = { ...rejectionReasons };
+            itemsToProcess.forEach(item => {
+                delete newApprovals[item.borrowing_id];
+                delete newRejections[item.borrowing_id];
+            });
+            setItemApprovals(newApprovals);
+            setRejectionReasons(newRejections);
 
         } catch (error) {
             console.error('Error:', error);
@@ -483,7 +513,8 @@ const LoanApprovalDetail = () => {
                         onClick={handleSubmit}
                         sx={{
                             mt: 2, backgroundColor: "#0C628B",
-                            color: "white",}}
+                            color: "white",
+                        }}
                     >
                         Submit
                     </Button>

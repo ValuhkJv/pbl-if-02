@@ -17,11 +17,6 @@ import {
   Box,
   Typography,
   Tooltip,
-  Dialog,
-  DialogActions,
-  DialogTitle,
-  Snackbar,
-  Alert,
   TablePagination,
   InputAdornment,
   Stack,
@@ -33,27 +28,17 @@ import {
   DeleteForeverOutlined as DeleteForeverOutlinedIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
+import Alert from "../../components/alert"; // Import alert service
 
 export default function LoanApproval() {
   const navigate = useNavigate();
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [loanApproval, setLoanApproval] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
-
+ 
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
@@ -143,11 +128,7 @@ export default function LoanApproval() {
       setLoanApproval(Object.values(transformedData)); // Gunakan state yang sudah ada
     } catch (error) {
       console.error("Fetch error:", error);
-      setSnackbar({
-        open: true,
-        message: `Error: ${error.message}`,
-        severity: "error",
-      });
+      Alert.error("Error", error.message);
     }
   };
 
@@ -213,92 +194,55 @@ export default function LoanApproval() {
       const token = localStorage.getItem("token");
       const userRole = localStorage.getItem("roles_id");
 
-      // Ambil semua borrowing_id dari items dalam group
       const borrowingIds = groupData.items.map((item) => item.borrowing_id);
-      const deletePromises = [];
+      const itemToDelete = groupData.items.find(
+        (item) => item.borrowing_id === borrowingIds[0]
+      );
 
-      for (const id of borrowingIds) {
-        // Check if item status is valid for deletion
-        const itemToDelete = groupData.items.find(
-          (item) => item.borrowing_id === id
+      if (
+        userRole === "2" &&
+        !["rejected", "return"].includes(itemToDelete.status)
+      ) {
+        Alert.error(
+          "Unauthorized",
+          "Staf hanya dapat menghapus peminjaman yang ditolak atau sudah dikembalikan"
         );
-
-        // For staff (role 2), only allow deletion if status is 'rejected' or 'return'
-        if (
-          userRole === "2" &&
-          !["rejected", "return"].includes(itemToDelete.status)
-        ) {
-          setSnackbar({
-            open: true,
-            message:
-              "Staf hanya dapat menghapus peminjaman yang ditolak atau sudah dikembalikan",
-            severity: "error",
-          });
-          return;
-        }
-
-        // Proceed with deletion
-        deletePromises.push(
-          fetch(`http://localhost:5000/peminjaman/${id}`, {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }).then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
-        );
+        return;
       }
 
-      // Wait for all deletions to complete
+      const deletePromises = borrowingIds.map((id) =>
+        fetch(`http://localhost:5000/peminjaman/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }).then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+      );
+
       await Promise.all(deletePromises);
 
-      // Update local state after successful deletion
       setLoanApproval((prevLoans) =>
         prevLoans.filter(
           (loan) => !borrowingIds.includes(loan.items[0].borrowing_id)
         )
       );
 
-      setSnackbar({
-        open: true,
-        message: "Peminjaman berhasil dihapus",
-        severity: "success",
-      });
-
-      // Refresh data to ensure sync with server
+      Alert.success("Berhasil", "Peminjaman berhasil dihapus");
       fetchLoanApproval();
     } catch (error) {
       console.error("Delete error:", error);
-      setSnackbar({
-        open: true,
-        message: `Gagal menghapus peminjaman: ${error.message}`,
-        severity: "error",
-      });
+      Alert.error("Gagal", `Gagal menghapus peminjaman: ${error.message}`);
     }
   };
   // Modifikasi fungsi handleOpenDeleteDialog
   const handleOpenDeleteDialog = (groupData) => {
-    setItemToDelete(groupData);
-    setDeleteDialogOpen(true);
-  };
-
-  // Fungsi untuk menutup dialog konfirmasi hapus
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
-  };
-
-  // Fungsi konfirmasi delete
-  const confirmDelete = async () => {
-    if (itemToDelete) {
-      await handleDelete(itemToDelete);
-      handleCloseDeleteDialog();
-    }
+    Alert.confirmDelete(() => handleDelete(groupData));
   };
 
   useEffect(() => {
@@ -550,68 +494,6 @@ export default function LoanApproval() {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleCloseDeleteDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: { borderRadius: "12px", padding: "8px" },
-        }}
-      >
-        <DialogTitle id="alert-dialog-title">
-          {"Apakah Anda yakin ingin menghapus?"}
-        </DialogTitle>
-
-        <DialogActions
-          sx={{
-            justifyContent: "center",
-            gap: 2,
-          }}
-        >
-          <Button
-            onClick={handleCloseDeleteDialog}
-            sx={{
-              border: "2px solid ",
-              borderColor: "black",
-              color: "black",
-              borderRadius: "8px",
-              padding: "8px 16px",
-            }}
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            sx={{
-              border: "2px solid #69D2FF",
-              backgroundColor: "#69D2FF",
-              color: "black",
-              padding: "8px 16px",
-            }}
-            autoFocus
-          >
-            Hapus
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 }

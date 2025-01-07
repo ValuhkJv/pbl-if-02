@@ -368,7 +368,7 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         r.requested_by AS user_id,
         u.full_name,
         COUNT(DISTINCT r.request_id) AS total_requests,
-        MAX(r.created_at) as created_at,
+        r.created_at,
         d.division_name
       FROM 
         requests r
@@ -379,9 +379,17 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
       WHERE 
         d.division_name = $1 
       GROUP BY 
-        r.requested_by, u.full_name, d.division_name, r.created_at
-      ORDER BY 
-        u.full_name, r.created_at DESC;`,
+        r.requested_by, u.full_name, d.division_name, DATE(r.created_at)
+      HAVING 
+      DATE(r.created_at) = (
+      SELECT DATE(created_at)
+      FROM requests r2
+      WHERE r2.requested_by = r.requested_by
+      ORDER BY created_at DESC
+      LIMIT 1
+  )
+ORDER BY 
+  r.created_at DESC;`,
       [division]
     );
     console.log(result.rows);
@@ -758,6 +766,7 @@ app.put(
   }
 );
 
+// Endpoint untuk export data permintaan
 app.get("/requests/export/:date", async (req, res) => {
   const { date } = req.params;
   const { user_id } = req.query;
@@ -815,7 +824,6 @@ app.get("/requests/export/:date", async (req, res) => {
       LEFT JOIN users admin ON r.approved_by_admin = admin.user_id
       WHERE r.requested_by = $1 
       AND r.created_at::date = $2::date
-       AND r.status IN ('Approved by Head', 'Approved by Staff SBUM')
       ORDER BY r.created_at ASC`,
       [user_id, formattedDate]
     );

@@ -11,11 +11,7 @@ import {
   Typography,
   IconButton,
   Grid,
-  Dialog,
-  DialogActions,
-  DialogTitle,
   Snackbar,
-  Alert,
   Stack,
   FormControl,
   InputLabel,
@@ -36,6 +32,8 @@ import {
 } from "@mui/icons-material";
 import PengembalianModal from "./PengembalianModal";
 import { styled } from "@mui/system";
+import Alert from "../../components/alert"; // Import alert service
+
 
 const Pengembalian = () => {
   const [page, setPage] = useState(0);
@@ -45,8 +43,6 @@ const Pengembalian = () => {
   const [transactions, setTransactions] = useState([]);
   const [openPengembalianModal, setOpenPengembalianModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -110,12 +106,7 @@ const Pengembalian = () => {
       transaction.borrowing_ids?.[0] || transaction.borrowing_id;
 
     if (!borrowing_id) {
-      console.log("Missing or invalid borrowing_id:", transaction);
-      setSnackbar({
-        open: true,
-        message: "Data peminjaman tidak valid",
-        severity: "error",
-      });
+      Alert.error("Error", "Data peminjaman tidak valid");
       return;
     }
 
@@ -154,110 +145,87 @@ const Pengembalian = () => {
 
   const handleDelete = async (borrowing_id) => {
     if (!borrowing_id) {
-      setSnackbar({
-        open: true,
-        message: "ID peminjaman tidak valid",
-        severity: "error",
-      });
+      Alert.error("Error", "ID peminjaman tidak valid");
       return;
     }
 
-    try {
-      const token = localStorage.getItem("token");
-      const userRole = localStorage.getItem("roles_id");
+    const deleteAction = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const userRole = localStorage.getItem("roles_id");
 
-      const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Gagal menghapus peminjaman");
-      }
-
-      const data = await response.json();
-      // For staff (roles_id === 1): remove from state
-      // For regular users: mark as deleted but keep in state
-      setTransactions(prevTransactions => {
-        if (userRole === "1") {
-          return prevTransactions.filter(t => t.borrowing_id !== borrowing_id);
-        } else {
-          return prevTransactions.map(t => {
-            if (t.borrowing_id === borrowing_id) {
-              return { ...t, is_deleted: true };
-            }
-            return t;
-          });
-        }
-      });
-
-      // Update local storage
-      const updatedTransactions = transactions.filter(t =>
-        userRole === "1"
-          ? t.borrowing_id !== borrowing_id
-          : t.borrowing_id === borrowing_id
-            ? { ...t, is_deleted: true }
-            : t
-      );
-      localStorage.setItem("transactions", JSON.stringify(updatedTransactions));
-
-      setSnackbar({
-        open: true,
-        message: data.message,
-        severity: "success"
-      });
-
-    } catch (error) {
-      console.error(error);
-      setSnackbar({
-        open: true,
-        message: error.message,
-        severity: "error",
-      });
-    }
-  };
-
-  const handleCancelBorrowing = async (borrowing_id) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `http://localhost:5000/peminjaman/cancel/${borrowing_id}`,
-        {
-          method: "PUT", // Atau "PATCH" tergantung implementasi backend
+        const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Gagal menghapus peminjaman");
         }
-      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Gagal membatalkan peminjaman");
+        const data = await response.json();
+        // For staff (roles_id === 1): remove from state
+        // For regular users: mark as deleted but keep in state
+        setTransactions(prevTransactions => {
+          const newTransactions = userRole === "1"
+            ? prevTransactions.filter(t => t.borrowing_id !== borrowing_id)
+            : prevTransactions.map(t => {
+              if (t.borrowing_id === borrowing_id) {
+                return { ...t, is_deleted: true };
+              }
+              return t;
+            });
+
+          // Update localStorage with the new state
+          localStorage.setItem("transactions", JSON.stringify(newTransactions));
+
+          return newTransactions;
+        });
+
+        Alert.success("Berhasil!", data.message);
+      } catch (error) {
+        console.error(error);
+        Alert.error("Error", error.message);
       }
+    };
 
-      const data = await response.json();
+    Alert.confirmDelete(deleteAction);
+  };
 
-      // Refresh data transaksi
-      await refreshTransactions();
+  const handleCancelBorrowing = async (borrowing_id) => {
+    const cancelAction = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `http://localhost:5000/peminjaman/cancel/${borrowing_id}`,
+          {
+            method: "PUT",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-      setSnackbar({
-        open: true,
-        message: data.message,
-        severity: "success",
-      });
-    } catch (error) {
-      console.error(error);
-      setSnackbar({
-        open: true,
-        message: error.message,
-        severity: "error",
-      });
-    }
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Gagal membatalkan peminjaman");
+        }
+
+        const data = await response.json();
+        await refreshTransactions();
+        Alert.success("Berhasil!", data.message);
+      } catch (error) {
+        console.error(error);
+        Alert.error("Error", error.message);
+      }
+    };
+
+    Alert.confirmCancel(cancelAction);
   };
 
   useEffect(() => {
@@ -342,27 +310,6 @@ const Pengembalian = () => {
         message: "Gagal memperbarui data",
         severity: "error",
       });
-    }
-  };
-
-  // Fungsi untuk membuka dialog konfirmasi hapus
-  const handleOpenDeleteDialog = (id) => {
-    setItemToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  // Fungsi untuk menutup dialog konfirmasi hapus
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
-  };
-
-  // Fungsi konfirmasi delete
-  const confirmDelete = async () => {
-    if (itemToDelete) {
-      await handleDelete(itemToDelete);
-      handleCloseDeleteDialog();
-      await refreshTransactions();
     }
   };
 
@@ -744,7 +691,7 @@ const Pengembalian = () => {
                       <IconButton
                         color="error"
                         onClick={() =>
-                          handleOpenDeleteDialog(transaction.borrowing_id)
+                          handleDelete(transaction.borrowing_id)
                         }
                       >
                         <CloseIcon />
@@ -795,52 +742,6 @@ const Pengembalian = () => {
           />
         </TableContainer>
       </Paper>
-
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleCloseDeleteDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: { borderRadius: "12px", padding: "8px" },
-        }}
-      >
-        <DialogTitle id="alert-dialog-title">
-          {"Apakah Anda yakin ingin menghapus?"}
-        </DialogTitle>
-
-        <DialogActions
-          sx={{
-            justifyContent: "center",
-            gap: 2,
-          }}
-        >
-          <Button
-            onClick={handleCloseDeleteDialog}
-            sx={{
-              border: "2px solid ",
-              borderColor: "black",
-              color: "black",
-              borderRadius: "8px",
-              padding: "8px 16px",
-            }}
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            sx={{
-              border: "2px solid #69D2FF",
-              backgroundColor: "#69D2FF",
-              color: "black",
-              padding: "8px 16px",
-            }}
-            autoFocus
-          >
-            Hapus
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Add Snackbar for notifications */}
       <Snackbar

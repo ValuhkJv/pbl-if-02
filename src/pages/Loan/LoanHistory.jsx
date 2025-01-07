@@ -20,11 +20,6 @@ import {
   Tooltip,
   Button,
   Divider,
-  Dialog,
-  DialogTitle,
-  DialogActions,
-  Snackbar,
-  Alert,
   Modal,
 } from "@mui/material";
 import { styled } from "@mui/system";
@@ -37,6 +32,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import ExportLoanWord from "./ExportLoanWord";
+import Alert from "../../components/alert"; // Import alert service
 
 export default function LoanHistory() {
   // state untuk menyimpan status filter
@@ -49,20 +45,9 @@ export default function LoanHistory() {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState("Semua");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
 
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
 
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
     border: "1px solid #ddd",
@@ -148,7 +133,7 @@ export default function LoanHistory() {
       console.log("Token from localStorage:", token);
 
       if (!token) {
-        console.error("No token found in localStorage");
+        Alert.error("Error", "Token tidak ditemukan");
         return;
       }
 
@@ -173,17 +158,16 @@ export default function LoanHistory() {
       }
 
       const data = await response.json();
-      console.log("Fetched Transactions:", data); // Detailed data log
+       // Transform data jika diperlukan
+       const transformedData = data.map((loan) => ({
+        ...loan,
+        borrowing_ids: [loan.borrowing_id],
+      }));
 
+      setHistory(transformedData);
       if (data.length === 0) {
         console.warn("No transactions found");
       }
-
-      // Modifikasi: Pastikan setiap item memiliki borrowing_ids
-      const transformedData = data.map((loan) => ({
-        ...loan,
-        borrowing_ids: [loan.borrowing_id], // Buat array dengan single borrowing_id
-      }));
 
       setHistory(transformedData);
     } catch (error) {
@@ -197,19 +181,14 @@ export default function LoanHistory() {
     fetchHistory();
   }, []);
 
-  // Modifikasi fungsi handleDelete
   const handleDelete = async (borrowing_id) => {
     if (!borrowing_id) {
-      setSnackbar({
-        open: true,
-        message: "ID peminjaman tidak valid",
-        severity: "error",
-      });
+      Alert.error("Error", "ID peminjaman tidak valid");
       return;
     }
+
     try {
       const token = localStorage.getItem("token");
-      const userRole = localStorage.getItem("roles_id");
 
       const response = await fetch(
         `http://localhost:5000/peminjaman/${borrowing_id}`,
@@ -227,55 +206,27 @@ export default function LoanHistory() {
         throw new Error(errorData.error || "Gagal menghapus peminjaman");
       }
 
-      const data = await response.json();
-      // For non-staff users, just filter out the deleted item from the UI
-      // For staff, remove it completely since it's hard deleted
-      setHistory((prevHistory) => {
-        if (userRole === "1") {
-          return prevHistory.filter((item) => item.borrowing_id !== borrowing_id);
-        } else {
-          return prevHistory.map((item) => {
-            if (item.borrowing_id === borrowing_id) {
-              return { ...item, is_deleted: true };
-            }
-            return item;
-          });
-        }
-      });
+      // Perbarui state history secara langsung setelah penghapusan berhasil
+      setHistory(prevHistory => 
+        prevHistory.filter(item => item.borrowing_id !== borrowing_id)
+      );
 
-      setSnackbar({
-        open: true,
-        message: data.message,
-        severity: "success",
-      });
+      // Tampilkan pesan sukses
+      Alert.success("Berhasil", "Peminjaman berhasil dihapus");
+      
+      // Refresh data dari server untuk memastikan sinkronisasi
+      await fetchHistory();
+
     } catch (error) {
       console.error("Delete error:", error);
-      setSnackbar({
-        open: true,
-        message: error.message,
-        severity: "error",
-      });
+      Alert.error("Error", error.message);
     }
   };
-
   // Modifikasi fungsi handleOpenDeleteDialog
   const handleOpenDeleteDialog = (groupData) => {
-    setItemToDelete(groupData);
-    setDeleteDialogOpen(true);
-  };
-
-  // Fungsi untuk menutup dialog konfirmasi hapus
-  const handleCloseDeleteDialog = () => {
-    setDeleteDialogOpen(false);
-    setItemToDelete(null);
-  };
-
-  // Fungsi konfirmasi delete
-  const confirmDelete = async () => {
-    if (itemToDelete) {
-      await handleDelete(itemToDelete);
-      handleCloseDeleteDialog();
-    }
+    Alert.confirmDelete(async () => {
+      await handleDelete(groupData);
+    });
   };
 
   // handle perubahan dropdown
@@ -750,67 +701,7 @@ export default function LoanHistory() {
           }}
         />
       </TableContainer>
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleCloseDeleteDialog}
-        aria-labelledby="alert-dialog-title"
-        aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: { borderRadius: "12px", padding: "8px" },
-        }}
-      >
-        <DialogTitle id="alert-dialog-title">
-          {"Apakah Anda yakin ingin menghapus?"}
-        </DialogTitle>
 
-        <DialogActions
-          sx={{
-            justifyContent: "center",
-            gap: 2,
-          }}
-        >
-          <Button
-            onClick={handleCloseDeleteDialog}
-            sx={{
-              border: "2px solid ",
-              borderColor: "black",
-              color: "black",
-              borderRadius: "8px",
-              padding: "8px 16px",
-            }}
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            sx={{
-              border: "2px solid #69D2FF",
-              backgroundColor: "#69D2FF",
-              color: "black",
-              padding: "8px 16px",
-            }}
-            autoFocus
-          >
-            Hapus
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
       <DetailModal
         open={openDetailModal}
         onClose={handleCloseDetail}
