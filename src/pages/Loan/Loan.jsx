@@ -19,8 +19,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Snackbar,
-  Alert,
   Stack,
 } from "@mui/material";
 import { Add, Replay, ShoppingCart, Close } from "@mui/icons-material";
@@ -28,6 +26,8 @@ import { format } from "date-fns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import sweetAlert from "../../components/Alert";
+
 
 const Borrowing = () => {
   // State untuk form dan data
@@ -55,21 +55,13 @@ const Borrowing = () => {
   // State untuk modal dan notifikasi
   const [openModal, setOpenModal] = useState(false);
   const [keteranganError, setKeteranganError] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+ 
 
   const [tanggal] = useState(format(new Date(), "yyyy-MM-dd"));
   const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
   const handleCloseModal = () => setOpenModal(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
 
   // Reset keterangan error when modal opens
   useEffect(() => {
@@ -90,7 +82,7 @@ const Borrowing = () => {
         setBarangList(availableBarang);
       } catch (error) {
         console.error(error.message);
-        alert("Terjadi kesalahan saat mengambil data barang.");
+        sweetAlert.error("Error", "Terjadi kesalahan saat mengambil data barang.");
       }
     };
     fetchBarang();
@@ -142,11 +134,7 @@ const Borrowing = () => {
           stack: error.stack,
         });
 
-        setSnackbar({
-          open: true,
-          message: `Gagal memuat data peminjaman: ${error.message}`,
-          severity: "error",
-        });
+        sweetAlert.error("Error", `Gagal memuat data peminjaman: ${error.message}`);
       }
     };
 
@@ -217,11 +205,8 @@ const Borrowing = () => {
       setNamaBarang("");
       setJumlah(1);
     } else {
-      setSnackbar({
-        open: true,
-        message: "Pilih barang dan masukkan jumlah yang valid",
-        severity: "error",
-      });
+      sweetAlert.warning("Peringatan", "Pilih barang dan masukkan jumlah yang valid");
+
     }
   };
 
@@ -243,20 +228,12 @@ const Borrowing = () => {
     }
 
     if (!phoneNumber.trim()) {
-      setSnackbar({
-        open: true,
-        message: "Nomor telepon harus diisi.",
-        severity: "error",
-      });
+      sweetAlert.warning("Nomor telepon harus diisi!");
       return;
     }
 
     if (!tanggalPinjam || !tanggalKembali || !jamPinjam || !jamKembali) {
-      setSnackbar({
-        open: true,
-        message: "Tanggal dan jam harus diisi.",
-        severity: "error",
-      });
+      sweetAlert.warning("Tanggal dan jam harus diisi!");
       return;
     }
 
@@ -302,22 +279,13 @@ const Borrowing = () => {
 
       await Promise.all(promises);
 
-      // Reset form dan state
-      setSnackbar({
-        open: true,
-        message: "Peminjaman berhasil diajukan",
-        severity: "success",
-      });
+      sweetAlert.success("Peminjaman berhasil diajukan");
 
       // Reset form
       resetFields();
     } catch (error) {
       console.error("Error in handleBorrowing:", error);
-      setSnackbar({
-        open: true,
-        message: `Terjadi kesalahan: ${error.message}`,
-        severity: "error",
-      });
+      sweetAlert.error("Error", `Terjadi kesalahan: ${error.message}`);
     }
   };
 
@@ -353,21 +321,13 @@ const Borrowing = () => {
       setTransactions(activeTransactions);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
-      setSnackbar({
-        open: true,
-        message: "Gagal memperbarui data",
-        severity: "error",
-      });
+     sweetAlert.error("Gagal memperbarui peminjaman")
     }
   };
 
   const handleDelete = async (id) => {
     if (!id) {
-      setSnackbar({
-        open: true,
-        message: "ID peminjaman tidak valid",
-        severity: "error",
-      });
+      sweetAlert.error("Error", "ID peminjaman tidak valid");
       return;
     }
 
@@ -386,22 +346,13 @@ const Borrowing = () => {
         throw new Error(errorData.error || "Gagal menghapus peminjaman");
       }
 
-      const data = await response.json();
-
       // Refresh data setelah delete berhasil
       await refreshTransactions();
-
-      console.log("Before delete:", transactions);
       setTransactions((prevTransactions) =>
         prevTransactions.filter((t) => t.id !== id)
       );
-      console.log("After delete:", transactions);
 
-      setSnackbar({
-        open: true,
-        message: data.message,
-        severity: "success",
-      });
+    
 
       // Update local storage
       const updatedTransactions = transactions.filter((t) => t.id !== id);
@@ -411,11 +362,7 @@ const Borrowing = () => {
       await refreshTransactions();
     } catch (error) {
       console.error(error);
-      setSnackbar({
-        open: true,
-        message: error.message,
-        severity: "error",
-      });
+      sweetAlert.error("Error", error.message);
     }
   };
 
@@ -788,11 +735,8 @@ const Borrowing = () => {
                 } else {
                   setKeteranganError(!keterangan.trim());
                   if (!phoneNumber.trim()) {
-                    setSnackbar({
-                      open: true,
-                      message: "Nomor telepon harus diisi",
-                      severity: "error",
-                    });
+                    sweetAlert.warning("Nomor telepon harus diisi.");
+                    return;
                   }
                 }
               }}
@@ -854,22 +798,6 @@ const Borrowing = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Add Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Grid>
   );
 };

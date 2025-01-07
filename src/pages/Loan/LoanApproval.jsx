@@ -28,7 +28,7 @@ import {
   DeleteForeverOutlined as DeleteForeverOutlinedIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
-import Alert from "../../components/alert"; // Import alert service
+import sweetAlert from "../../components/Alert";
 
 export default function LoanApproval() {
   const navigate = useNavigate();
@@ -128,7 +128,7 @@ export default function LoanApproval() {
       setLoanApproval(Object.values(transformedData)); // Gunakan state yang sudah ada
     } catch (error) {
       console.error("Fetch error:", error);
-      Alert.error("Error", error.message);
+      sweetAlert.error("Error", error.message);
     }
   };
 
@@ -203,7 +203,7 @@ export default function LoanApproval() {
         userRole === "2" &&
         !["rejected", "return"].includes(itemToDelete.status)
       ) {
-        Alert.error(
+        sweetAlert.error(
           "Unauthorized",
           "Staf hanya dapat menghapus peminjaman yang ditolak atau sudah dikembalikan"
         );
@@ -233,16 +233,16 @@ export default function LoanApproval() {
         )
       );
 
-      Alert.success("Berhasil", "Peminjaman berhasil dihapus");
+      sweetAlert.success("Berhasil", "Peminjaman berhasil dihapus");
       fetchLoanApproval();
     } catch (error) {
       console.error("Delete error:", error);
-      Alert.error("Gagal", `Gagal menghapus peminjaman: ${error.message}`);
+      sweetAlert.error("Gagal", `Gagal menghapus peminjaman: ${error.message}`);
     }
   };
   // Modifikasi fungsi handleOpenDeleteDialog
   const handleOpenDeleteDialog = (groupData) => {
-    Alert.confirmDelete(() => handleDelete(groupData));
+    sweetAlert.confirmDelete(() => handleDelete(groupData));
   };
 
   useEffect(() => {

@@ -20,13 +20,12 @@ import {
   FormControl,
   InputLabel,
   TablePagination,
-  Snackbar,
-  Alert,
   Divider,
   Stack
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
+import sweetAlert from "../../components/Alert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -54,11 +53,6 @@ const DetailPersetujuanAdmin = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Semua");
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
 
   const token = localStorage.getItem("token");
 
@@ -77,11 +71,7 @@ const DetailPersetujuanAdmin = () => {
         setDetails(response.data);
       } catch (error) {
         console.error("Error fetching details:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to fetch details",
-          severity: "error",
-        });
+        sweetAlert.error("Error", "Failed to fetch details");
       } finally {
         setLoading(false);
       }
@@ -125,81 +115,74 @@ const DetailPersetujuanAdmin = () => {
     );
 
     if (!hasDecisions) {
-      setSnackbar({
-        open: true,
-        message: "Please make a decision for at least one item",
-        severity: "error",
-      });
+      sweetAlert.warning("Warning", "Please make a decision for at least one item");
       return false;
     }
     return true;
   };
 
-const handleSubmit = async () => {
-  if (!validateSubmission()) return;
-  setLoading(true);
-  try {
-    const requests = details
-      .filter(item => item.status === "Approved by Head" && 
-                     (itemApprovals[item.request_id] !== undefined || 
-                      rejectionReasons[item.request_id]?.trim()))
-      .map((item) => ({
-        request_id: item.request_id,
-        status: itemApprovals[item.request_id]
-          ? "Approved by Staff SBUM"
-          : "Rejected by Staff SBUM",
-        rejection_reason: itemApprovals[item.request_id]
-          ? null
-          : rejectionReasons[item.request_id]?.trim(),
-      }));
+  const handleSubmit = async () => {
+    if (!validateSubmission()) return;
+    setLoading(true);
+    try {
+      const requests = details
+        .filter(item => item.status === "Approved by Head" &&
+          (itemApprovals[item.request_id] !== undefined ||
+            rejectionReasons[item.request_id]?.trim()))
+        .map((item) => ({
+          request_id: item.request_id,
+          status: itemApprovals[item.request_id]
+            ? "Approved by Staff SBUM"
+            : "Rejected by Staff SBUM",
+          rejection_reason: itemApprovals[item.request_id]
+            ? null
+            : rejectionReasons[item.request_id]?.trim(),
+        }));
 
-    if (requests.length === 0) {
-      throw new Error("No eligible requests to update");
-    }
+      if (requests.length === 0) {
+        throw new Error("No eligible requests to update");
+      }
 
-    // Process requests sequentially instead of concurrently
-    for (const request of requests) {
-      await axios.put(
-        `http://localhost:5000/requestsApprovalAdmin/${request.request_id}/admin-approval`,
-        request,
+      // Process requests sequentially instead of concurrently
+      for (const request of requests) {
+        await axios.put(
+          `http://localhost:5000/requestsApprovalAdmin/${request.request_id}/admin-approval`,
+          request,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
+
+      sweetAlert.success(
+        `Berhasil memperbarui permintaan`
+      );
+      setItemApprovals({});
+      setRejectionReasons({});
+
+      // Refresh the details after successful update
+      const response = await axios.get(
+        `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
+      setDetails(response.data);
+
+    } catch (error) {
+      console.error("Error updating requests:", error);
+      sweetAlert.error(
+        "Gagal",
+        "Gagal memperbarui permintaan: " + (error.response?.data?.message || error.message)
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setSnackbar({
-      open: true,
-      message: "Successfully updated requests",
-      severity: "success",
-    });
-    setItemApprovals({});
-    setRejectionReasons({});
-    
-    // Refresh the details after successful update
-    const response = await axios.get(
-      `http://localhost:5000/requestsApprovalAdmin/details/${created_at}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-    setDetails(response.data);
-
-  } catch (error) {
-    console.error("Error updating requests:", error);
-    setSnackbar({
-      open: true,
-      message: error.response?.data?.message || "Failed to update requests",
-      severity: "error",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const getFilteredRows = () => {
     return details.filter(
@@ -424,18 +407,6 @@ const handleSubmit = async () => {
         Submit
       </Button>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

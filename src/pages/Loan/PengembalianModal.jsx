@@ -10,25 +10,17 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Snackbar,
-  Alert,
   Box,
   Typography,
 } from "@mui/material";
 import axios from "axios";
+import sweetAlert from "../../components/Alert";
 
 const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
   const [initialCondition, setInitialCondition] = useState("");
   const [returnCondition, setReturnCondition] = useState("");
   const [returnProof, setReturnProof] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
-  const [error, setError] = useState("");
-  const [openSnackbar, setOpenSnackbar] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
 
   // Reset form when modal opens
   useEffect(() => {
@@ -92,22 +84,17 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
       if (response.status === 200 || response.status === 201) {
         onUpdate();
         onClose();
-        setSnackbar({
-          open: true,
-          message: "Pengembalian berhasil disubmit",
-          severity: "success",
-        });
+        sweetAlert.success("Berhasil", "Pengembalian berhasil disubmit");
       }
     } catch (error) {
       console.error("Error submitting return:", error);
-      setError(error.response?.data?.message || error.message);
-      setOpenSnackbar(true);
+      sweetAlert.error(
+        "Error",
+        error.response?.data?.message || error.message
+      );
     }
   };
 
-  const handleCloseSnackbar = () => {
-    setOpenSnackbar(false);
-  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -121,15 +108,13 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
       const maxSize = 5 * 1024 * 1024; // 5MB
 
       if (!allowedTypes.includes(file.type)) {
-        setError("Hanya file gambar yang diizinkan");
-        setOpenSnackbar(true);
+        sweetAlert.error("Error", "Hanya file gambar yang diizinkan");
         e.target.value = null;
         return;
       }
 
       if (file.size > maxSize) {
-        setError("Ukuran file maksimal 5MB");
-        setOpenSnackbar(true);
+        sweetAlert.error("Error", "Ukuran file maksimal 5MB");
         e.target.value = null;
         return;
       }
@@ -231,21 +216,6 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={openSnackbar}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity="error"
-          sx={{ width: "100%" }}
-        >
-          {error}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

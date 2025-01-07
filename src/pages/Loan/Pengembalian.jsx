@@ -11,7 +11,6 @@ import {
   Typography,
   IconButton,
   Grid,
-  Snackbar,
   Stack,
   FormControl,
   InputLabel,
@@ -32,8 +31,7 @@ import {
 } from "@mui/icons-material";
 import PengembalianModal from "./PengembalianModal";
 import { styled } from "@mui/system";
-import Alert from "../../components/alert"; // Import alert service
-
+import sweetAlert from "../../components/Alert";
 
 const Pengembalian = () => {
   const [page, setPage] = useState(0);
@@ -44,15 +42,6 @@ const Pengembalian = () => {
   const [openPengembalianModal, setOpenPengembalianModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
-  };
 
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
@@ -106,7 +95,7 @@ const Pengembalian = () => {
       transaction.borrowing_ids?.[0] || transaction.borrowing_id;
 
     if (!borrowing_id) {
-      Alert.error("Error", "Data peminjaman tidak valid");
+      sweetAlert.error("Error", "Data peminjaman tidak valid");
       return;
     }
 
@@ -145,7 +134,7 @@ const Pengembalian = () => {
 
   const handleDelete = async (borrowing_id) => {
     if (!borrowing_id) {
-      Alert.error("Error", "ID peminjaman tidak valid");
+      sweetAlert.error("Error", "ID peminjaman tidak valid");
       return;
     }
 
@@ -168,32 +157,16 @@ const Pengembalian = () => {
         }
 
         const data = await response.json();
-        // For staff (roles_id === 1): remove from state
-        // For regular users: mark as deleted but keep in state
-        setTransactions(prevTransactions => {
-          const newTransactions = userRole === "1"
-            ? prevTransactions.filter(t => t.borrowing_id !== borrowing_id)
-            : prevTransactions.map(t => {
-              if (t.borrowing_id === borrowing_id) {
-                return { ...t, is_deleted: true };
-              }
-              return t;
-            });
+        await refreshTransactions();
 
-          // Update localStorage with the new state
-          localStorage.setItem("transactions", JSON.stringify(newTransactions));
-
-          return newTransactions;
-        });
-
-        Alert.success("Berhasil!", data.message);
+        sweetAlert.success("Berhasil!", data.message);
       } catch (error) {
         console.error(error);
-        Alert.error("Error", error.message);
+        sweetAlert.error("Error", error.message);
       }
     };
 
-    Alert.confirmDelete(deleteAction);
+    sweetAlert.confirmDelete(deleteAction);
   };
 
   const handleCancelBorrowing = async (borrowing_id) => {
@@ -218,14 +191,14 @@ const Pengembalian = () => {
 
         const data = await response.json();
         await refreshTransactions();
-        Alert.success("Berhasil!", data.message);
+        sweetAlert.success("Berhasil!", data.message);
       } catch (error) {
         console.error(error);
-        Alert.error("Error", error.message);
+        sweetAlert.error("Error", error.message);
       }
     };
 
-    Alert.confirmCancel(cancelAction);
+    sweetAlert.confirmCancel(cancelAction);
   };
 
   useEffect(() => {
@@ -278,11 +251,10 @@ const Pengembalian = () => {
           stack: error.stack,
         });
 
-        setSnackbar({
-          open: true,
-          message: `Gagal memuat data peminjaman: ${error.message}`,
-          severity: "error",
-        });
+        sweetAlert.error(
+          "Gagal",
+          "Gagal memuat data peminjaman peminjaman: " + (error.response?.data?.message || error.message)
+        );
       }
     };
 
@@ -305,11 +277,10 @@ const Pengembalian = () => {
       setTransactions(data);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
-      setSnackbar({
-        open: true,
-        message: "Gagal memperbarui data",
-        severity: "error",
-      });
+      sweetAlert.error(
+        "Gagal",
+        "Gagal Mengambil data: " + (error.response?.data?.message || error.message)
+      );
     }
   };
 
@@ -742,22 +713,6 @@ const Pengembalian = () => {
           />
         </TableContainer>
       </Paper>
-
-      {/* Add Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
       <DetailModal
         open={openDetailModal}
         onClose={handleCloseDetail}

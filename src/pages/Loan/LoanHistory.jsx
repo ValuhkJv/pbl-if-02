@@ -32,7 +32,7 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import ExportLoanWord from "./ExportLoanWord";
-import Alert from "../../components/alert"; // Import alert service
+import sweetAlert from "../../components/Alert";
 
 export default function LoanHistory() {
   // state untuk menyimpan status filter
@@ -133,7 +133,7 @@ export default function LoanHistory() {
       console.log("Token from localStorage:", token);
 
       if (!token) {
-        Alert.error("Error", "Token tidak ditemukan");
+        sweetAlert.error("Error", "Token tidak ditemukan");
         return;
       }
 
@@ -172,7 +172,7 @@ export default function LoanHistory() {
       setHistory(transformedData);
     } catch (error) {
       console.error("Detailed Error:", error);
-      alert("Gagal memuat data peminjaman: " + error.message);
+      sweetAlert("Gagal memuat data peminjaman: " + error.message);
     }
   };
 
@@ -183,7 +183,7 @@ export default function LoanHistory() {
 
   const handleDelete = async (borrowing_id) => {
     if (!borrowing_id) {
-      Alert.error("Error", "ID peminjaman tidak valid");
+      sweetAlert.error("Error", "ID peminjaman tidak valid");
       return;
     }
 
@@ -212,19 +212,19 @@ export default function LoanHistory() {
       );
 
       // Tampilkan pesan sukses
-      Alert.success("Berhasil", "Peminjaman berhasil dihapus");
+      sweetAlert.success("Berhasil", "Peminjaman berhasil dihapus");
       
       // Refresh data dari server untuk memastikan sinkronisasi
       await fetchHistory();
 
     } catch (error) {
       console.error("Delete error:", error);
-      Alert.error("Error", error.message);
+      sweetAlert.error("Error", error.message);
     }
   };
   // Modifikasi fungsi handleOpenDeleteDialog
   const handleOpenDeleteDialog = (groupData) => {
-    Alert.confirmDelete(async () => {
+    sweetAlert.confirmDelete(async () => {
       await handleDelete(groupData);
     });
   };

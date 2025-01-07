@@ -14,8 +14,6 @@ import {
     TextField,
     Button,
     Paper,
-    Alert,
-    Snackbar,
     CircularProgress,
     TablePagination,
     MenuItem,
@@ -29,6 +27,8 @@ import {
     Search as SearchIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/system";
+import sweetAlert from "../../components/Alert";
+
 
 const StyledTableCell = styled(TableCell)({
     padding: "12px",
@@ -58,12 +58,6 @@ const LoanApprovalDetail = () => {
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("Semua");
-
-    const [snackbar, setSnackbar] = useState({
-        open: false,
-        message: '',
-        severity: 'success'
-    });
 
     const fetchDetails = async () => {
         setLoading(true);
@@ -101,11 +95,8 @@ const LoanApprovalDetail = () => {
             }
         } catch (error) {
             console.error('Error:', error);
-            setSnackbar({
-                open: true,
-                message: 'Failed to fetch loan details',
-                severity: 'error'
-            });
+            sweetAlert.error("Error", "Failed to fetch details");
+
         } finally {
             setLoading(false);
         }
@@ -216,21 +207,7 @@ const LoanApprovalDetail = () => {
 
         // Check if any decisions have been made
         if (decidedItems.length === 0) {
-            setSnackbar({
-                open: true,
-                message: 'Please make at least one decision (approve/reject)',
-                severity: 'error'
-            });
-            return false;
-        }
-
-        // Check if any decisions have been made
-        if (decidedItems.length === 0) {
-            setSnackbar({
-                open: true,
-                message: 'Please make at least one decision (approve/reject)',
-                severity: 'error'
-            });
+            sweetAlert.warning("Warning", "Please make a decision for at least one item");
             return false;
         }
 
@@ -242,11 +219,7 @@ const LoanApprovalDetail = () => {
         });
 
         if (invalidRejections.length > 0) {
-            setSnackbar({
-                open: true,
-                message: 'Please provide rejection reasons for all rejected items',
-                severity: 'error'
-            });
+            sweetAlert.error("Error", "Please provide rejection reasons for all rejected items")
             return false;
         }
 
@@ -301,11 +274,9 @@ const LoanApprovalDetail = () => {
             }
 
             await fetchDetails();
-            setSnackbar({
-                open: true,
-                message: 'Successfully updated loan approvals',
-                severity: 'success'
-            });
+            sweetAlert.success(
+                `Berhasil memperbarui peminjaman`
+            );
 
             // Clear only the processed decisions
             const newApprovals = { ...itemApprovals };
@@ -319,18 +290,16 @@ const LoanApprovalDetail = () => {
 
         } catch (error) {
             console.error('Error:', error);
-            setSnackbar({
-                open: true,
-                message: error.message || 'Failed to update loan approvals',
-                severity: 'error'
-            });
+            sweetAlert.error(
+                "Gagal",
+                "Gagal memperbarui peminjaman: " + (error.response?.data?.message || error.message)
+            );
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) return <CircularProgress />;
-    if (!loanDetails) return <Alert severity="info">No loan details found</Alert>;
 
     return (
         <Box className="p-6">
@@ -520,15 +489,7 @@ const LoanApprovalDetail = () => {
                     </Button>
                 </Box>
             </Box>
-            <Snackbar
-                open={snackbar.open}
-                autoHideDuration={3000}
-                onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-            >
-                <Alert severity={snackbar.severity} onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}>
-                    {snackbar.message}
-                </Alert>
-            </Snackbar>
+
 
         </Box>
     );

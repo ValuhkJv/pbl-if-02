@@ -20,13 +20,12 @@ import {
   InputLabel,
   InputAdornment,
   TablePagination,
-  Snackbar,
-  Alert,
   Divider,
   Stack
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
+import sweetAlert from "../../components/Alert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -53,11 +52,7 @@ const RequestApprovDetail = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Semua");
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+
 
   const token = localStorage.getItem("token");
 
@@ -76,11 +71,7 @@ const RequestApprovDetail = () => {
         setDetails(response.data);
       } catch (error) {
         console.error("Error fetching details:", error);
-        setSnackbar({
-          open: true,
-          message: "Failed to fetch details",
-          severity: "error",
-        });
+        sweetAlert.error("Error", "Failed to fetch details");
       } finally {
         setLoading(false);
       }
@@ -124,11 +115,7 @@ const RequestApprovDetail = () => {
     );
 
     if (!hasDecisions) {
-      setSnackbar({
-        open: true,
-        message: "Please make a decision for at least one item",
-        severity: "error",
-      });
+      sweetAlert.warning("Warning", "Please make a decision for at least one item");
       return false;
     }
     return true;
@@ -136,6 +123,7 @@ const RequestApprovDetail = () => {
 
   const handleSubmit = async () => {
     if (!validateSubmission()) return;
+    sweetAlert.warning("Processing", "Please wait while we process your request...");
     setLoading(true);
     try {
       // Only process items that are pending and have been modified
@@ -154,11 +142,7 @@ const RequestApprovDetail = () => {
         }));
   
       if (modifiedRequests.length === 0) {
-        setSnackbar({
-          open: true,
-          message: "No pending items were modified",
-          severity: "warning"
-        });
+        sweetAlert.warning("Warning", "No pending items were modified");
         return;
       }
   
@@ -180,11 +164,17 @@ const RequestApprovDetail = () => {
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
   
-      setSnackbar({
-        open: true,
-        message: `Updated ${successful} requests. ${failed ? `Failed: ${failed}` : ''}`,
-        severity: failed ? "warning" : "success"
-      });
+      if (failed > 0) {
+        sweetAlert.warning(
+          "Sebagian Berhasil",
+          `Berhasil memperbarui ${successful} permintaan. Gagal: ${failed} permintaan`
+        );
+      } else {
+        // Use successToast for a less intrusive success notification
+        sweetAlert.success(
+          `Berhasil memperbarui ${successful} permintaan`
+        );
+      }
   
       if (successful > 0) {
         // Refresh the data
@@ -192,11 +182,10 @@ const RequestApprovDetail = () => {
       }
     } catch (error) {
       console.error("Error updating requests:", error);
-      setSnackbar({
-        open: true,
-        message: "Failed to update requests: " + (error.response?.data?.message || error.message),
-        severity: "error"
-      });
+      sweetAlert.error(
+        "Gagal",
+        "Gagal memperbarui permintaan: " + (error.response?.data?.message || error.message)
+      );
     } finally {
       setLoading(false);
     }
@@ -423,19 +412,6 @@ const RequestApprovDetail = () => {
       >
         Submit
       </Button>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };
