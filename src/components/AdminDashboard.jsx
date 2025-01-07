@@ -402,45 +402,43 @@ function DashboardStaf() {
           </Card>
         </Grid>
         <Container maxWidth="lg" style={{ marginTop: 50, marginBottom: 30 }}>
-        {/* Panduan 1 */}
-        <Box marginBottom={3}>
-          <Typography
-            variant="subtitle1"
-            gutterBottom
-            style={{ fontWeight: "bold" }}
-          >
-            1. Cara Melakukan Menajemen Barang
-          </Typography>
+          {/* Panduan 1 */}
+          <Box>
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              style={{ fontWeight: "bold" }}
+            >
+              1. Cara Menyetujui/Menolak Permintaan Barang
+            </Typography>
 
-          <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
-        </Box>
+            <YouTubeEmbed videoId="wzo4OsflBmc" aspectRatio="16:9" />
+          </Box>
+          {/* Panduan 2 */}
+          <Box marginBottom={3}>
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              style={{ fontWeight: "bold" }}
+            >
+              2. Cara Menyetujui/Menolak Peminjaman Barang
+            </Typography>
 
-        {/* Panduan 2 */}
-        <Box marginBottom={3}>
-          <Typography
-            variant="subtitle1"
-            gutterBottom
-            style={{ fontWeight: "bold" }}
-          >
-            2. Cara Menyetujui/Menolak Peminjaman Barang
-          </Typography>
+            <YouTubeEmbed videoId="yMZixq6IoWw" aspectRatio="16:9" />
+          </Box>
+          {/* Panduan 1 */}
+          <Box marginBottom={3}>
+            <Typography
+              variant="subtitle1"
+              gutterBottom
+              style={{ fontWeight: "bold" }}
+            >
+              3. Cara Melakukan Menajemen Barang
+            </Typography>
 
-          <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
-        </Box>
-
-        {/* Panduan 3 */}
-        <Box>
-          <Typography
-            variant="subtitle1"
-            gutterBottom
-            style={{ fontWeight: "bold" }}
-          >
-            3. Cara Menyetujui/Menolak Permintaan Barang
-          </Typography>
-
-          <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
-        </Box>
-      </Container>
+            <YouTubeEmbed videoId="boJCBTkzJio" aspectRatio="16:9" />
+          </Box>
+        </Container>
       </Grid>
 
       {/* Error Snackbar */}

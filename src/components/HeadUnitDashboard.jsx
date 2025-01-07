@@ -109,7 +109,7 @@ function Dashboard() {
           3. Cara Menyetujui/Menolak Permintaan Barang
         </Typography>
 
-        <YouTubeEmbed videoId="YRR3v6hFWAI" aspectRatio="16:9" />
+        <YouTubeEmbed videoId="wzo4OsflBmc" aspectRatio="16:9" />
       </Box>
     </Container>
   );

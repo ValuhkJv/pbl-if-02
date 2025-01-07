@@ -20,7 +20,7 @@ import {
   Paper,
   TextField,
   InputAdornment,
-
+  Autocomplete
 } from "@mui/material";
 import { FileDownload as FileDownloadIcon } from "@mui/icons-material";
 import jsPDF from "jspdf";
@@ -57,8 +57,18 @@ const columns = [
 ];
 
 const months = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  { label: "Januari", value: "0" },
+  { label: "Februari", value: "1" },
+  { label: "Maret", value: "2" },
+  { label: "April", value: "3" },
+  { label: "Mei", value: "4" },
+  { label: "Juni", value: "5" },
+  { label: "Juli", value: "6" },
+  { label: "Agustus", value: "7" },
+  { label: "September", value: "8" },
+  { label: "Oktober", value: "9" },
+  { label: "November", value: "10" },
+  { label: "Desember", value: "11" }
 ];
 
 
@@ -347,27 +357,56 @@ export default function StockReport() {
           spacing={2}
           alignItems="center"
         >
-          <FormControl sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
-            <InputLabel>Bulan</InputLabel>
-            <Select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-            >
-              <MenuItem value="">Semua Bulan</MenuItem>
-              {months.map((month, index) => (
-                <MenuItem key={month} value={index}>
-                  {month}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <TextField
+            variant="outlined"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          />
+          <Autocomplete
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              }
+            }}
+            options={months}
+            getOptionLabel={(option) => option.label || ""}
+            value={months.find(month => month.value === selectedMonth) || null}
+            onChange={(event, newValue) => {
+              setSelectedMonth(newValue ? newValue.value : "");
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Bulan"
+                variant="outlined"
+              />
+            )}
+            ListboxProps={{
+              style: {
+                maxHeight: '200px',
+                overflow: 'auto',
+              }
+            }}
+          />
 
           <FormControl sx={{
             width: "250px",
@@ -432,27 +471,7 @@ export default function StockReport() {
           >
             Export to Excel
           </Button>
-          <TextField
-            variant="outlined"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              width: "250px",
-              backgroundColor: "white",
-              borderRadius: 1,
-              "& .MuiOutlinedInput-root": {
-                height: "40px",
-              },
-            }}
-          />
+
         </Stack>
       </Box>
 

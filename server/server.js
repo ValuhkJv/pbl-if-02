@@ -368,9 +368,8 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         r.requested_by AS user_id,
         u.full_name,
         COUNT(DISTINCT r.request_id) AS total_requests,
-        r.created_at, 
-        d.division_name, 
-        r.status
+        MAX(r.created_at) as created_at,
+        d.division_name
       FROM 
         requests r
       JOIN 
@@ -380,7 +379,7 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
       WHERE 
         d.division_name = $1 
       GROUP BY 
-        r.requested_by, u.full_name, d.division_name, r.created_at, r.status
+        r.requested_by, u.full_name, d.division_name, r.created_at
       ORDER BY 
         u.full_name, r.created_at DESC;`,
       [division]
@@ -578,8 +577,7 @@ app.get("/requestsApprovalAdmin/:division", async (req, res) => {
       u.full_name,
       COUNT(DISTINCT r.request_id) AS total_requests,
       r.created_at, 
-      d.division_name,
-      r.status
+      d.division_name
     FROM 
       requests r
     JOIN 
@@ -589,7 +587,7 @@ app.get("/requestsApprovalAdmin/:division", async (req, res) => {
     WHERE 
       d.division_name = $1 
     GROUP BY 
-      r.requested_by, u.full_name, d.division_name, r.created_at, r.status
+      r.requested_by, u.full_name, d.division_name, r.created_at
     ORDER BY 
       u.full_name, r.created_at DESC;`,
       [division]

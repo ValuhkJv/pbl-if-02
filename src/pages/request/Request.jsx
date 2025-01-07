@@ -15,6 +15,7 @@ import {
   Box,
   Paper,
   IconButton,
+  Autocomplete
 } from "@mui/material";
 import axios from "axios";
 import ClearIcon from "@mui/icons-material/Clear";
@@ -175,6 +176,16 @@ const RequestForm = () => {
       .catch((err) => console.error(err));
   };
 
+
+
+  const handleItemChange = (_, newValue) => {
+    setFormData(prev => ({
+      ...prev,
+      item_id: newValue?.item_id || null,
+      stock: newValue?.stock || ""
+    }));
+  };
+
   return (
     <div>
       <Box sx={{ padding: 2 }}>
@@ -227,27 +238,28 @@ const RequestForm = () => {
               </Select>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <Select
-                name="item_id"
-                value={formData.item_id}
-                onChange={handleChange}
-                fullWidth
-                displayEmpty
+              <Autocomplete
+                options={items}
+                getOptionLabel={(option) => option.item_name || ""}
+                value={items.find(item => item.item_id === formData.item_id) || null}
+                onChange={handleItemChange}
                 disabled={!formData.category_id}
-              >
-                <MenuItem value="">-- Pilih Barang --</MenuItem>
-                {items.length > 0 ? (
-                  items.map((item) => (
-                    <MenuItem key={item.item_id} value={item.item_id}>
-                      {item.item_name}
-                    </MenuItem>
-                  ))
-                ) : (
-                  <MenuItem value="" disabled>
-                    No items available
-                  </MenuItem>
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="-- Pilih Barang --"
+                    className="w-full"
+                  />
                 )}
-              </Select>
+                className="w-full"
+                noOptionsText={formData.category_id ? "Barang belum tersedia" : "Pilih kategori terlebih dahulu"}
+                ListboxProps={{
+                  style: {
+                    maxHeight: '200px',
+                    overflow: 'auto'
+                  }
+                }}
+              />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

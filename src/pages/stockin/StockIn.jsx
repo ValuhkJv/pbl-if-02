@@ -22,6 +22,7 @@ import {
   InputAdornment,
   TablePagination,
   Tooltip,
+  Autocomplete
 } from "@mui/material";
 import axios from "axios";
 import Alert from "../../components/alert";
@@ -129,6 +130,13 @@ const StockInPage = () => {
     setFormData({
       ...formData,
       [name]: name === "quantity" ? Number(value) : value,
+    });
+  };
+
+  const handleItemChange = (event, newValue) => {
+    setFormData({
+      ...formData,
+      item_id: newValue ? newValue.item_id : "",
     });
   };
 
@@ -412,21 +420,26 @@ const StockInPage = () => {
               </Grid>
 
               <Grid item xs={12}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Nama Barang"
-                  name="item_id"
-                  value={formData.item_id}
-                  onChange={handleChange}
-                  required
-                >
-                  {items.map((item) => (
-                    <MenuItem key={item.item_id} value={item.item_id}>
-                      {item.item_name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <Autocomplete
+                  options={items}
+                  getOptionLabel={(option) => option.item_name}
+                  value={items.find(item => item.item_id === formData.item_id) || null}
+                  onChange={handleItemChange}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Nama Barang"
+                      required
+                      fullWidth
+                    />
+                  )}
+                  ListboxProps={{
+                    style: {
+                      maxHeight: '200px',
+                      overflow: 'auto'
+                    }
+                  }}
+                />
               </Grid>
 
               <Grid item xs={12}>
@@ -443,7 +456,7 @@ const StockInPage = () => {
             </Grid>
           </form>
         </DialogContent>
-        <DialogActions sx={{mr: 2}}>
+        <DialogActions sx={{ mr: 2 , gap:"1px" }}>
           <Button onClick={handleClose} color="secondary" sx={{
             border: "2px solid",
             borderColor: "black",
@@ -457,6 +470,7 @@ const StockInPage = () => {
           <Button onClick={handleSubmit} color="primary" variant="contained"
             sx={{
               color: "white",
+              border: "2px",
               borderRadius: "8px",
               padding: "8px 16px",
               textTransform: "none"

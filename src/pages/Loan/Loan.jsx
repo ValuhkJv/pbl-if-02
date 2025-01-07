@@ -633,6 +633,12 @@ const Borrowing = () => {
                 <TextField {...params} label="Cari Barang" />
               )}
               sx={{ width: "300px" }}
+              ListboxProps={{
+                style: {
+                  maxHeight: '200px',
+                  overflow: 'auto'
+                }
+              }}
             />
             <TextField
               label="Nama Barang"
