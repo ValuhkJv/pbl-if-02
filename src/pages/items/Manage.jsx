@@ -29,7 +29,7 @@ import {
 } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
 import { styled } from "@mui/system";
-import Alert from "../../components/alert";
+import sweetAlert from "../../components/Alert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -160,7 +160,7 @@ function ManageInventory() {
     console.log("itemId to delete in handleDeleteData:", itemId); // Debugging untuk melihat nilai itemId
 
     if (itemId === null) {
-      Alert.error("Error", "Item ID is not valid.");
+      sweetAlert.error("Error", "Item ID is not valid.");
       return;
     }
 
@@ -173,14 +173,14 @@ function ManageInventory() {
           setItems((prevItems) =>
             prevItems.filter((item) => item.item_id !== itemId)
           );
-          Alert.success("Deleted!", "Item has been successfully deleted.");
+          sweetAlert.success("Deleted!", "Item has been successfully deleted.");
         } else {
-          Alert.error("Error", "Failed to delete the item.");
+          sweetAlert.error("Error", "Failed to delete the item.");
         }
       })
       .catch((error) => {
         console.error("Error:", error);
-        Alert.error("Error", "Something went wrong.");
+        sweetAlert.error("Error", "Something went wrong.");
       });
   };
 
@@ -213,9 +213,9 @@ function ManageInventory() {
     const payload = isEditing
       ? formData // Saat mengedit barang
       : {
-        ...formData,
-        stock: formData.initial_stock, // Saat menambah, backend otomatis gunakan initial_stock untuk stock
-      };
+          ...formData,
+          stock: formData.initial_stock, // Saat menambah, backend otomatis gunakan initial_stock untuk stock
+        };
 
     fetch(url, {
       method: method,
@@ -244,11 +244,15 @@ function ManageInventory() {
           setItems([...items, data]);
         }
         handleCloseModal();
-        Alert.success("Berhasil!", "Data barang berhasil disimpan.", "success");
+        sweetAlert.success(
+          "Berhasil!",
+          "Data barang berhasil disimpan.",
+          "success"
+        );
       })
       .catch((error) => console.error("Error:", error));
     handleCloseModal(); // Tutup modal setelah submit
-    Alert.error("Gagal!", "Kode barang atau Barang Sudah ada.", "error");
+    sweetAlert.error("Gagal!", "Kode barang atau Barang Sudah ada.", "error");
   };
 
   const categoryNames = {
@@ -446,11 +450,7 @@ function ManageInventory() {
                           <EditIcon />
                         </DetailButton>
                       </Tooltip>
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ mx: 1 }}
-                      />
+                      <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                       <Tooltip title="Hapus" placement="top" key={item.item_id}>
                         <RemoveButton
                           sx={{
@@ -469,7 +469,7 @@ function ManageInventory() {
                               item.item_id
                             ); // Debugging untuk melihat ID yang dipilih
                             setItemIdToDelete(item.item_id);
-                            Alert.confirmDelete(() =>
+                            sweetAlert.confirmDelete(() =>
                               handleDeleteData(item.item_id)
                             );
                           }}
