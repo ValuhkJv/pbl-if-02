@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
@@ -368,7 +368,7 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         r.requested_by AS user_id,
         u.full_name,
         COUNT(DISTINCT r.request_id) AS total_requests,
-        r.created_at,
+        MAX(r.created_at) as created_at,  -- Get the most recent request date
         d.division_name
       FROM 
         requests r
@@ -380,14 +380,8 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         d.division_name = $1 
       GROUP BY 
         r.requested_by, u.full_name, d.division_name, DATE(r.created_at)
-      HAVING 
-      DATE(r.created_at) = (
-      SELECT DATE(created_at)
-      FROM requests r2
-      WHERE r2.requested_by = r.requested_by
-      ORDER BY created_at DESC
-      LIMIT 1
-  )
+     
+  
 ORDER BY 
   r.created_at DESC;`,
       [division]

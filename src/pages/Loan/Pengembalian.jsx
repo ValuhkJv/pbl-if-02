@@ -141,7 +141,6 @@ const Pengembalian = () => {
     const deleteAction = async () => {
       try {
         const token = localStorage.getItem("token");
-        const userRole = localStorage.getItem("roles_id");
 
         const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
           method: "DELETE",

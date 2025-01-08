@@ -82,12 +82,14 @@ const RequestApprovalHead = () => {
   // Move filtering logic after null check
   const getFilteredRows = () => {
     if (!requests) return [];
-    return requests.filter(
-      (item) =>
-      (!searchTerm ||
-        (item.full_name &&
-          item.full_name.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+    return requests.filter((item) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        !searchTerm ||
+        (item.full_name && item.full_name.toLowerCase().includes(searchLower)) ||
+        (item.total_requests && item.total_requests.toString().includes(searchTerm))
+      );
+    });
   };
 
   const getDisplayedRows = () => {
