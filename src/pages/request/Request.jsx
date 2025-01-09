@@ -113,40 +113,81 @@ const RequestForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const validateFormData = () => {
+    if (!formData.category_id) {
+      sweetAlert.error("Error", "Silahkan pilih kategori terlebih dahulu");
+      return false;
+    }
+    if (!formData.item_id) {
+      sweetAlert.error("Error", "Silahkan pilih barang terlebih dahulu");
+      return false;
+    }
+    if (!formData.quantity || formData.quantity <= 0) {
+      sweetAlert.error("Error", "Jumlah harus lebih dari 0");
+      return false;
+    }
+    if (!formData.reason.trim()) {
+      sweetAlert.error("Error", "Silahkan isi alasan permintaan");
+      return false;
+    }
+    return true;
+  };
+
   const addRequest = () => {
+    if (!validateFormData()) {
+      return;
+    }
     const selectedItem = items.find(
       (item) => item.item_id === formData.item_id
     );
 
-    if (requests.length < 3) {
-      if (parseInt(formData.quantity) > parseInt(selectedItem.stock)) {
-        alert("Jumlah barang melebihi stok yang tersedia!");
-        return;
-      }
-
-      setRequests([
-        ...requests,
-        {
-          item_id: selectedItem.item_id,
-          item_name: selectedItem.item_name,
-          category_name: selectedItem.category_name,
-          quantity: formData.quantity,
-          reason: formData.reason,
-          stock: selectedItem.stock,
-        },
-      ]);
-
-      // Reset form
-      setFormData({
-        category_id: "",
-        item_id: "",
-        quantity: "",
-        reason: "",
-        stock: "",
-      });
-    } else {
-      alert("Maksimal 3 barang per permintaan!");
+    if (!selectedItem) {
+      sweetAlert.error("Error", "Barang tidak ditemukan");
+      return;
     }
+
+    if (requests.length >= 3) {
+      sweetAlert.error("Error", "Maksimal 3 barang per permintaan!");
+      return;
+    }
+
+    // Check if item already exists in requests
+    if (requests.some(request => request.item_id === selectedItem.item_id)) {
+      sweetAlert.error("Error", "Barang sudah ada dalam daftar permintaan");
+      return;
+    }
+
+    const quantity = parseInt(formData.quantity);
+    const stock = parseInt(selectedItem.stock);
+
+    if (quantity > stock) {
+      sweetAlert.error(
+        "Error",
+        `Jumlah permintaan (${quantity}) melebihi stok yang tersedia (${stock})`
+      );
+      return;
+    }
+
+    setRequests([
+      ...requests,
+      {
+        item_id: selectedItem.item_id,
+        item_name: selectedItem.item_name,
+        category_name: selectedItem.category_name,
+        quantity: quantity,
+        reason: formData.reason,
+        stock: stock,
+      },
+    ]);
+
+    // Reset form
+    setFormData({
+      category_id: "",
+      item_id: "",
+      quantity: "",
+      reason: "",
+      stock: "",
+    });
   };
 
   // Fungsi untuk menghapus item dari daftar pinjaman
@@ -154,8 +195,13 @@ const RequestForm = () => {
     setRequests(requests.filter((request) => request.item_id !== itemId));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const userId = localStorage.getItem("user_id");
+    if (!userId) {
+      sweetAlert.error("Error", "User ID tidak ditemukan");
+      return;
+    }
+
     const payload = {
       user_id: userId,
       requests: requests.map((req) => ({
@@ -165,21 +211,24 @@ const RequestForm = () => {
         category_name: req.category_name,
       })),
     };
-    console.log("Payload:", payload);
 
-    axios
-      .post("http://localhost:5000/requests/batch", payload)
-      .then(() => {
-        sweetAlert.success("Berhasil!", "Data telah disimpan dengan sukses.");
-        setRequests([]);
-      })
-      .catch((err) => console.error(err));
+    try {
+      await axios.post("http://localhost:5000/requests/batch", payload);
+      sweetAlert.success("Berhasil!", "Permintaan telah berhasil diajukan");
+      setRequests([]);
+    } catch (error) {
+      sweetAlert.error(
+        "Error",
+        error.response?.data?.message || "Terjadi kesalahan pada server"
+      );
+      console.error(error);
+    }
   };
 
   const handleItemChange = (_, newValue) => {
     setFormData((prev) => ({
       ...prev,
-      item_id: newValue?.item_id || null,
+      item_id: newValue?.item_id || "",
       stock: newValue?.stock || "",
     }));
   };

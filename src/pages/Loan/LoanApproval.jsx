@@ -38,7 +38,7 @@ export default function LoanApproval() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
- 
+
   const StyledTableCell = styled(TableCell)({
     padding: "12px",
     border: "1px solid #ddd",
@@ -167,7 +167,28 @@ export default function LoanApproval() {
         (filterStatus !== "return" && item.status === filterStatus);
 
       return matchesSearch && matchesStatus;
-    });
+    })
+      .sort((a, b) => {
+        // Sort by status priority
+        const statusPriority = {
+          pending: 0,      // Pending first
+          approved: 1,     // Then approved
+          rejected: 2,     // Then rejected
+          return: 3        // Return last
+        };
+
+        // Get priority values, default to highest number if status not found
+        const aPriority = statusPriority[a.status] ?? 999;
+        const bPriority = statusPriority[b.status] ?? 999;
+
+        // Sort by priority first
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        // If same status, sort by date (newest first)
+        return new Date(b.borrow_date) - new Date(a.borrow_date);
+      });
   };
 
   // Gunakan fungsi filter gabungan untuk mendapatkan data yang akan ditampilkan

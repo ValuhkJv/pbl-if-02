@@ -35,6 +35,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Logout as LogoutIcon,
+  Inventory2 as InventoryIcon,
 } from "@mui/icons-material";
 import { Link, Route, Routes, Navigate, useNavigate } from "react-router-dom";
 import polibatam from "../assets/logoPolibatam.png";
@@ -177,7 +178,7 @@ export default function Dashboard() {
 
   const menuItemsByRole = {
     1: [
-      { text: "Barang Masuk", icon: <SummarizeIcon />, link: "/stock-in" },
+      { text: "Barang Masuk", icon: <InventoryIcon />, link: "/stock-in" },
       { text: "Laporan", icon: <SummarizeIcon />, link: "/report" },
     ],
     2: [
@@ -673,7 +674,7 @@ export default function Dashboard() {
             }
           />
           <Route
-            path="/requestsApprovHead/head-approval/details/:created_at"
+            path="/requestsApprovHead/head-approval/details/:created_at/:user_id"
             element={
               <ProtectedRoute allowedRoles={[2]}>
                 <RequestApprovDetail />
@@ -681,7 +682,7 @@ export default function Dashboard() {
             }
           />
           <Route
-            path="/requestsApprovalAdmin/details/:created_at"
+            path="/requestsApprovalAdmin/details/:created_at/:user_id"
             element={
               <ProtectedRoute allowedRoles={[1]}>
                 <RequestApprovDetailadmin />

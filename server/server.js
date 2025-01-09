@@ -191,6 +191,7 @@ app.get("/categories", async (req, res) => {
   }
 });
 
+
 app.get("/items", async (req, res) => {
   const { category_id } = req.query;
   try {
@@ -367,8 +368,8 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
       `SELECT 
         r.requested_by AS user_id,
         u.full_name,
-        COUNT(DISTINCT r.request_id) AS total_requests,
-        MAX(r.created_at) as created_at,  -- Get the most recent request date
+        COUNT(r.item_id) AS total_requests,
+        MAX(r.created_at) as created_at,  
         d.division_name
       FROM 
         requests r
@@ -380,10 +381,8 @@ app.get("/requestsApprovHead/head-approval/:division", async (req, res) => {
         d.division_name = $1 
       GROUP BY 
         r.requested_by, u.full_name, d.division_name, DATE(r.created_at)
-     
-  
-ORDER BY 
-  r.created_at DESC;`,
+      ORDER BY 
+       r.created_at DESC;`,
       [division]
     );
     console.log(result.rows);
@@ -396,13 +395,11 @@ ORDER BY
 
 //menampilkan detail persetujuan kepala unit
 app.get(
-  "/requestsApprovHead/head-approval/details/:created_at",
+  "/requestsApprovHead/head-approval/details/:created_at/:user_id",
   authenticateToken,
   async (req, res) => {
-    const { created_at } = req.params; // Tanggal dari frontend
-    const user_id = req.user.user_id; // Mengambil user_id dari sesi atau token autentikasi
-    console.log("User ID:", user_id);
-    console.log("Created At received by Backend:", created_at);
+    const { created_at, user_id: requested_user_id } = req.params; // Ambil user_id dari parameter
+    const head_user_id = req.user.user_id; 
     try {
       // Ambil division_id dari user_id
       const divisionResult = await db.query(
@@ -411,7 +408,7 @@ app.get(
         FROM users
         WHERE user_id = $1;
         `,
-        [user_id]
+        [head_user_id]
       );
 
       if (divisionResult.rows.length === 0) {
@@ -422,21 +419,18 @@ app.get(
 
       const division_id = divisionResult.rows[0].division_id;
 
-      // Ambil semua request_id yang sesuai
+      // Modifikasi query untuk filter berdasarkan requested_user_id
       const requestIdsResult = await db.query(
-        `
-         SELECT r.request_id, r.status
-        FROM requests r
-        JOIN users u ON r.requested_by = u.user_id
-        WHERE u.division_id = $1
-          AND r.created_at::date = $2;
-        `,
-        [division_id, created_at]
+        `SELECT r.request_id, r.status
+         FROM requests r
+         JOIN users u ON r.requested_by = u.user_id
+         WHERE u.division_id = $1
+           AND r.created_at::date = $2
+           AND r.requested_by = $3;`, // Tambahkan filter requested_by
+        [division_id, created_at, requested_user_id]
       );
 
       const requestIds = requestIdsResult.rows.map((row) => row.request_id);
-
-      console.log("Request IDs from first query:", requestIds);
 
       if (requestIds.length === 0) {
         return res.status(404).json({
@@ -577,7 +571,7 @@ app.get("/requestsApprovalAdmin/:division", async (req, res) => {
       `SELECT 
       r.requested_by AS user_id,
       u.full_name,
-      COUNT(DISTINCT r.request_id) AS total_requests,
+  COUNT(r.item_id) AS total_requests,
       r.created_at, 
       d.division_name
     FROM 
@@ -604,13 +598,12 @@ app.get("/requestsApprovalAdmin/:division", async (req, res) => {
 
 //menampilkan detail persetujuan staff
 app.get(
-  "/requestsApprovalAdmin/details/:created_at",
+  "/requestsApprovalAdmin/details/:created_at/:user_id",
   authenticateToken,
   async (req, res) => {
-    const { created_at } = req.params; // Tanggal dari frontend
-    const user_id = req.user.user_id; // Mengambil user_id dari sesi atau token autentikasi
-    console.log("User ID:", user_id);
-    console.log("Created At received by Backend:", created_at);
+    const { created_at, user_id: requested_user_id } = req.params; // Ambil user_id dari parameter
+    const head_user_id = req.user.user_id; 
+
     try {
       // Ambil division_id dari user_id
       const divisionResult = await db.query(
@@ -619,7 +612,7 @@ app.get(
         FROM users
         WHERE user_id = $1;
         `,
-        [user_id]
+        [head_user_id]
       );
 
       if (divisionResult.rows.length === 0) {
@@ -630,16 +623,15 @@ app.get(
 
       const division_id = divisionResult.rows[0].division_id;
 
-      // Ambil semua request_id yang sesuai
+      // Modifikasi query untuk filter berdasarkan requested_user_id
       const requestIdsResult = await db.query(
-        `
-        SELECT r.request_id, r.status
-        FROM requests r
-        JOIN users u ON r.requested_by = u.user_id
-        WHERE u.division_id = $1
-          AND r.created_at::date = $2;
-        `,
-        [division_id, created_at]
+        `SELECT r.request_id, r.status
+         FROM requests r
+         JOIN users u ON r.requested_by = u.user_id
+         WHERE u.division_id = $1
+           AND r.created_at::date = $2
+           AND r.requested_by = $3;`, // Tambahkan filter requested_by
+        [division_id, created_at, requested_user_id]
       );
 
       const requestIds = requestIdsResult.rows.map((row) => row.request_id);
@@ -2050,7 +2042,7 @@ app.get("/dashboard/counts", authenticateToken, async (req, res) => {
     const result = await db.query(`
       SELECT
       (SELECT COUNT(*) FROM requests) AS requests,
-      (SELECT COUNT(*) FROM borrowing WHERE is_deleted = false) AS borrowings,
+      (SELECT COUNT(*) FROM borrowing) AS borrowings,
       (SELECT COUNT(*) FROM items WHERE stock > 0) AS items`);
     res.json(result.rows[0]);
   } catch (error) {
