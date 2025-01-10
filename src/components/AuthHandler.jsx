@@ -1,26 +1,26 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { Snackbar, Alert } from '@mui/material';
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Snackbar, Alert } from "@mui/material";
 
 const AuthHandler = () => {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
 
   const checkTokenValidity = async () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem("token");
     if (!token) return;
 
     try {
-      await axios.get('http://localhost:5000/validate-token', {
-        headers: { Authorization: `Bearer ${token}` }
+      await axios.get("http://localhost:5000/validate-token", {
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch (error) {
       if (error.response?.status === 403) {
         setOpen(true);
-        localStorage.clear();
+        sessionStorage.clear();
         setTimeout(() => {
-          navigate('/');
+          navigate("/");
         }, 2000);
       }
     }
@@ -33,13 +33,13 @@ const AuthHandler = () => {
   }, [navigate]);
 
   return (
-    <Snackbar 
-      open={open} 
-      autoHideDuration={3000} 
+    <Snackbar
+      open={open}
+      autoHideDuration={3000}
       onClose={() => setOpen(false)}
-      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      anchorOrigin={{ vertical: "top", horizontal: "center" }}
     >
-      <Alert severity="warning" sx={{ width: '100%' }}>
+      <Alert severity="warning" sx={{ width: "100%" }}>
         Sesi telah berakhir. Silakan login kembali.
       </Alert>
     </Snackbar>

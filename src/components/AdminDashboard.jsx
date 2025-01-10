@@ -38,7 +38,7 @@ function DashboardStaf() {
   const checkBorrowingStatus = async (borrowingIds) => {
     try {
       const headers = {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         "Content-Type": "application/json",
       };
 
@@ -66,7 +66,7 @@ function DashboardStaf() {
   const checkStockStatus = async () => {
     try {
       const headers = {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         "Content-Type": "application/json",
       };
 
@@ -124,7 +124,7 @@ function DashboardStaf() {
   const fetchDashboardData = async () => {
     try {
       const headers = {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${sessionStorage.getItem("token")}`,
         "Content-Type": "application/json",
       };
       const [itemsRes, overdueRes, requestsRes, borrowingRes, zeroStockRes] =

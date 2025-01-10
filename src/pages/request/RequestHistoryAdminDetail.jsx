@@ -19,12 +19,10 @@ import {
   Select,
   FormControl,
   InputLabel,
-  TablePagination
+  TablePagination,
 } from "@mui/material";
 import { styled } from "@mui/system";
-import {
-  Search as SearchIcon,
-} from "@mui/icons-material";
+import { Search as SearchIcon } from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -50,21 +48,17 @@ const RequestHistoryAdminDetail = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-
-  const token = localStorage.getItem("token"); // Ambil token dari local storage
+  const token = sessionStorage.getItem("token"); // Ambil token dari local storage
 
   useEffect(() => {
     console.log("Making request for date:", created_at);
-    
+
     axios
-      .get(
-        `http://localhost:5000/requests/details/${created_at}/${user_id}}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      .get(`http://localhost:5000/requests/details/${created_at}/${user_id}}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       .then((res) => {
         console.log("Response status:", res.status);
         console.log("Response data:", res.data);
@@ -121,7 +115,6 @@ const RequestHistoryAdminDetail = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
 
   return (
     <Box
@@ -182,14 +175,17 @@ const RequestHistoryAdminDetail = () => {
           spacing={2}
           alignItems="center"
         >
-          <FormControl variant="outlined" sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
+          <FormControl
+            variant="outlined"
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -198,10 +194,16 @@ const RequestHistoryAdminDetail = () => {
             >
               <MenuItem value="Semua">Semua</MenuItem>
               <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
-              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
-              <MenuItem value="Approved by Staff SBUM">Disetujui Staff SBUM</MenuItem>
+              <MenuItem value="Approved by Head">
+                Disetujui Kepala Unit
+              </MenuItem>
+              <MenuItem value="Approved by Staff SBUM">
+                Disetujui Staff SBUM
+              </MenuItem>
               <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
-              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
+              <MenuItem value="Rejected by Staff SBUM">
+                Ditolak Staff SBUM
+              </MenuItem>
             </Select>
           </FormControl>
         </Stack>
@@ -284,7 +286,9 @@ const RequestHistoryAdminDetail = () => {
                 <StyledTableCell>{item.reason}</StyledTableCell>
                 <StyledTableCell>{item.user_division}</StyledTableCell>
                 <StyledTableCell>{item.status}</StyledTableCell>
-                <StyledTableCell>{item.rejection_reason || "-"}</StyledTableCell>
+                <StyledTableCell>
+                  {item.rejection_reason || "-"}
+                </StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>

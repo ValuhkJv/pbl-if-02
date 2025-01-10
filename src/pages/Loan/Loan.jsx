@@ -28,7 +28,6 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import sweetAlert from "../../components/SweetAlert";
 
-
 const Borrowing = () => {
   // State untuk form dan data
   const [noInventaris, setNoInventaris] = useState("");
@@ -44,7 +43,7 @@ const Borrowing = () => {
   const [peminjam, setPeminjam] = useState("");
   const [nim_nik_nidn, setNimNikNidn] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const userId = localStorage.getItem("user_id");
+  const userId = sessionStorage.getItem("user_id");
 
   // State untuk daftar barang dan transaksi
   const [barangList, setBarangList] = useState([]);
@@ -55,7 +54,6 @@ const Borrowing = () => {
   // State untuk modal dan notifikasi
   const [openModal, setOpenModal] = useState(false);
   const [keteranganError, setKeteranganError] = useState(false);
- 
 
   const [tanggal] = useState(format(new Date(), "yyyy-MM-dd"));
   const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
@@ -82,7 +80,10 @@ const Borrowing = () => {
         setBarangList(availableBarang);
       } catch (error) {
         console.error(error.message);
-        sweetAlert.error("Error", "Terjadi kesalahan saat mengambil data barang.");
+        sweetAlert.error(
+          "Error",
+          "Terjadi kesalahan saat mengambil data barang."
+        );
       }
     };
     fetchBarang();
@@ -91,9 +92,9 @@ const Borrowing = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const userRole = localStorage.getItem("roles_id"); // Simpan role saat login
-        const userId = localStorage.getItem("user_id");
+        const token = sessionStorage.getItem("token");
+        const userRole = sessionStorage.getItem("roles_id"); // Simpan role saat login
+        const userId = sessionStorage.getItem("user_id");
 
         if (!token) {
           throw new Error("Token tidak tersedia");
@@ -126,7 +127,7 @@ const Borrowing = () => {
         });
 
         setTransactions(filteredData);
-        localStorage.setItem("transactions", JSON.stringify(filteredData));
+        sessionStorage.setItem("transactions", JSON.stringify(filteredData));
       } catch (error) {
         console.error("DETAILED Fetch Transactions Error:", {
           name: error.name,
@@ -134,7 +135,10 @@ const Borrowing = () => {
           stack: error.stack,
         });
 
-        sweetAlert.error("Error", `Gagal memuat data peminjaman: ${error.message}`);
+        sweetAlert.error(
+          "Error",
+          `Gagal memuat data peminjaman: ${error.message}`
+        );
       }
     };
 
@@ -152,28 +156,28 @@ const Borrowing = () => {
   // Ambil data user saat komponen dimuat
   useEffect(() => {
     // Alternative approach using individual items:
-    const fullName = localStorage.getItem("full_name");
-    const nik = localStorage.getItem("nik");
+    const fullName = sessionStorage.getItem("full_name");
+    const nik = sessionStorage.getItem("nik");
 
     if (fullName && nik) {
       setPeminjam(fullName);
       setNimNikNidn(nik);
     } else {
-      console.warn("User data incomplete in localStorage");
+      console.warn("User data incomplete in sessionStorage");
     }
   }, []);
 
-  // Mengambil data dari localStorage dengan user-specific key
+  // Mengambil data dari sessionStorage dengan user-specific key
   useEffect(() => {
-    const storedItems = localStorage.getItem(`cart_items_${userId}`);
+    const storedItems = sessionStorage.getItem(`cart_items_${userId}`);
     if (storedItems) {
       setItems(JSON.parse(storedItems));
     }
   }, [userId]);
 
-  // Menyimpan data ke localStorage dengan user-specific key
+  // Menyimpan data ke sessionStorage dengan user-specific key
   useEffect(() => {
-    localStorage.setItem(`cart_items_${userId}`, JSON.stringify(items));
+    sessionStorage.setItem(`cart_items_${userId}`, JSON.stringify(items));
   }, [items, userId]);
 
   // Fungsi untuk menambah item ke daftar pinjaman
@@ -205,8 +209,10 @@ const Borrowing = () => {
       setNamaBarang("");
       setJumlah(1);
     } else {
-      sweetAlert.warning("Peringatan", "Pilih barang dan masukkan jumlah yang valid");
-
+      sweetAlert.warning(
+        "Peringatan",
+        "Pilih barang dan masukkan jumlah yang valid"
+      );
     }
   };
 
@@ -250,8 +256,8 @@ const Borrowing = () => {
     );
 
     try {
-      const token = localStorage.getItem("token");
-      const userId = localStorage.getItem("user_id");
+      const token = sessionStorage.getItem("token");
+      const userId = sessionStorage.getItem("user_id");
 
       // Create borrowing transactions
       const promises = items.map((item) => {
@@ -305,7 +311,7 @@ const Borrowing = () => {
 
   const refreshTransactions = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch("http://localhost:5000/peminjaman", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -321,7 +327,7 @@ const Borrowing = () => {
       setTransactions(activeTransactions);
     } catch (error) {
       console.error("Error refreshing transactions:", error);
-     sweetAlert.error("Gagal memperbarui peminjaman")
+      sweetAlert.error("Gagal memperbarui peminjaman");
     }
   };
 
@@ -332,7 +338,7 @@ const Borrowing = () => {
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch(`http://localhost:5000/peminjaman/${id}`, {
         method: "DELETE",
         headers: {
@@ -352,11 +358,12 @@ const Borrowing = () => {
         prevTransactions.filter((t) => t.id !== id)
       );
 
-    
-
       // Update local storage
       const updatedTransactions = transactions.filter((t) => t.id !== id);
-      localStorage.setItem("transactions", JSON.stringify(updatedTransactions));
+      sessionStorage.setItem(
+        "transactions",
+        JSON.stringify(updatedTransactions)
+      );
 
       // Refresh the transactions list to ensure sync with server
       await refreshTransactions();
@@ -582,9 +589,9 @@ const Borrowing = () => {
               sx={{ width: "300px" }}
               ListboxProps={{
                 style: {
-                  maxHeight: '200px',
-                  overflow: 'auto'
-                }
+                  maxHeight: "200px",
+                  overflow: "auto",
+                },
               }}
             />
             <TextField

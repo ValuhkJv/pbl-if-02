@@ -15,11 +15,14 @@ import {
   Tooltip,
   InputAdornment,
   TextField,
-  TablePagination
+  TablePagination,
 } from "@mui/material";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { InfoOutlined as InfoOutlinedIcon, Search as SearchIcon, } from "@mui/icons-material";
+import {
+  InfoOutlined as InfoOutlinedIcon,
+  Search as SearchIcon,
+} from "@mui/icons-material";
 import { styled } from "@mui/system";
 
 const StyledTableCell = styled(TableCell)({
@@ -57,11 +60,10 @@ const DetailButton = styled(Button)(({ theme }) => ({
 const RequestApprovalHead = () => {
   const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
-  const division = localStorage.getItem("division_name"); // Divisi kepala unit
+  const division = sessionStorage.getItem("division_name"); // Divisi kepala unit
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
 
   useEffect(() => {
     axios
@@ -70,9 +72,10 @@ const RequestApprovalHead = () => {
         // Remove duplicates based on user_id and created_at
         const uniqueRequests = res.data.reduce((acc, current) => {
           const isDuplicate = acc.find(
-            (item) => 
-              item.user_id === current.user_id && 
-              new Date(item.created_at).toLocaleDateString() === new Date(current.created_at).toLocaleDateString()
+            (item) =>
+              item.user_id === current.user_id &&
+              new Date(item.created_at).toLocaleDateString() ===
+                new Date(current.created_at).toLocaleDateString()
           );
           if (!isDuplicate) {
             return [...acc, current];
@@ -96,24 +99,23 @@ const RequestApprovalHead = () => {
   // Move filtering logic after null check
   const getFilteredRows = () => {
     if (!requests) return [];
-    
+
     return requests.filter((item) => {
       const searchLower = searchTerm.toLowerCase();
-      
+
       // Check if searchTerm is a valid date
       const searchDate = new Date(searchTerm);
       const isValidDate = searchDate instanceof Date && !isNaN(searchDate);
       const itemDate = new Date(item.created_at);
-      
+
       // Combine all conditions with AND instead of OR
       return (
         !searchTerm || // if no search term, show all
-        (
-          (item.full_name?.toLowerCase().includes(searchLower) ||
-          item.total_requests?.toString().includes(searchTerm) ||
-          item.division_name?.toLowerCase().includes(searchLower) ||
-          (isValidDate && itemDate.toLocaleDateString() === searchDate.toLocaleDateString()))
-        )
+        item.full_name?.toLowerCase().includes(searchLower) ||
+        item.total_requests?.toString().includes(searchTerm) ||
+        item.division_name?.toLowerCase().includes(searchLower) ||
+        (isValidDate &&
+          itemDate.toLocaleDateString() === searchDate.toLocaleDateString())
       );
     });
   };
@@ -190,8 +192,7 @@ const RequestApprovalHead = () => {
           direction={{ xs: "column", sm: "row" }}
           spacing={2}
           alignItems="flex-end"
-        >
-        </Stack>
+        ></Stack>
 
         {/* Search di kanan */}
         <TextField

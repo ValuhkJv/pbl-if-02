@@ -22,7 +22,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; import {
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import {
   Search as SearchIcon,
   InfoOutlined as InfoOutlinedIcon,
 } from "@mui/icons-material";
@@ -30,7 +31,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; import {
 const RequestApprovalAdmin = () => {
   const [requests, setRequests] = useState([]);
   const navigate = useNavigate();
-  const division = localStorage.getItem("division_name");
+  const division = sessionStorage.getItem("division_name");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -78,7 +79,6 @@ const RequestApprovalAdmin = () => {
       .catch((err) => console.error(err));
   }, [division]);
 
-
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -116,9 +116,8 @@ const RequestApprovalAdmin = () => {
       dateMatch = dateMatch && tanggalPinjam <= endDateTime;
     }
 
-    return searchMatch && dateMatch;  // Return the combined filter result
+    return searchMatch && dateMatch; // Return the combined filter result
   });
-  
 
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
@@ -129,13 +128,10 @@ const RequestApprovalAdmin = () => {
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={2}
-      sx={{ width: { xs: '100%', md: 'auto' } }}
+      sx={{ width: { xs: "100%", md: "auto" } }}
     >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-        >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <DatePicker
             label="Tanggal Mulai"
             sx={{
@@ -189,10 +185,10 @@ const RequestApprovalAdmin = () => {
   // Modified table cell to format date correctly
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 

@@ -21,7 +21,7 @@ import {
   InputLabel,
   TablePagination,
   Divider,
-  Stack
+  Stack,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
@@ -55,7 +55,7 @@ const DetailPersetujuanAdmin = () => {
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -63,7 +63,7 @@ const DetailPersetujuanAdmin = () => {
       setError(null);
 
       try {
-        console.log('Fetching details with params:', { created_at, user_id });
+        console.log("Fetching details with params:", { created_at, user_id });
 
         if (!created_at || !user_id) {
           throw new Error("Missing required parameters");
@@ -77,7 +77,7 @@ const DetailPersetujuanAdmin = () => {
             },
           }
         );
-        console.log('API Response:', response.data);
+        console.log("API Response:", response.data);
 
         if (!response.data) {
           throw new Error("No data received from server");
@@ -133,7 +133,10 @@ const DetailPersetujuanAdmin = () => {
     );
 
     if (!hasDecisions) {
-      sweetAlert.warning("Warning", "Please make a decision for at least one item");
+      sweetAlert.warning(
+        "Warning",
+        "Please make a decision for at least one item"
+      );
       return false;
     }
     return true;
@@ -144,9 +147,12 @@ const DetailPersetujuanAdmin = () => {
     setLoading(true);
     try {
       const requests = details
-        .filter(item => item.status === "Approved by Head" &&
-          (itemApprovals[item.request_id] !== undefined ||
-            rejectionReasons[item.request_id]?.trim()))
+        .filter(
+          (item) =>
+            item.status === "Approved by Head" &&
+            (itemApprovals[item.request_id] !== undefined ||
+              rejectionReasons[item.request_id]?.trim())
+        )
         .map((item) => ({
           request_id: item.request_id,
           status: itemApprovals[item.request_id]
@@ -174,9 +180,7 @@ const DetailPersetujuanAdmin = () => {
         );
       }
 
-      sweetAlert.success(
-        `Berhasil memperbarui permintaan`
-      );
+      sweetAlert.success(`Berhasil memperbarui permintaan`);
       setItemApprovals({});
       setRejectionReasons({});
 
@@ -190,12 +194,12 @@ const DetailPersetujuanAdmin = () => {
         }
       );
       setDetails(response.data);
-
     } catch (error) {
       console.error("Error updating requests:", error);
       sweetAlert.error(
         "Gagal",
-        "Gagal memperbarui permintaan: " + (error.response?.data?.message || error.message)
+        "Gagal memperbarui permintaan: " +
+          (error.response?.data?.message || error.message)
       );
     } finally {
       setLoading(false);
@@ -281,14 +285,18 @@ const DetailPersetujuanAdmin = () => {
           spacing={2}
           alignItems="center"
         >
-          <FormControl variant="outlined" sx={{
-            marginRight: 2, width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
+          <FormControl
+            variant="outlined"
+            sx={{
+              marginRight: 2,
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -299,7 +307,9 @@ const DetailPersetujuanAdmin = () => {
               <MenuItem value="Approved by Staff SBUM">
                 Disetujui Staff SBUM
               </MenuItem>
-              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
+              <MenuItem value="Rejected by Staff SBUM">
+                Ditolak Staff SBUM
+              </MenuItem>
               <MenuItem value="Approved by Head">Menunggu Persetujuan</MenuItem>
             </Select>
           </FormControl>
@@ -317,7 +327,8 @@ const DetailPersetujuanAdmin = () => {
             ),
           }}
           sx={{
-            marginRight: 2, width: "250px",
+            marginRight: 2,
+            width: "250px",
             backgroundColor: "white",
             borderRadius: 1,
             "& .MuiOutlinedInput-root": {
@@ -393,7 +404,7 @@ const DetailPersetujuanAdmin = () => {
                 </StyledTableCell>
                 <StyledTableCell>
                   {item.status === "Approved by Head" &&
-                    !itemApprovals[item.request_id] ? (
+                  !itemApprovals[item.request_id] ? (
                     <TextField
                       fullWidth
                       size="small"
@@ -431,9 +442,7 @@ const DetailPersetujuanAdmin = () => {
         sx={{ mt: 2, backgroundColor: "#0C628B", color: "white" }}
       >
         {loading ? "Processing..." : "Submit"}
-
       </Button>
-
     </Box>
   );
 };

@@ -43,7 +43,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 const DetailPermintaan = () => {
   const { date } = useParams();
   const [details, setDetails] = useState([]);
-  const userId = localStorage.getItem("user_id");
+  const userId = sessionStorage.getItem("user_id");
   const formattedDate = new Date(date).toLocaleDateString("en-CA"); // Hanya ambil bagian tanggalnya saja
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -100,7 +100,6 @@ const DetailPermintaan = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
-
 
   return (
     <Box
@@ -161,14 +160,17 @@ const DetailPermintaan = () => {
           spacing={2}
           alignItems="center"
         >
-          <FormControl variant="outlined" sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
+          <FormControl
+            variant="outlined"
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -177,10 +179,16 @@ const DetailPermintaan = () => {
             >
               <MenuItem value="Semua">Semua</MenuItem>
               <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
-              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
-              <MenuItem value="Approved by Staff SBUM">Disetujui Staff SBUM</MenuItem>
+              <MenuItem value="Approved by Head">
+                Disetujui Kepala Unit
+              </MenuItem>
+              <MenuItem value="Approved by Staff SBUM">
+                Disetujui Staff SBUM
+              </MenuItem>
               <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
-              <MenuItem value="Rejected by Staff SBUM">Ditolak Staff SBUM</MenuItem>
+              <MenuItem value="Rejected by Staff SBUM">
+                Ditolak Staff SBUM
+              </MenuItem>
             </Select>
           </FormControl>
         </Stack>
@@ -258,7 +266,9 @@ const DetailPermintaan = () => {
           <TableBody>
             {displayedRows.map((detail, index) => (
               <StyledTableRow key={detail.request_id}>
-                <StyledTableCell>{index + 1 + page * rowsPerPage}</StyledTableCell>
+                <StyledTableCell>
+                  {index + 1 + page * rowsPerPage}
+                </StyledTableCell>
                 <StyledTableCell>{detail.day_of_week}</StyledTableCell>
                 <StyledTableCell>
                   {new Date(detail.date).toLocaleDateString()}
@@ -270,7 +280,9 @@ const DetailPermintaan = () => {
                 <StyledTableCell>{detail.quantity}</StyledTableCell>
                 <StyledTableCell>{detail.requested_by}</StyledTableCell>
                 <StyledTableCell>{detail.status}</StyledTableCell>
-                <StyledTableCell>{detail.rejection_reason || "-"}</StyledTableCell>
+                <StyledTableCell>
+                  {detail.rejection_reason || "-"}
+                </StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>
@@ -286,7 +298,6 @@ const DetailPermintaan = () => {
         />
       </TableContainer>
     </Box>
-
   );
 };
 

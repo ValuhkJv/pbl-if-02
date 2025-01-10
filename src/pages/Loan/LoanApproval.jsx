@@ -89,7 +89,7 @@ export default function LoanApproval() {
 
   const fetchLoanApproval = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await fetch(
         "http://localhost:5000/peminjaman?view=approval",
@@ -151,30 +151,31 @@ export default function LoanApproval() {
 
   // Menggabungkan filter status dan pencarian dalam satu fungsi
   const getFilteredRows = () => {
-    return loanApproval.filter((item) => {
-      const matchesSearch =
-        !searchTerm ||
-        Object.values(item)
-          .join(" ")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+    return loanApproval
+      .filter((item) => {
+        const matchesSearch =
+          !searchTerm ||
+          Object.values(item)
+            .join(" ")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase());
 
-      const matchesStatus =
-        filterStatus === "Semua" ||
-        (filterStatus === "return" &&
-          (item.status === "return" ||
-            item.status.startsWith("return: terlambat"))) ||
-        (filterStatus !== "return" && item.status === filterStatus);
+        const matchesStatus =
+          filterStatus === "Semua" ||
+          (filterStatus === "return" &&
+            (item.status === "return" ||
+              item.status.startsWith("return: terlambat"))) ||
+          (filterStatus !== "return" && item.status === filterStatus);
 
-      return matchesSearch && matchesStatus;
-    })
+        return matchesSearch && matchesStatus;
+      })
       .sort((a, b) => {
         // Sort by status priority
         const statusPriority = {
-          pending: 0,      // Pending first
-          approved: 1,     // Then approved
-          rejected: 2,     // Then rejected
-          return: 3        // Return last
+          pending: 0, // Pending first
+          approved: 1, // Then approved
+          rejected: 2, // Then rejected
+          return: 3, // Return last
         };
 
         // Get priority values, default to highest number if status not found
@@ -199,21 +200,21 @@ export default function LoanApproval() {
   );
 
   useEffect(() => {
-    const storedTransactions = localStorage.getItem("transactions");
+    const storedTransactions = sessionStorage.getItem("transactions");
     if (storedTransactions) {
       setRequests(JSON.parse(storedTransactions));
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("request", JSON.stringify(requests));
+    sessionStorage.setItem("request", JSON.stringify(requests));
   }, [requests]);
 
   // Modifikasi fungsi handleDelete
   const handleDelete = async (groupData) => {
     try {
-      const token = localStorage.getItem("token");
-      const userRole = localStorage.getItem("roles_id");
+      const token = sessionStorage.getItem("token");
+      const userRole = sessionStorage.getItem("roles_id");
 
       const borrowingIds = groupData.items.map((item) => item.borrowing_id);
       const itemToDelete = groupData.items.find(
@@ -330,14 +331,17 @@ export default function LoanApproval() {
           spacing={2}
           alignItems="center"
         >
-          <FormControl variant="outlined" sx={{
-            width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
+          <FormControl
+            variant="outlined"
+            sx={{
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -439,8 +443,12 @@ export default function LoanApproval() {
                 </StyledTableCell>
 
                 <StyledTableCell>
-                  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
-
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="center"
+                    alignItems="center"
+                  >
                     <Tooltip title="Detail" placement="top">
                       <DetailButton
                         variant="contained"
@@ -470,35 +478,31 @@ export default function LoanApproval() {
                         <InfoOutlinedIcon />
                       </DetailButton>
                     </Tooltip>
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1 }}
-                    />
+                    <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                     {/* Only show delete button for return/rejected status */}
                     {(loan.status === "return" ||
                       loan.status === "rejected") && (
-                        <Tooltip title="Hapus" placement="top">
-                          <RemoveButton
-                            variant="contained"
-                            sx={{
-                              my: 1,
-                              mx: 2,
-                              padding: "0",
-                              borderRadius: "50%",
-                              height: "35px",
-                              width: "35px",
-                              minWidth: "35px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                            onClick={() => handleOpenDeleteDialog(loan)}
-                          >
-                            <DeleteForeverOutlinedIcon />
-                          </RemoveButton>
-                        </Tooltip>
-                      )}
+                      <Tooltip title="Hapus" placement="top">
+                        <RemoveButton
+                          variant="contained"
+                          sx={{
+                            my: 1,
+                            mx: 2,
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() => handleOpenDeleteDialog(loan)}
+                        >
+                          <DeleteForeverOutlinedIcon />
+                        </RemoveButton>
+                      </Tooltip>
+                    )}
                   </Stack>
                 </StyledTableCell>
               </StyledTableRow>
