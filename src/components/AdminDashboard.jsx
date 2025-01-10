@@ -238,7 +238,8 @@ function DashboardStaf() {
           icon={<ErrorIcon />}
           style={{ marginBottom: 10 }}
         >
-          Barang {item.item_name} ({item.item_id}) telah habis. Harap segera restock barang tersebut.
+          Barang {item.item_name} ({item.item_id}) telah habis. Harap segera
+          restock barang tersebut.
         </Alert>
       ))}
 
