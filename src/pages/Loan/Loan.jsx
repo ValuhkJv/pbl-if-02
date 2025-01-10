@@ -26,7 +26,7 @@ import { format } from "date-fns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 
 const Borrowing = () => {

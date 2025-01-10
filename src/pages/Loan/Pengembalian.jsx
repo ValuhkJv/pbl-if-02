@@ -31,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import PengembalianModal from "./PengembalianModal";
 import { styled } from "@mui/system";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 const Pengembalian = () => {
   const [page, setPage] = useState(0);

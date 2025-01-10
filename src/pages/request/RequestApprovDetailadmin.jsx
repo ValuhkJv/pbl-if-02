@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",

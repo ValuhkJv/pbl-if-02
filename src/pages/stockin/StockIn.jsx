@@ -25,7 +25,7 @@ import {
   Autocomplete,
 } from "@mui/material";
 import axios from "axios";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 import { styled } from "@mui/system";
 import {
   Search as SearchIcon,

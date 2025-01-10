@@ -28,7 +28,7 @@ import {
   DeleteForeverOutlined as DeleteForeverOutlinedIcon,
   Search as SearchIcon,
 } from "@mui/icons-material";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 export default function LoanApproval() {
   const navigate = useNavigate();

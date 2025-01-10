@@ -19,7 +19,7 @@ import {
 } from "@mui/material";
 import axios from "axios";
 import ClearIcon from "@mui/icons-material/Clear";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 import { styled } from "@mui/system";
 
 const StyledTableCell = styled(TableCell)({

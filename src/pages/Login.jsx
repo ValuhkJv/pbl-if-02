@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import polibatam from "../assets/polibatam.png";
 import backgroundImage from "../assets/tekno.png";
-import sweetAlert from "../components/Alert";
+import sweetAlert from "../components/SweetAlert";
 
 const Login = () => {
   const [username, setUsername] = useState("");
