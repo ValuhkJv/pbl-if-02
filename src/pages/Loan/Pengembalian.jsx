@@ -31,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import PengembalianModal from "./PengembalianModal";
 import { styled } from "@mui/system";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 const Pengembalian = () => {
   const [page, setPage] = useState(0);
@@ -141,7 +141,6 @@ const Pengembalian = () => {
     const deleteAction = async () => {
       try {
         const token = localStorage.getItem("token");
-        const userRole = localStorage.getItem("roles_id");
 
         const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
           method: "DELETE",

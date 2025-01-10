@@ -25,7 +25,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
@@ -43,7 +43,7 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 const RequestApprovDetail = () => {
-  const { created_at } = useParams();
+  const { created_at, user_id } = useParams();
   const [details, setDetails] = useState([]);
   const [itemApprovals, setItemApprovals] = useState({});
   const [rejectionReasons, setRejectionReasons] = useState({});
@@ -52,33 +52,51 @@ const RequestApprovDetail = () => {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("Semua");
-
+  const [error, setError] = useState(null);
 
   const token = localStorage.getItem("token");
 
   useEffect(() => {
     const fetchDetails = async () => {
       setLoading(true);
+      setError(null);
+
       try {
+        console.log('Fetching details with params:', { created_at, user_id });
+
+        if (!created_at || !user_id) {
+          throw new Error("Missing required parameters");
+        }
+
         const response = await axios.get(
-          `http://localhost:5000/requestsApprovHead/head-approval/details/${created_at}`,
+          `http://localhost:5000/requestsApprovHead/head-approval/details/${created_at}/${user_id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
+        console.log('API Response:', response.data);
+
+        if (!response.data) {
+          throw new Error("No data received from server");
+        }
+
         setDetails(response.data);
       } catch (error) {
         console.error("Error fetching details:", error);
-        sweetAlert.error("Error", "Failed to fetch details");
+        setError(error.response?.data?.message || error.message);
+        sweetAlert.error(
+          "Error",
+          error.response?.data?.message || "Failed to fetch details"
+        );
       } finally {
         setLoading(false);
       }
     };
 
     fetchDetails();
-  }, [created_at, token]);
+  }, [created_at, user_id, token]);
 
   const handleApprovalChange = (request_id, checked) => {
     setItemApprovals((prev) => ({
@@ -128,24 +146,24 @@ const RequestApprovDetail = () => {
     try {
       // Only process items that are pending and have been modified
       const modifiedRequests = details
-        .filter(item => 
-          item.status.toLowerCase() === "pending" && 
-          (itemApprovals.hasOwnProperty(item.request_id) || 
-           rejectionReasons.hasOwnProperty(item.request_id))
+        .filter(item =>
+          item.status.toLowerCase() === "pending" &&
+          (itemApprovals.hasOwnProperty(item.request_id) ||
+            rejectionReasons.hasOwnProperty(item.request_id))
         )
         .map(item => ({
           request_id: item.request_id,
           status: itemApprovals[item.request_id] ? "Approved by Head" : "Rejected by Head",
-          rejection_reason: itemApprovals[item.request_id] 
-            ? null 
+          rejection_reason: itemApprovals[item.request_id]
+            ? null
             : rejectionReasons[item.request_id]?.trim()
         }));
-  
+
       if (modifiedRequests.length === 0) {
         sweetAlert.warning("Warning", "No pending items were modified");
         return;
       }
-  
+
       const results = await Promise.allSettled(
         modifiedRequests.map(request =>
           axios.put(
@@ -159,11 +177,11 @@ const RequestApprovDetail = () => {
           )
         )
       );
-  
+
       // Handle partial success/failure
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
-  
+
       if (failed > 0) {
         sweetAlert.warning(
           "Sebagian Berhasil",
@@ -175,7 +193,7 @@ const RequestApprovDetail = () => {
           `Berhasil memperbarui ${successful} permintaan`
         );
       }
-  
+
       if (successful > 0) {
         // Refresh the data
         window.location.reload();
@@ -204,6 +222,14 @@ const RequestApprovDetail = () => {
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
+
+  if (loading) {
+    return <Typography>Loading...</Typography>;
+  }
+
+  if (error) {
+    return <Typography color="error">Error: {error}</Typography>;
+  }
 
   return (
     <Box
@@ -410,7 +436,7 @@ const RequestApprovDetail = () => {
         onClick={handleSubmit}
         sx={{ mt: 2, backgroundColor: "#0C628B", color: "white" }}
       >
-        Submit
+        {loading ? "Processing..." : "Submit"}
       </Button>
     </Box>
   );

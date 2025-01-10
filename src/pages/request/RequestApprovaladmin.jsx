@@ -355,7 +355,7 @@ const RequestApprovalAdmin = () => {
                           navigate(
                             `/requestsApprovalAdmin/details/${new Date(
                               request.created_at
-                            ).toLocaleDateString("en-CA")}`
+                            ).toLocaleDateString("en-CA")}/${request.user_id}`
                           );
                         }}
                       >

@@ -27,8 +27,7 @@ import {
     Search as SearchIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/system";
-import sweetAlert from "../../components/Alert";
-
+import sweetAlert from "../../components/SweetAlert";
 
 const StyledTableCell = styled(TableCell)({
     padding: "12px",
@@ -45,7 +44,6 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
     },
 }));
 
-
 const LoanApprovalDetail = () => {
     const { date } = useParams();
     const [searchParams] = useSearchParams();
@@ -58,6 +56,8 @@ const LoanApprovalDetail = () => {
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterStatus, setFilterStatus] = useState("Semua");
+
+    useEffect(() => {
 
     const fetchDetails = async () => {
         setLoading(true);
@@ -102,9 +102,8 @@ const LoanApprovalDetail = () => {
         }
     };
 
-    useEffect(() => {
-        fetchDetails();
-    }, [date, borrower_id]);
+    fetchDetails();
+}, [date, borrower_id]);
 
     const handleFilterChange = (event) => {
         setFilterStatus(event.target.value);
@@ -119,31 +118,57 @@ const LoanApprovalDetail = () => {
         setPage(0);
     };
 
-    // Move filtering logic after null check
     const getFilteredRows = () => {
-        if (!loanDetails?.items) return [];
-        return loanDetails.items.filter(
-            (item) =>
-                (!searchTerm ||
-                    (item.item_name &&
-                        item.item_name.toLowerCase().includes(searchTerm.toLowerCase()))) &&
-                (filterStatus === "Semua" || item.status === filterStatus)
-        );
+        if (!loanDetails?.items) {
+            return [];
+        }
+
+        return loanDetails.items.filter((item) => {
+            const matchesSearch =
+                !searchTerm ||
+                Object.values(item)
+                    .join(" ")
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase());
+
+            const matchesStatus =
+                filterStatus === "Semua" ||
+                (filterStatus === "return" &&
+                    (item.status === "return" ||
+                        item.status.startsWith("return: terlambat"))) ||
+                (filterStatus !== "return" && item.status === filterStatus);
+
+            return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => {
+            const statusPriority = {
+                pending: 0,
+                approved: 1,
+                rejected: 2,
+                return: 3
+            };
+
+            const aPriority = statusPriority[a.status] ?? 999;
+            const bPriority = statusPriority[b.status] ?? 999;
+
+            if (aPriority !== bPriority) {
+                return aPriority - bPriority;
+            }
+
+            return new Date(b.borrow_date) - new Date(a.borrow_date);
+        });
     };
 
-    const getDisplayedRows = () => {
-        const filteredRows = getFilteredRows();
-        const startIndex = page * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        return filteredRows.slice(startIndex, endIndex);
-    };
+    // Gunakan fungsi filter gabungan untuk mendapatkan data yang akan ditampilkan
+    const filteredRows = getFilteredRows();
+    const displayedRows = filteredRows.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+    );
 
     useEffect(() => {
         setPage(0); // Reset to the first page whenever the search term changes
     }, [searchTerm]);
-
-    const filteredRows = getFilteredRows();
-    const displayedRows = getDisplayedRows();
 
     const isItemPending = (status) => {
         return status.toLowerCase() === 'pending';
@@ -241,7 +266,6 @@ const LoanApprovalDetail = () => {
             const token = localStorage.getItem('token');
             const pendingItems = loanDetails.items.filter(item => item.status === 'pending');
             const itemsToProcess = pendingItems.filter(item => {
-                // Only process items that have been explicitly approved or rejected
                 return itemApprovals[item.borrowing_id] !== undefined ||
                     rejectionReasons[item.borrowing_id]?.trim();
             });
@@ -265,15 +289,46 @@ const LoanApprovalDetail = () => {
                     });
 
                     const responseData = await response.json();
-                    console.log("Server response:", responseData);
-
                     if (!response.ok) {
                         throw new Error(responseData.message || 'Failed to process approval');
                     }
                 }
             }
 
-            await fetchDetails();
+            // Instead of calling fetchDetails directly, trigger the useEffect by updating date or borrower_id
+            // This ensures we're using the same fetching logic
+            setLoading(true); // Set loading before fetch
+            const response = await fetch(
+                `http://localhost:5000/peminjaman/detail/${date}?borrower_id=${borrower_id}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (!response.ok) throw new Error('Failed to fetch details');
+
+            const data = await response.json();
+            if (data.length > 0) {
+                const borrowerInfo = {
+                    full_name: data[0].full_name,
+                    nik: data[0].nik,
+                    borrow_date: date,
+                    return_date: date,
+                    items: data.map(item => ({
+                        borrowing_id: item.borrowing_id,
+                        item_name: item.item_name,
+                        item_code: item.item_code,
+                        quantity: item.quantity,
+                        reason: item.reason,
+                        status: item.status,
+                        rejection_reason: item.rejection_reason
+                    }))
+                };
+                setLoanDetails(borrowerInfo);
+            }
+
             sweetAlert.success(
                 `Berhasil memperbarui peminjaman`
             );

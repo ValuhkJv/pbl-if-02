@@ -66,7 +66,21 @@ const RequestApprovalHead = () => {
   useEffect(() => {
     axios
       .get(`http://localhost:5000/requestsApprovHead/head-approval/${division}`)
-      .then((res) => setRequests(res.data))
+      .then((res) => {
+        // Remove duplicates based on user_id and created_at
+        const uniqueRequests = res.data.reduce((acc, current) => {
+          const isDuplicate = acc.find(
+            (item) => 
+              item.user_id === current.user_id && 
+              new Date(item.created_at).toLocaleDateString() === new Date(current.created_at).toLocaleDateString()
+          );
+          if (!isDuplicate) {
+            return [...acc, current];
+          }
+          return acc;
+        }, []);
+        setRequests(uniqueRequests);
+      })
       .catch((err) => console.error(err));
   }, [division]);
 
@@ -82,12 +96,26 @@ const RequestApprovalHead = () => {
   // Move filtering logic after null check
   const getFilteredRows = () => {
     if (!requests) return [];
-    return requests.filter(
-      (item) =>
-      (!searchTerm ||
-        (item.full_name &&
-          item.full_name.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+    
+    return requests.filter((item) => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      // Check if searchTerm is a valid date
+      const searchDate = new Date(searchTerm);
+      const isValidDate = searchDate instanceof Date && !isNaN(searchDate);
+      const itemDate = new Date(item.created_at);
+      
+      // Combine all conditions with AND instead of OR
+      return (
+        !searchTerm || // if no search term, show all
+        (
+          (item.full_name?.toLowerCase().includes(searchLower) ||
+          item.total_requests?.toString().includes(searchTerm) ||
+          item.division_name?.toLowerCase().includes(searchLower) ||
+          (isValidDate && itemDate.toLocaleDateString() === searchDate.toLocaleDateString()))
+        )
+      );
+    });
   };
 
   const getDisplayedRows = () => {
@@ -266,7 +294,7 @@ const RequestApprovalHead = () => {
                           navigate(
                             `/requestsApprovHead/head-approval/details/${new Date(
                               req.created_at
-                            ).toLocaleDateString("en-CA")}`
+                            ).toLocaleDateString("en-CA")}/${req.user_id}`
                           );
                         }}
                       >

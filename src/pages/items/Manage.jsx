@@ -29,7 +29,7 @@ import {
 } from "@mui/icons-material";
 import { useLocation } from "react-router-dom";
 import { styled } from "@mui/system";
-import sweetAlert from "../../components/Alert";
+import sweetAlert from "../../components/SweetAlert";
 
 const StyledTableCell = styled(TableCell)({
   padding: "12px",
