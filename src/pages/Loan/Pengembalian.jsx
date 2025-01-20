@@ -252,7 +252,7 @@ const Pengembalian = () => {
         sweetAlert.error(
           "Gagal",
           "Gagal memuat data peminjaman peminjaman: " +
-            (error.response?.data?.message || error.message)
+          (error.response?.data?.message || error.message)
         );
       }
     };
@@ -279,7 +279,7 @@ const Pengembalian = () => {
       sweetAlert.error(
         "Gagal",
         "Gagal Mengambil data: " +
-          (error.response?.data?.message || error.message)
+        (error.response?.data?.message || error.message)
       );
     }
   };
@@ -323,7 +323,7 @@ const Pengembalian = () => {
         filterStatus === "Semua" ||
         (filterStatus === "return" &&
           (item.status === "return" ||
-            item.status.startsWith("return: terlambat"))) ||
+            item.status.startsWith("late"))) ||
         (filterStatus !== "return" && item.status === filterStatus);
 
       return matchesSearch && matchesStatus;
@@ -586,9 +586,9 @@ const Pengembalian = () => {
                   <StyledTableCell>{transaction.quantity}</StyledTableCell>
                   <StyledTableCell>{transaction.reason}</StyledTableCell>
                   <StyledTableCell>
-                    {transaction.status.startsWith("return: terlambat") ? (
+                    {transaction.status.startsWith('late:') ? (
                       <Typography color="error">
-                        {transaction.status}
+                        {`Terlambat ${transaction.status.split(':')[1].replace('d', ' hari')}`}
                       </Typography>
                     ) : (
                       transaction.status

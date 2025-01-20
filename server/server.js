@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "12345678",
+  password: "password",
   database: "subbagian",
   port: 5432,
 });
@@ -1516,13 +1516,19 @@ app.post(
       // Hitung selisih hari
       const expectedReturn = new Date(loan.return_date);
       const actualReturn = new Date();
-      const diffTime = Math.abs(actualReturn - expectedReturn);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      // Reset jam ke 00:00:00 untuk kedua tanggal
+      expectedReturn.setHours(0, 0, 0, 0);
+      actualReturn.setHours(0, 0, 0, 0);
+
+     // Hitung selisih dalam hari (pembulatan ke bawah)
+      const diffTime = actualReturn - expectedReturn;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       // Buat status message berdasarkan keterlambatan
       let statusMessage = "return";
-      if (actualReturn > expectedReturn) {
-        statusMessage = `return: terlambat ${diffDays} hari`;
+      if (diffDays > 0) { // Hanya jika benar-benar telat
+        statusMessage = `late:${diffDays}d`;
       }
 
       // Update loan status dengan pesan keterlambatan
