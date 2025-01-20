@@ -55,14 +55,14 @@ const Login = () => {
         divisionName: response.data.division_name,
       };
 
-      // Simpan token ke localStorage
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("role", response.data.roles_id);
-      localStorage.setItem("user_id", response.data.user_id);
-      localStorage.setItem("full_name", response.data.full_name);
-      localStorage.setItem("nik", response.data.nik);
-      localStorage.setItem("division_name", response.data.division_name);
-      localStorage.setItem("user", JSON.stringify(userData)); // Store user data as JSON string
+      // Simpan token ke sessionStorage
+      sessionStorage.setItem("token", response.data.token);
+      sessionStorage.setItem("role", response.data.roles_id);
+      sessionStorage.setItem("user_id", response.data.user_id);
+      sessionStorage.setItem("full_name", response.data.full_name);
+      sessionStorage.setItem("nik", response.data.nik);
+      sessionStorage.setItem("division_name", response.data.division_name);
+      sessionStorage.setItem("user", JSON.stringify(userData)); // Store user data as JSON string
 
       // Tampilkan Toast sukses
       sweetAlert.successToast(

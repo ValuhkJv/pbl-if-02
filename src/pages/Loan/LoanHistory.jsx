@@ -48,7 +48,6 @@ export default function LoanHistory() {
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [openDetailModal, setOpenDetailModal] = useState(false);
 
-
   const StyledTableCell = styled(TableCell)(({ theme }) => ({
     border: "1px solid #ddd",
     padding: theme.spacing(1.5),
@@ -129,8 +128,8 @@ export default function LoanHistory() {
 
   const fetchHistory = async () => {
     try {
-      const token = localStorage.getItem("token");
-      console.log("Token from localStorage:", token);
+      const token = sessionStorage.getItem("token");
+      console.log("Token from sessionStorage:", token);
 
       if (!token) {
         sweetAlert.error("Error", "Token tidak ditemukan");
@@ -158,8 +157,8 @@ export default function LoanHistory() {
       }
 
       const data = await response.json();
-       // Transform data jika diperlukan
-       const transformedData = data.map((loan) => ({
+      // Transform data jika diperlukan
+      const transformedData = data.map((loan) => ({
         ...loan,
         borrowing_ids: [loan.borrowing_id],
       }));
@@ -188,7 +187,7 @@ export default function LoanHistory() {
     }
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       const response = await fetch(
         `http://localhost:5000/peminjaman/${borrowing_id}`,
@@ -207,16 +206,15 @@ export default function LoanHistory() {
       }
 
       // Perbarui state history secara langsung setelah penghapusan berhasil
-      setHistory(prevHistory => 
-        prevHistory.filter(item => item.borrowing_id !== borrowing_id)
+      setHistory((prevHistory) =>
+        prevHistory.filter((item) => item.borrowing_id !== borrowing_id)
       );
 
       // Tampilkan pesan sukses
       sweetAlert.success("Berhasil", "Peminjaman berhasil dihapus");
-      
+
       // Refresh data dari server untuk memastikan sinkronisasi
       await fetchHistory();
-
     } catch (error) {
       console.error("Delete error:", error);
       sweetAlert.error("Error", error.message);
@@ -290,13 +288,10 @@ export default function LoanHistory() {
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={2}
-      sx={{ width: { xs: '100%', md: 'auto' } }}
+      sx={{ width: { xs: "100%", md: "auto" } }}
     >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-        >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <DatePicker
             label="Tanggal Mulai"
             sx={{
@@ -344,14 +339,18 @@ export default function LoanHistory() {
           />
         </Stack>
       </LocalizationProvider>
-      <FormControl variant="outlined" sx={{
-        minWidth: { sm: '160px' }, width: "250px",
-        backgroundColor: "white",
-        borderRadius: 1,
-        "& .MuiOutlinedInput-root": {
-          height: "40px",
-        },
-      }}>
+      <FormControl
+        variant="outlined"
+        sx={{
+          minWidth: { sm: "160px" },
+          width: "250px",
+          backgroundColor: "white",
+          borderRadius: 1,
+          "& .MuiOutlinedInput-root": {
+            height: "40px",
+          },
+        }}
+      >
         <InputLabel>Bulan</InputLabel>
         <Select
           value={selectedMonth}
@@ -422,7 +421,6 @@ export default function LoanHistory() {
                 alt="Bukti Pengembalian"
                 style={{ maxWidth: "100%", height: "auto" }}
               />
-
             )}
           </Box>
           <Button
@@ -487,12 +485,16 @@ export default function LoanHistory() {
           }}
         />
       </Box>
-      <Box sx={{
-        width: '100%', p: 2, mb: 2,
-        justifyContent: "center",
-        alignItems: "center",
-        display: "flex",
-      }}>
+      <Box
+        sx={{
+          width: "100%",
+          p: 2,
+          mb: 2,
+          justifyContent: "center",
+          alignItems: "center",
+          display: "flex",
+        }}
+      >
         <Stack
           direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
@@ -505,7 +507,8 @@ export default function LoanHistory() {
           <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={2}
-            sx={{ width: { xs: '100%', md: 'auto' } }}>
+            sx={{ width: { xs: "100%", md: "auto" } }}
+          >
             <TextField
               variant="outlined"
               placeholder="Search..."
@@ -527,14 +530,18 @@ export default function LoanHistory() {
                 },
               }}
             />
-            <FormControl variant="outlined" sx={{
-              minWidth: { sm: '200px' }, width: "250px",
-              backgroundColor: "white",
-              borderRadius: 1,
-              "& .MuiOutlinedInput-root": {
-                height: "40px",
-              },
-            }}>
+            <FormControl
+              variant="outlined"
+              sx={{
+                minWidth: { sm: "200px" },
+                width: "250px",
+                backgroundColor: "white",
+                borderRadius: 1,
+                "& .MuiOutlinedInput-root": {
+                  height: "40px",
+                },
+              }}
+            >
               <InputLabel>Status</InputLabel>
               <Select
                 value={filterStatus}
@@ -625,7 +632,12 @@ export default function LoanHistory() {
                   {item.return_condition || "-"}
                 </StyledTableCell>
                 <StyledTableCell>
-                  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="center"
+                    alignItems="center"
+                  >
                     <Tooltip title="Detail">
                       <DetailButton
                         variant="contained"
@@ -646,40 +658,36 @@ export default function LoanHistory() {
                         <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
                       </DetailButton>
                     </Tooltip>
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1 }}
-                    />
+                    <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                     {/* Only show delete button for return/rejected status */}
                     {(item.status === "return" ||
                       item.status === "rejected" ||
                       item.status.startsWith("return: terlambat")) && (
-                        <Tooltip title="Hapus">
-                          <RemoveButton
-                            variant="contained"
-                            sx={{
-                              my: 1,
-                              mx: 2,
-                              padding: "0",
-                              borderRadius: "50%",
-                              height: "35px",
-                              width: "35px",
-                              minWidth: "35px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                            onClick={() =>
-                              handleOpenDeleteDialog(item.borrowing_id)
-                            }
-                          >
-                            <DeleteForeverOutlinedIcon
-                              sx={{ fontSize: "20px" }}
-                            />
-                          </RemoveButton>
-                        </Tooltip>
-                      )}
+                      <Tooltip title="Hapus">
+                        <RemoveButton
+                          variant="contained"
+                          sx={{
+                            my: 1,
+                            mx: 2,
+                            padding: "0",
+                            borderRadius: "50%",
+                            height: "35px",
+                            width: "35px",
+                            minWidth: "35px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                          onClick={() =>
+                            handleOpenDeleteDialog(item.borrowing_id)
+                          }
+                        >
+                          <DeleteForeverOutlinedIcon
+                            sx={{ fontSize: "20px" }}
+                          />
+                        </RemoveButton>
+                      </Tooltip>
+                    )}
                   </Stack>
                 </StyledTableCell>
               </StyledTableRow>

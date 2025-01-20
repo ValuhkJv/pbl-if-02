@@ -81,7 +81,10 @@ const RequestList = ({ userId }) => {
   const filteredRows = requests.filter(
     (item) =>
       !searchTerm ||
-      new Date(item.date).toLocaleDateString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+      new Date(item.date)
+        .toLocaleDateString()
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       item.total_requests.toString().includes(searchTerm)
   );
 
@@ -95,7 +98,7 @@ const RequestList = ({ userId }) => {
   }, [searchTerm]);
 
   useEffect(() => {
-    const userId = localStorage.getItem("user_id");
+    const userId = sessionStorage.getItem("user_id");
 
     if (!userId) {
       console.error("User ID is required!");
@@ -114,7 +117,7 @@ const RequestList = ({ userId }) => {
   const fetchRequests = async () => {
     setLoading(true);
     setError(null);
-    const userId = localStorage.getItem("user_id");
+    const userId = sessionStorage.getItem("user_id");
 
     if (!userId) {
       setError("User ID tidak ditemukan. Silakan login kembali.");
@@ -123,13 +126,16 @@ const RequestList = ({ userId }) => {
     }
 
     try {
-      const response = await axios.get(`http://localhost:5000/requests?user_id=${userId}`);
+      const response = await axios.get(
+        `http://localhost:5000/requests?user_id=${userId}`
+      );
       setRequests(response.data);
       console.log("Fetched requests:", requests);
-
-
     } catch (err) {
-      setError("Gagal memuat data permintaan. " + (err.response?.data?.message || err.message));
+      setError(
+        "Gagal memuat data permintaan. " +
+          (err.response?.data?.message || err.message)
+      );
     } finally {
       setLoading(false);
     }
@@ -138,7 +144,7 @@ const RequestList = ({ userId }) => {
   const handleExportDetail = async (date) => {
     setExporting(true);
     try {
-      const userId = localStorage.getItem("user_id");
+      const userId = sessionStorage.getItem("user_id");
 
       if (!userId) {
         throw new Error("User ID tidak ditemukan - silakan login ulang");
@@ -146,21 +152,26 @@ const RequestList = ({ userId }) => {
 
       // Get the date in YYYY-MM-DD format, considering timezone
       const d = new Date(date);
-      const formattedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const formattedDate = `${d.getFullYear()}-${String(
+        d.getMonth() + 1
+      ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-      console.log('Export request details:', {
+      console.log("Export request details:", {
         originalDate: date,
         formattedDate: formattedDate,
-        userId: userId
+        userId: userId,
       });
 
-      const response = await axios.get(`http://localhost:5000/requests/export/${formattedDate}`, {
-        params: {
-          user_id: userId
-        },
-      });
+      const response = await axios.get(
+        `http://localhost:5000/requests/export/${formattedDate}`,
+        {
+          params: {
+            user_id: userId,
+          },
+        }
+      );
 
-      console.log('Response data:', response.data.data[0]); // Add this line
+      console.log("Response data:", response.data.data[0]); // Add this line
 
       if (!response.data.success || !response.data.data?.length) {
         throw new Error("Tidak ada data untuk diekspor");
@@ -178,7 +189,7 @@ const RequestList = ({ userId }) => {
         ["Unit/Bagian", `: ${firstDetail.division_name}`, "", ""],
         ["Uraian", `: ${firstDetail.reason}`, "", ""],
         [],
-        ["No", "Jenis Barang", "Satuan", "Jumlah"]
+        ["No", "Jenis Barang", "Satuan", "Jumlah"],
       ];
 
       // Add items
@@ -187,7 +198,7 @@ const RequestList = ({ userId }) => {
           index + 1,
           detail.item_name || "-",
           detail.unit || "-",
-          detail.quantity || 0
+          detail.quantity || 0,
         ]);
       });
 
@@ -195,16 +206,27 @@ const RequestList = ({ userId }) => {
       ws_data.push(
         [],
         [],
-        ["Peminta / Penerima", "Menyetujui, Kepala Unit *)", "Menyerahkan, Petugas Umum", ""],
+        [
+          "Peminta / Penerima",
+          "Menyetujui, Kepala Unit *)",
+          "Menyerahkan, Petugas Umum",
+          "",
+        ],
         ["", "", "", ""],
         ["", "", "", ""],
         ["", "", "", ""],
-        [`Nama    : ${firstDetail.requester_name || "-"}`,
-        `Nama    : ${firstDetail.head_name || "-"}`,
-        `Nama    : ${firstDetail.admin_name || "-"}`, ""],
-        [`NIK/NIP : ${firstDetail.request_by_id || "-"}`,
-        `NIK/NIP : ${firstDetail.head_nik || "-"}`,
-        `NIK/NIP : ${firstDetail.admin_nik || "-"}`, ""],
+        [
+          `Nama    : ${firstDetail.requester_name || "-"}`,
+          `Nama    : ${firstDetail.head_name || "-"}`,
+          `Nama    : ${firstDetail.admin_name || "-"}`,
+          "",
+        ],
+        [
+          `NIK/NIP : ${firstDetail.request_by_id || "-"}`,
+          `NIK/NIP : ${firstDetail.head_nik || "-"}`,
+          `NIK/NIP : ${firstDetail.admin_nik || "-"}`,
+          "",
+        ],
         ["*)Kajur/KPS/Ka.Bag/Ka.Subbag/Ka.Unit/Ka.Pokja/Ka.Pusat", "", "", ""]
       );
 
@@ -213,34 +235,37 @@ const RequestList = ({ userId }) => {
       const wb = XLSX.utils.book_new();
 
       // Configure columns and merges
-      ws['!cols'] = [
-        { width: 20 }, { width: 40 }, { width: 25 }, { width: 25 }
+      ws["!cols"] = [
+        { width: 20 },
+        { width: 40 },
+        { width: 25 },
+        { width: 25 },
       ];
 
       // Add borders to all cells in the table
-      const range = XLSX.utils.decode_range(ws['!ref']);
+      const range = XLSX.utils.decode_range(ws["!ref"]);
       for (let R = range.s.r; R <= range.e.r; R++) {
         for (let C = range.s.c; C <= range.e.c; C++) {
           const cell_address = { c: C, r: R };
           const cell_ref = XLSX.utils.encode_cell(cell_address);
 
           if (!ws[cell_ref]) {
-            ws[cell_ref] = { t: 's', v: '' };
+            ws[cell_ref] = { t: "s", v: "" };
           }
 
           ws[cell_ref].s = {
             font: { name: "Arial", sz: 11 },
             alignment: {
-              vertical: 'center',
-              horizontal: R < 8 ? 'left' : 'center',
-              wrapText: true
+              vertical: "center",
+              horizontal: R < 8 ? "left" : "center",
+              wrapText: true,
             },
             border: {
-              top: { style: 'thin' },
-              bottom: { style: 'thin' },
-              left: { style: 'thin' },
-              right: { style: 'thin' }
-            }
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
+            },
           };
         }
       }
@@ -249,13 +274,13 @@ const RequestList = ({ userId }) => {
       const headerStyle = {
         font: { bold: true, sz: 12 },
         fill: { fgColor: { rgb: "EEEEEE" } },
-        alignment: { vertical: 'center', horizontal: 'center' },
+        alignment: { vertical: "center", horizontal: "center" },
         border: {
-          top: { style: 'medium' },
-          bottom: { style: 'medium' },
-          left: { style: 'medium' },
-          right: { style: 'medium' }
-        }
+          top: { style: "medium" },
+          bottom: { style: "medium" },
+          left: { style: "medium" },
+          right: { style: "medium" },
+        },
       };
       // Apply header styles
       for (let C = 0; C <= 3; C++) {
@@ -270,23 +295,25 @@ const RequestList = ({ userId }) => {
         ws[cell_ref].s = headerStyle;
       }
 
-      ws['!merges'] = [
+      ws["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
-        { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 3 } }
+        {
+          s: { r: ws_data.length - 1, c: 0 },
+          e: { r: ws_data.length - 1, c: 3 },
+        },
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
 
       // Generate and save file
       const wbout = XLSX.write(wb, {
-        bookType: 'xlsx',
-        type: 'array',
-        cellStyles: true // Enable cell styles
+        bookType: "xlsx",
+        type: "array",
+        cellStyles: true, // Enable cell styles
       });
-      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
       saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
-
     } catch (err) {
       setError(err.message || "Gagal mengekspor data");
     } finally {
@@ -294,17 +321,24 @@ const RequestList = ({ userId }) => {
     }
   };
 
-  if (loading) return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-      <CircularProgress />
-    </Box>
-  );
+  if (loading)
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
 
-  if (error) return (
-    <Box p={3}>
-      <Alert severity="error">{error}</Alert>
-    </Box>
-  );
+  if (error)
+    return (
+      <Box p={3}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
 
   return (
     <Box
@@ -388,7 +422,6 @@ const RequestList = ({ userId }) => {
           spacing={2}
           alignItems="center"
         >
-
           <TextField
             variant="outlined"
             placeholder="Search..."
@@ -438,8 +471,18 @@ const RequestList = ({ userId }) => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ bgcolor: "#0C628B", height: "25px", borderTopLeftRadius: "12px", borderTopRightRadius: "12px" }} />
+        <TableContainer
+          component={Paper}
+          sx={{ borderRadius: 2, overflow: "hidden" }}
+        >
+          <div
+            style={{
+              bgcolor: "#0C628B",
+              height: "25px",
+              borderTopLeftRadius: "12px",
+              borderTopRightRadius: "12px",
+            }}
+          />
           <Table>
             <TableHead>
               <TableRow>
@@ -452,25 +495,32 @@ const RequestList = ({ userId }) => {
             <TableBody>
               {paginatedRows.map((request, index) => (
                 <StyledTableRow key={request.date}>
-                  <StyledTableCell>{page * rowsPerPage + index + 1}</StyledTableCell>
-                  <StyledTableCell>{new Date(request.date).toLocaleDateString()}</StyledTableCell>
+                  <StyledTableCell>
+                    {page * rowsPerPage + index + 1}
+                  </StyledTableCell>
+                  <StyledTableCell>
+                    {new Date(request.date).toLocaleDateString()}
+                  </StyledTableCell>
                   <StyledTableCell>{request.total_requests}</StyledTableCell>
                   <StyledTableCell>
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      justifyContent="center"
+                      alignItems="center"
+                    >
                       <Tooltip title="Detail" placement="top">
                         <ActionButton
                           variant="contained"
                           color="primary"
-                          onClick={() => navigate(`/DetailPermintaan/${request.date}`)}
+                          onClick={() =>
+                            navigate(`/DetailPermintaan/${request.date}`)
+                          }
                         >
                           <InfoOutlinedIcon />
                         </ActionButton>
                       </Tooltip>
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ mx: 1 }}
-                      />
+                      <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                       <Tooltip title="Export" placement="top">
                         <ActionButton
                           variant="contained"
@@ -478,7 +528,11 @@ const RequestList = ({ userId }) => {
                           onClick={() => handleExportDetail(request.date)}
                           disabled={exporting}
                         >
-                          {exporting ? <CircularProgress size={24} /> : <FileDownloadIcon />}
+                          {exporting ? (
+                            <CircularProgress size={24} />
+                          ) : (
+                            <FileDownloadIcon />
+                          )}
                         </ActionButton>
                       </Tooltip>
                     </Stack>

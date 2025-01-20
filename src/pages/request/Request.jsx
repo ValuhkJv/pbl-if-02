@@ -56,14 +56,14 @@ const RequestForm = () => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const userId = localStorage.getItem("user_id"); // Atau dari session atau token JWT
+      const userId = sessionStorage.getItem("user_id"); // Atau dari session atau token JWT
       if (userId) {
         try {
           const userResponse = await axios.get(
             `http://localhost:5000/users/${userId}`
           ); // Sesuaikan user_id
           setUserData({
-            full_name: localStorage.getItem("full_name"),
+            full_name: sessionStorage.getItem("full_name"),
             division_name: userResponse.data.division_name,
             division_id: userResponse.data.division_id,
           });
@@ -152,7 +152,7 @@ const RequestForm = () => {
     }
 
     // Check if item already exists in requests
-    if (requests.some(request => request.item_id === selectedItem.item_id)) {
+    if (requests.some((request) => request.item_id === selectedItem.item_id)) {
       sweetAlert.error("Error", "Barang sudah ada dalam daftar permintaan");
       return;
     }
@@ -196,7 +196,7 @@ const RequestForm = () => {
   };
 
   const handleSubmit = async () => {
-    const userId = localStorage.getItem("user_id");
+    const userId = sessionStorage.getItem("user_id");
     if (!userId) {
       sweetAlert.error("Error", "User ID tidak ditemukan");
       return;

@@ -21,7 +21,7 @@ import {
   InputAdornment,
   TablePagination,
   Divider,
-  Stack
+  Stack,
 } from "@mui/material";
 import { styled } from "@mui/system";
 import { Search as SearchIcon } from "@mui/icons-material";
@@ -54,7 +54,7 @@ const RequestApprovDetail = () => {
   const [filterStatus, setFilterStatus] = useState("Semua");
   const [error, setError] = useState(null);
 
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -62,7 +62,7 @@ const RequestApprovDetail = () => {
       setError(null);
 
       try {
-        console.log('Fetching details with params:', { created_at, user_id });
+        console.log("Fetching details with params:", { created_at, user_id });
 
         if (!created_at || !user_id) {
           throw new Error("Missing required parameters");
@@ -76,7 +76,7 @@ const RequestApprovDetail = () => {
             },
           }
         );
-        console.log('API Response:', response.data);
+        console.log("API Response:", response.data);
 
         if (!response.data) {
           throw new Error("No data received from server");
@@ -133,7 +133,10 @@ const RequestApprovDetail = () => {
     );
 
     if (!hasDecisions) {
-      sweetAlert.warning("Warning", "Please make a decision for at least one item");
+      sweetAlert.warning(
+        "Warning",
+        "Please make a decision for at least one item"
+      );
       return false;
     }
     return true;
@@ -141,22 +144,28 @@ const RequestApprovDetail = () => {
 
   const handleSubmit = async () => {
     if (!validateSubmission()) return;
-    sweetAlert.warning("Processing", "Please wait while we process your request...");
+    sweetAlert.warning(
+      "Processing",
+      "Please wait while we process your request..."
+    );
     setLoading(true);
     try {
       // Only process items that are pending and have been modified
       const modifiedRequests = details
-        .filter(item =>
-          item.status.toLowerCase() === "pending" &&
-          (itemApprovals.hasOwnProperty(item.request_id) ||
-            rejectionReasons.hasOwnProperty(item.request_id))
+        .filter(
+          (item) =>
+            item.status.toLowerCase() === "pending" &&
+            (itemApprovals.hasOwnProperty(item.request_id) ||
+              rejectionReasons.hasOwnProperty(item.request_id))
         )
-        .map(item => ({
+        .map((item) => ({
           request_id: item.request_id,
-          status: itemApprovals[item.request_id] ? "Approved by Head" : "Rejected by Head",
+          status: itemApprovals[item.request_id]
+            ? "Approved by Head"
+            : "Rejected by Head",
           rejection_reason: itemApprovals[item.request_id]
             ? null
-            : rejectionReasons[item.request_id]?.trim()
+            : rejectionReasons[item.request_id]?.trim(),
         }));
 
       if (modifiedRequests.length === 0) {
@@ -165,7 +174,7 @@ const RequestApprovDetail = () => {
       }
 
       const results = await Promise.allSettled(
-        modifiedRequests.map(request =>
+        modifiedRequests.map((request) =>
           axios.put(
             `http://localhost:5000/requestsApprovHead/${request.request_id}/head-approval`,
             request,
@@ -179,8 +188,8 @@ const RequestApprovDetail = () => {
       );
 
       // Handle partial success/failure
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
+      const successful = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.filter((r) => r.status === "rejected").length;
 
       if (failed > 0) {
         sweetAlert.warning(
@@ -189,9 +198,7 @@ const RequestApprovDetail = () => {
         );
       } else {
         // Use successToast for a less intrusive success notification
-        sweetAlert.success(
-          `Berhasil memperbarui ${successful} permintaan`
-        );
+        sweetAlert.success(`Berhasil memperbarui ${successful} permintaan`);
       }
 
       if (successful > 0) {
@@ -202,7 +209,8 @@ const RequestApprovDetail = () => {
       console.error("Error updating requests:", error);
       sweetAlert.error(
         "Gagal",
-        "Gagal memperbarui permintaan: " + (error.response?.data?.message || error.message)
+        "Gagal memperbarui permintaan: " +
+          (error.response?.data?.message || error.message)
       );
     } finally {
       setLoading(false);
@@ -288,15 +296,18 @@ const RequestApprovDetail = () => {
           spacing={2}
           alignItems="center"
         >
-
-          <FormControl variant="outlined" sx={{
-            marginRight: 2, width: "250px",
-            backgroundColor: "white",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              height: "40px",
-            },
-          }}>
+          <FormControl
+            variant="outlined"
+            sx={{
+              marginRight: 2,
+              width: "250px",
+              backgroundColor: "white",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+              },
+            }}
+          >
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -304,7 +315,9 @@ const RequestApprovDetail = () => {
               label="Status"
             >
               <MenuItem value="Semua">Semua</MenuItem>
-              <MenuItem value="Approved by Head">Disetujui Kepala Unit</MenuItem>
+              <MenuItem value="Approved by Head">
+                Disetujui Kepala Unit
+              </MenuItem>
               <MenuItem value="Rejected by Head">Ditolak Kepala Unit</MenuItem>
               <MenuItem value="pending">Menunggu Persetujuan</MenuItem>
             </Select>
@@ -399,7 +412,7 @@ const RequestApprovDetail = () => {
                 </StyledTableCell>
                 <StyledTableCell>
                   {item.status === "pending" &&
-                    !itemApprovals[item.request_id] ? (
+                  !itemApprovals[item.request_id] ? (
                     <TextField
                       fullWidth
                       size="small"

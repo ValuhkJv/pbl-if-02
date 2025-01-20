@@ -38,7 +38,7 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
     e.preventDefault();
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       // Check if loanData and borrowing_id exist
       if (!loanData || !loanData.borrowing_id) {
@@ -88,13 +88,9 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
       }
     } catch (error) {
       console.error("Error submitting return:", error);
-      sweetAlert.error(
-        "Error",
-        error.response?.data?.message || error.message
-      );
+      sweetAlert.error("Error", error.response?.data?.message || error.message);
     }
   };
-
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -189,7 +185,7 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{mr: 2}}>
+        <DialogActions sx={{ mr: 2 }}>
           <Button
             onClick={onClose}
             sx={{
@@ -212,7 +208,9 @@ const PengembalianModal = ({ open, onClose, loanData, onUpdate }) => {
               borderRadius: "8px",
               padding: "8px 16px",
             }}
-            > Submit
+          >
+            {" "}
+            Submit
           </Button>
         </DialogActions>
       </Dialog>

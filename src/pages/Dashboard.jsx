@@ -115,8 +115,8 @@ const DrawerHeader = styled("div")(({ theme }) => ({
 
 export default function Dashboard() {
   const theme = useTheme();
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const role = parseInt(localStorage.getItem("role"), 10 || "guest");
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
+  const role = parseInt(sessionStorage.getItem("role"), 10 || "guest");
   const [openDrawer, setOpenDrawer] = React.useState(true);
   const [openPeminjaman, setOpenPeminjaman] = useState(false);
   const [openPermintaan, setOpenPermintaan] = useState(false);
@@ -139,8 +139,8 @@ export default function Dashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("role");
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("role");
     navigate("/");
   };
 
@@ -296,7 +296,8 @@ export default function Dashboard() {
                 fontSize: { xs: "10px", sm: "14px" }, // Font lebih kecil di perangkat kecil
               }}
             >
-              <strong>SBUM</strong><br /> SUB-BAGIAN UMUM POLIBATAM
+              <strong>SBUM</strong>
+              <br /> SUB-BAGIAN UMUM POLIBATAM
             </Typography>
           </Box>
           <IconButton onClick={handleCloseDrawer}>
@@ -479,7 +480,6 @@ export default function Dashboard() {
                     >
                       <ListItemText primary="Persetujuan" />
                     </ListItemButton>
-                   
                   </List>
                 </Collapse>
               </>

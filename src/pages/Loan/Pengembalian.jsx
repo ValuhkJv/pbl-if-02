@@ -89,7 +89,6 @@ const Pengembalian = () => {
   }));
 
   const handleOpenPengembalianModal = (transaction) => {
-
     // Check if we have borrowing_ids array and use the first ID
     const borrowing_id =
       transaction.borrowing_ids?.[0] || transaction.borrowing_id;
@@ -115,7 +114,7 @@ const Pengembalian = () => {
 
   const handleUpdateTransactions = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch("http://localhost:5000/peminjaman", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -126,7 +125,7 @@ const Pengembalian = () => {
       if (!response.ok) throw new Error("Gagal mengambil data peminjaman");
       const data = await response.json();
       setTransactions(data);
-      localStorage.setItem("transactions", JSON.stringify(data));
+      sessionStorage.setItem("transactions", JSON.stringify(data));
     } catch (error) {
       console.error("Error refreshing transactions:", error);
     }
@@ -140,15 +139,18 @@ const Pengembalian = () => {
 
     const deleteAction = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
 
-        const response = await fetch(`http://localhost:5000/peminjaman/${borrowing_id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await fetch(
+          `http://localhost:5000/peminjaman/${borrowing_id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -171,7 +173,7 @@ const Pengembalian = () => {
   const handleCancelBorrowing = async (borrowing_id) => {
     const cancelAction = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         const response = await fetch(
           `http://localhost:5000/peminjaman/cancel/${borrowing_id}`,
           {
@@ -203,9 +205,9 @@ const Pengembalian = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const userRole = localStorage.getItem("roles_id"); // Simpan role saat login
-        const userId = localStorage.getItem("user_id");
+        const token = sessionStorage.getItem("token");
+        const userRole = sessionStorage.getItem("roles_id"); // Simpan role saat login
+        const userId = sessionStorage.getItem("user_id");
 
         if (!token) {
           throw new Error("Token tidak tersedia");
@@ -229,20 +231,17 @@ const Pengembalian = () => {
         const data = await response.json();
 
         // Filter data based on role and deletion status
-        const filteredData = data.filter(transaction => {
+        const filteredData = data.filter((transaction) => {
           const isStaff = userRole === "1";
           const isOwner = transaction.borrower_id === parseInt(userId);
 
           // Staff can see all non-deleted items
           // Regular users see their own items, including soft-deleted ones
-          return isStaff
-            ? !transaction.is_deleted
-            : isOwner;
+          return isStaff ? !transaction.is_deleted : isOwner;
         });
 
         setTransactions(filteredData);
-        localStorage.setItem("transactions", JSON.stringify(filteredData));
-
+        sessionStorage.setItem("transactions", JSON.stringify(filteredData));
       } catch (error) {
         console.error("Fetch Transactions Error:", {
           name: error.name,
@@ -252,7 +251,8 @@ const Pengembalian = () => {
 
         sweetAlert.error(
           "Gagal",
-          "Gagal memuat data peminjaman peminjaman: " + (error.response?.data?.message || error.message)
+          "Gagal memuat data peminjaman peminjaman: " +
+            (error.response?.data?.message || error.message)
         );
       }
     };
@@ -262,7 +262,7 @@ const Pengembalian = () => {
 
   const refreshTransactions = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       const response = await fetch("http://localhost:5000/peminjaman", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -278,16 +278,17 @@ const Pengembalian = () => {
       console.error("Error refreshing transactions:", error);
       sweetAlert.error(
         "Gagal",
-        "Gagal Mengambil data: " + (error.response?.data?.message || error.message)
+        "Gagal Mengambil data: " +
+          (error.response?.data?.message || error.message)
       );
     }
   };
 
   useEffect(() => {
-    const shouldRefresh = localStorage.getItem("shouldRefreshPengembalian");
+    const shouldRefresh = sessionStorage.getItem("shouldRefreshPengembalian");
     if (shouldRefresh === "true") {
       refreshTransactions();
-      localStorage.removeItem("shouldRefreshPengembalian");
+      sessionStorage.removeItem("shouldRefreshPengembalian");
     }
   }, []);
 
@@ -473,14 +474,17 @@ const Pengembalian = () => {
         alignItems="flex-end"
         sx={{ mb: 4, mt: 5 }}
       >
-        <FormControl variant="outlined" sx={{
-          width: "250px",
-          backgroundColor: "white",
-          borderRadius: 1,
-          "& .MuiOutlinedInput-root": {
-            height: "40px",
-          },
-        }}>
+        <FormControl
+          variant="outlined"
+          sx={{
+            width: "250px",
+            backgroundColor: "white",
+            borderRadius: 1,
+            "& .MuiOutlinedInput-root": {
+              height: "40px",
+            },
+          }}
+        >
           <InputLabel>Status</InputLabel>
           <Select
             value={filterStatus}
@@ -598,7 +602,12 @@ const Pengembalian = () => {
                   <StyledTableCell>
                     {transaction.status === "approved" &&
                       !transaction.return_proof && (
-                        <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          justifyContent="center"
+                          alignItems="center"
+                        >
                           <Button
                             variant="contained"
                             sx={{
@@ -633,7 +642,12 @@ const Pengembalian = () => {
                   </StyledTableCell>
                   <StyledTableCell>
                     {" "}
-                    <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      justifyContent="center"
+                      alignItems="center"
+                    >
                       <Tooltip title="Detail">
                         <DetailButton
                           variant="contained"
@@ -660,9 +674,7 @@ const Pengembalian = () => {
                     {["rejected", "return"].includes(transaction.status) && (
                       <IconButton
                         color="error"
-                        onClick={() =>
-                          handleDelete(transaction.borrowing_id)
-                        }
+                        onClick={() => handleDelete(transaction.borrowing_id)}
                       >
                         <CloseIcon />
                       </IconButton>

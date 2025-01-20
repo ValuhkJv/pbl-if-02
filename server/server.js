@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -190,7 +190,6 @@ app.get("/categories", async (req, res) => {
     res.status(500).send("Server Error");
   }
 });
-
 
 app.get("/items", async (req, res) => {
   const { category_id } = req.query;
@@ -399,7 +398,7 @@ app.get(
   authenticateToken,
   async (req, res) => {
     const { created_at, user_id: requested_user_id } = req.params; // Ambil user_id dari parameter
-    const head_user_id = req.user.user_id; 
+    const head_user_id = req.user.user_id;
     try {
       // Ambil division_id dari user_id
       const divisionResult = await db.query(
@@ -602,7 +601,7 @@ app.get(
   authenticateToken,
   async (req, res) => {
     const { created_at, user_id: requested_user_id } = req.params; // Ambil user_id dari parameter
-    const head_user_id = req.user.user_id; 
+    const head_user_id = req.user.user_id;
 
     try {
       // Ambil division_id dari user_id

@@ -17,7 +17,6 @@ import {
   Tooltip,
   TablePagination,
   CircularProgress,
-
 } from "@mui/material";
 import { styled } from "@mui/system";
 import axios from "axios";
@@ -26,7 +25,8 @@ import { saveAs } from "file-saver";
 import { useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"; import {
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import {
   Search as SearchIcon,
   InfoOutlined as InfoOutlinedIcon,
   FileDownload as FileDownloadIcon,
@@ -73,7 +73,6 @@ const RequestHistoryAdmin = () => {
     justifyContent: "center",
   }));
 
-
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
   };
@@ -111,28 +110,29 @@ const RequestHistoryAdmin = () => {
       dateMatch = dateMatch && tanggalPinjam <= endDateTime;
     }
 
-    return searchMatch && dateMatch;  // Return the combined filter result
+    return searchMatch && dateMatch; // Return the combined filter result
   });
-
 
   const startIndex = page * rowsPerPage;
   const endIndex = startIndex + rowsPerPage;
   const displayedRows = filteredRows.slice(startIndex, endIndex);
 
-
   const fetchRequestHistory = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/requests/history', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const token = sessionStorage.getItem("token");
+      const response = await axios.get(
+        "http://localhost:5000/requests/history",
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (response.data.success) {
         setRequests(response.data.data);
       }
     } catch (error) {
-      console.error('Error fetching requests:', error);
+      console.error("Error fetching requests:", error);
     } finally {
       setLoading(false);
     }
@@ -147,24 +147,24 @@ const RequestHistoryAdmin = () => {
     setError(null); // Reset error state at start
 
     try {
-      console.log('Starting export with:', {
+      console.log("Starting export with:", {
         date: formatDateForExport(date), // Tambahkan fungsi helper untuk format tanggal
         userId: requestUserId,
       });
 
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem("token");
       if (!token) {
         throw new Error("Token tidak ditemukan - silakan login ulang");
       }
 
       // Format tanggal menggunakan fungsi helper
-    const formattedDate = formatDateForExport(date);
+      const formattedDate = formatDateForExport(date);
 
       const response = await axios.get(
         `http://localhost:5000/requests/export/admin/${formattedDate}`,
         {
           params: { user_id: requestUserId },
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -184,7 +184,7 @@ const RequestHistoryAdmin = () => {
         ["Unit/Bagian", `: ${firstDetail.division_name}`, "", ""],
         ["Uraian", `: ${firstDetail.reason}`, "", ""],
         [],
-        ["No", "Jenis Barang", "Satuan", "Jumlah"]
+        ["No", "Jenis Barang", "Satuan", "Jumlah"],
       ];
 
       // Add items
@@ -193,7 +193,7 @@ const RequestHistoryAdmin = () => {
           index + 1,
           detail.item_name || "-",
           detail.unit || "-",
-          detail.quantity || 0
+          detail.quantity || 0,
         ]);
       });
 
@@ -201,16 +201,27 @@ const RequestHistoryAdmin = () => {
       ws_data.push(
         [],
         [],
-        ["Peminta / Penerima", "Menyetujui, Kepala Unit *)", "Menyerahkan, Petugas Umum", ""],
+        [
+          "Peminta / Penerima",
+          "Menyetujui, Kepala Unit *)",
+          "Menyerahkan, Petugas Umum",
+          "",
+        ],
         ["", "", "", ""],
         ["", "", "", ""],
         ["", "", "", ""],
-        [`Nama    : ${firstDetail.requester_name || "-"}`,
-         `Nama    : ${firstDetail.head_name || "-"}`,
-         `Nama    : ${firstDetail.admin_name || "-"}`, ""],
-        [`NIK/NIP : ${firstDetail.request_by_id || "-"}`,
-         `NIK/NIP : ${firstDetail.head_nik || "-"}`,
-         `NIK/NIP : ${firstDetail.admin_nik || "-"}`, ""],
+        [
+          `Nama    : ${firstDetail.requester_name || "-"}`,
+          `Nama    : ${firstDetail.head_name || "-"}`,
+          `Nama    : ${firstDetail.admin_name || "-"}`,
+          "",
+        ],
+        [
+          `NIK/NIP : ${firstDetail.request_by_id || "-"}`,
+          `NIK/NIP : ${firstDetail.head_nik || "-"}`,
+          `NIK/NIP : ${firstDetail.admin_nik || "-"}`,
+          "",
+        ],
         ["*)Kajur/KPS/Ka.Bag/Ka.Subbag/Ka.Unit/Ka.Pokja/Ka.Pusat", "", "", ""]
       );
 
@@ -219,34 +230,37 @@ const RequestHistoryAdmin = () => {
       const wb = XLSX.utils.book_new();
 
       // Configure column widths
-      ws['!cols'] = [
-        { width: 20 }, { width: 40 }, { width: 25 }, { width: 25 }
+      ws["!cols"] = [
+        { width: 20 },
+        { width: 40 },
+        { width: 25 },
+        { width: 25 },
       ];
 
       // Add borders and styling
-      const range = XLSX.utils.decode_range(ws['!ref']);
+      const range = XLSX.utils.decode_range(ws["!ref"]);
       for (let R = range.s.r; R <= range.e.r; R++) {
         for (let C = range.s.c; C <= range.e.c; C++) {
           const cell_address = { c: C, r: R };
           const cell_ref = XLSX.utils.encode_cell(cell_address);
 
           if (!ws[cell_ref]) {
-            ws[cell_ref] = { t: 's', v: '' };
+            ws[cell_ref] = { t: "s", v: "" };
           }
 
           ws[cell_ref].s = {
             font: { name: "Arial", sz: 11 },
             alignment: {
-              vertical: 'center',
-              horizontal: R < 8 ? 'left' : 'center',
-              wrapText: true
+              vertical: "center",
+              horizontal: R < 8 ? "left" : "center",
+              wrapText: true,
             },
             border: {
-              top: { style: 'thin' },
-              bottom: { style: 'thin' },
-              left: { style: 'thin' },
-              right: { style: 'thin' }
-            }
+              top: { style: "thin" },
+              bottom: { style: "thin" },
+              left: { style: "thin" },
+              right: { style: "thin" },
+            },
           };
         }
       }
@@ -255,13 +269,13 @@ const RequestHistoryAdmin = () => {
       const headerStyle = {
         font: { bold: true, sz: 12 },
         fill: { fgColor: { rgb: "EEEEEE" } },
-        alignment: { vertical: 'center', horizontal: 'center' },
+        alignment: { vertical: "center", horizontal: "center" },
         border: {
-          top: { style: 'medium' },
-          bottom: { style: 'medium' },
-          left: { style: 'medium' },
-          right: { style: 'medium' }
-        }
+          top: { style: "medium" },
+          bottom: { style: "medium" },
+          left: { style: "medium" },
+          right: { style: "medium" },
+        },
       };
 
       // Apply header styles
@@ -271,28 +285,30 @@ const RequestHistoryAdmin = () => {
       }
 
       // Define merged cells
-      ws['!merges'] = [
+      ws["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
         { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
-        { s: { r: ws_data.length - 1, c: 0 }, e: { r: ws_data.length - 1, c: 3 } }
+        {
+          s: { r: ws_data.length - 1, c: 0 },
+          e: { r: ws_data.length - 1, c: 3 },
+        },
       ];
 
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
 
       // Generate and save file
       const wbout = XLSX.write(wb, {
-        bookType: 'xlsx',
-        type: 'array',
-        cellStyles: true
+        bookType: "xlsx",
+        type: "array",
+        cellStyles: true,
       });
 
-      const blob = new Blob([wbout], { type: 'application/octet-stream' });
+      const blob = new Blob([wbout], { type: "application/octet-stream" });
       saveAs(blob, `Borang_Permintaan_${formattedDate}.xlsx`);
 
       setError("Berhasil mengekspor data");
-
     } catch (err) {
-      console.error('Export error:', err);
+      console.error("Export error:", err);
       setError(err.message || "Gagal mengekspor data");
     } finally {
       setExporting(false);
@@ -304,13 +320,10 @@ const RequestHistoryAdmin = () => {
     <Stack
       direction={{ xs: "column", sm: "row" }}
       spacing={2}
-      sx={{ width: { xs: '100%', md: 'auto' } }}
+      sx={{ width: { xs: "100%", md: "auto" } }}
     >
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-        >
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           <DatePicker
             label="Tanggal Mulai"
             sx={{
@@ -364,21 +377,21 @@ const RequestHistoryAdmin = () => {
   // Modified table cell to format date correctly
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    return date.toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
   };
 
   // Tambahkan fungsi helper untuk format tanggal
-const formatDateForExport = (dateString) => {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+  const formatDateForExport = (dateString) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
   return (
     <Box
@@ -515,7 +528,12 @@ const formatDateForExport = (dateString) => {
                 </StyledTableCell>
                 <StyledTableCell>{request.division_name}</StyledTableCell>
                 <StyledTableCell>
-                  <Stack direction="row" spacing={1} justifyContent="center" alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="center"
+                    alignItems="center"
+                  >
                     <Tooltip title="Detail">
                       <ActionButton
                         variant="contained"
@@ -531,18 +549,23 @@ const formatDateForExport = (dateString) => {
                           justifyContent: "center",
                         }}
                         onClick={() => {
-                          navigate(`/requestsHistory/details/${new Date(request.created_at).toLocaleDateString("en-CA")}/${request.user_id}`); // Make sure there's no extra characters
-                          console.log("Date being sent:", new Date(request.created_at).toLocaleDateString("en-CA"));
+                          navigate(
+                            `/requestsHistory/details/${new Date(
+                              request.created_at
+                            ).toLocaleDateString("en-CA")}/${request.user_id}`
+                          ); // Make sure there's no extra characters
+                          console.log(
+                            "Date being sent:",
+                            new Date(request.created_at).toLocaleDateString(
+                              "en-CA"
+                            )
+                          );
                         }}
                       >
                         <InfoOutlinedIcon sx={{ fontSize: "20px" }} />
                       </ActionButton>
                     </Tooltip>
-                    <Divider
-                      orientation="vertical"
-                      flexItem
-                      sx={{ mx: 1 }}
-                    />
+                    <Divider orientation="vertical" flexItem sx={{ mx: 1 }} />
                     <Tooltip title="Export" placement="top">
                       <ActionButton
                         variant="contained"
@@ -557,13 +580,19 @@ const formatDateForExport = (dateString) => {
                           alignItems: "center",
                           justifyContent: "center",
                         }}
-                        onClick={() => handleExportDetail(
-                          request.created_at, // Kirim langsung created_at tanpa modifikasi
-                          request.user_id
-                        )}
+                        onClick={() =>
+                          handleExportDetail(
+                            request.created_at, // Kirim langsung created_at tanpa modifikasi
+                            request.user_id
+                          )
+                        }
                         disabled={exporting}
                       >
-                        {exporting ? <CircularProgress size={24} /> : <FileDownloadIcon />}
+                        {exporting ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          <FileDownloadIcon />
+                        )}
                       </ActionButton>
                     </Tooltip>
                   </Stack>
