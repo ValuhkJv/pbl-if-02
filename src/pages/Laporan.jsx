@@ -138,7 +138,9 @@ export default function StockReport() {
   // Fungsi filter yang dikombinasikan
   const getFilteredRows = () => {
     return report.filter((item) => {
-      const matchesCategory = selectedCategory ? item.kategori === selectedCategory : true;
+      const matchesCategory = selectedCategory
+        ? item.kategori.trim().toLowerCase() === selectedCategory.trim().toLowerCase()
+        : true;
       const matchesMonth = selectedMonth !== ""
         ? item.bulan === parseInt(selectedMonth)
         : true;

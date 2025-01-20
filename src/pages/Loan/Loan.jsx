@@ -55,7 +55,7 @@ const Borrowing = () => {
   // State untuk modal dan notifikasi
   const [openModal, setOpenModal] = useState(false);
   const [keteranganError, setKeteranganError] = useState(false);
- 
+  const [phoneError, setPhoneError] = useState("");
 
   const [tanggal] = useState(format(new Date(), "yyyy-MM-dd"));
   const [jam, setJam] = useState(format(new Date(), "HH:mm:ss"));
@@ -219,6 +219,19 @@ const Borrowing = () => {
     );
   };
 
+  const validatePhoneNumber = (number) => {
+    if (!number) {
+      return "Nomor telepon harus diisi";
+    }
+    if (number.length < 8) {
+      return "Nomor telepon minimal 8 angka";
+    }
+    if (number.length > 15) {
+      return "Nomor telepon maksimal 15 angka";
+    }
+    return "";
+  };
+
   // Fungsi untuk submit peminjaman
   const handleBorrowing = async () => {
     // Validasi input
@@ -226,9 +239,11 @@ const Borrowing = () => {
       setKeteranganError(true);
       return;
     }
-
-    if (!phoneNumber.trim()) {
-      sweetAlert.warning("Nomor telepon harus diisi!");
+   
+    const phoneValidationError = validatePhoneNumber(phoneNumber);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
+      sweetAlert.warning(phoneValidationError);
       return;
     }
 
@@ -564,7 +579,6 @@ const Borrowing = () => {
             {/* Input Fields dan Tombol */}
             <Autocomplete
               variant="outlined"
-              placeholder="No inventaris..."
               options={barangList}
               getOptionLabel={(option) =>
                 `${option.item_name} (${option.item_code})`
@@ -704,12 +718,19 @@ const Borrowing = () => {
             label="Nomor Telepon"
             type="number"
             value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setPhoneNumber(value);
+              setPhoneError(validatePhoneNumber(value));
+            }}
+            error={!!phoneError}
+            helperText={phoneError}
             sx={{ mt: 2 }}
             required
             placeholder="Contoh: 081234567890"
             inputProps={{
               pattern: "[0-9]*",
+              minLength: 8,
               maxLength: 15,
             }}
           />
