@@ -22,7 +22,7 @@ const secretKey = "react";
 const db = new Pool({
   host: "localhost",
   user: "postgres",
-  password: "password",
+  password: "12345678",
   database: "subbagian",
   port: 5432,
 });
@@ -1521,13 +1521,14 @@ app.post(
       expectedReturn.setHours(0, 0, 0, 0);
       actualReturn.setHours(0, 0, 0, 0);
 
-     // Hitung selisih dalam hari (pembulatan ke bawah)
+      // Hitung selisih dalam hari (pembulatan ke bawah)
       const diffTime = actualReturn - expectedReturn;
       const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
       // Buat status message berdasarkan keterlambatan
       let statusMessage = "return";
-      if (diffDays > 0) { // Hanya jika benar-benar telat
+      if (diffDays > 0) {
+        // Hanya jika benar-benar telat
         statusMessage = `late:${diffDays}d`;
       }
 
